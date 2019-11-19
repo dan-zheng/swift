@@ -1057,18 +1057,18 @@ void swift::simple_display(llvm::raw_ostream &out,
 }
 
 //----------------------------------------------------------------------------//
-// DifferentiableAttributeParameterIndicesRequest computation.
+// DifferentiableAttributeTypeCheckRequest computation.
 //----------------------------------------------------------------------------//
 
 Optional<IndexSubset *>
-DifferentiableAttributeParameterIndicesRequest::getCachedResult() const {
+DifferentiableAttributeTypeCheckRequest::getCachedResult() const {
   auto *attr = std::get<0>(getStorage());
   if (attr->hasComputedParameterIndices())
     return attr->ParameterIndicesAndBit.getPointer();
   return None;
 }
 
-void DifferentiableAttributeParameterIndicesRequest::cacheResult(
+void DifferentiableAttributeTypeCheckRequest::cacheResult(
     IndexSubset *parameterIndices) const {
   auto *attr = std::get<0>(getStorage());
   attr->ParameterIndicesAndBit.setPointerAndInt(parameterIndices, true);

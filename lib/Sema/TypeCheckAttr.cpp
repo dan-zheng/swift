@@ -3314,8 +3314,8 @@ void AttributeChecker::visitDifferentiableAttr(DifferentiableAttr *attr) {
 }
 
 llvm::Expected<IndexSubset *>
-DifferentiableAttributeParameterIndicesRequest::evaluate(
-    Evaluator &evaluator, DifferentiableAttr *attr, Decl *D) const {
+DifferentiableAttributeTypeCheckRequest::evaluate(
+    Evaluator &evaluator, DifferentiableAttr *attr) const {
   // Skip checking implicit `@differentiable` attributes. We currently assume
   // that all implicit `@differentiable` attributes are valid.
   // Motivation: some implicit attributes do not contain a where clause, and
@@ -3325,6 +3325,7 @@ DifferentiableAttributeParameterIndicesRequest::evaluate(
   if (attr->isImplicit())
     return nullptr;
 
+  auto *D = attr->getOriginalDeclaration();
   auto &ctx = D->getASTContext();
   auto &diags = ctx.Diags;
   auto lookupConformance =

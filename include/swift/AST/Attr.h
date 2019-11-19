@@ -1824,6 +1824,24 @@ struct DeclNameWithLoc {
   DeclNameLoc Loc;
 };
 
+struct DifferentiableAttrConfiguration {
+  /// The JVP function (optional), resolved by the type checker if JVP name is
+  /// specified.
+  FuncDecl *jvp = nullptr;
+  /// The VJP function (optional), resolved by the type checker if VJP name is
+  /// specified.
+  FuncDecl *vjp = nullptr;
+  /// The differentiation parameters' indices, resolved by the type checker.
+  /// The bit stores whether the parameter indices have been computed.
+  llvm::PointerIntPair<IndexSubset *, 1, bool> parameterIndicesAndBit;
+  /// The generic signature for autodiff derivative functions. Resolved by the
+  /// type checker based on the original function's generic signature and the
+  /// attribute's where clause requirements. This is set only if the attribute
+  /// has a where clause.
+  GenericSignature DerivativeGenericSignature = GenericSignature();
+};
+
+// SWIFT_ENABLE_TENSORFLOW
 /// Attribute that marks a function as differentiable and optionally specifies
 /// custom associated derivative functions: 'jvp' and 'vjp'.
 ///
@@ -1835,7 +1853,7 @@ class DifferentiableAttr final
       private llvm::TrailingObjects<DifferentiableAttr,
                                     ParsedAutoDiffParameter> {
   friend TrailingObjects;
-  friend class DifferentiableAttributeParameterIndicesRequest;
+  friend class DifferentiableAttributeTypeCheckRequest;
 
   /// The declaration on which the `@differentiable` attribute is declared.
   Decl *OriginalDeclaration = nullptr;
@@ -1847,6 +1865,9 @@ class DifferentiableAttr final
   Optional<DeclNameWithLoc> JVP;
   /// The VJP function.
   Optional<DeclNameWithLoc> VJP;
+  /// The trailing where clause (optional).
+  TrailingWhereClause *WhereClause = nullptr;
+#if 0
   /// The JVP function (optional), resolved by the type checker if JVP name is
   /// specified.
   FuncDecl *JVPFunction = nullptr;
@@ -1856,13 +1877,14 @@ class DifferentiableAttr final
   /// The differentiation parameters' indices, resolved by the type checker.
   /// The bit stores whether the parameter indices have been computed.
   llvm::PointerIntPair<IndexSubset *, 1, bool> ParameterIndicesAndBit;
-  /// The trailing where clause (optional).
-  TrailingWhereClause *WhereClause = nullptr;
   /// The generic signature for autodiff derivative functions. Resolved by the
   /// type checker based on the original function's generic signature and the
   /// attribute's where clause requirements. This is set only if the attribute
   /// has a where clause.
   GenericSignature DerivativeGenericSignature = GenericSignature();
+#endif
+
+  DifferentiableAttrConfiguration config;
 
   explicit DifferentiableAttr(bool implicit, SourceLoc atLoc,
                               SourceRange baseRange, bool linear,
@@ -1928,16 +1950,12 @@ public:
 
   TrailingWhereClause *getWhereClause() const { return WhereClause; }
 
-  GenericSignature getDerivativeGenericSignature() const {
-    return DerivativeGenericSignature;
-  }
-  void setDerivativeGenericSignature(GenericSignature derivativeGenSig) {
-    DerivativeGenericSignature = derivativeGenSig;
-  }
+  GenericSignature getDerivativeGenericSignature() const;
+  void setDerivativeGenericSignature(GenericSignature derivativeGenSig);
 
-  FuncDecl *getJVPFunction() const { return JVPFunction; }
+  FuncDecl *getJVPFunction() const;
   void setJVPFunction(FuncDecl *decl);
-  FuncDecl *getVJPFunction() const { return VJPFunction; }
+  FuncDecl *getVJPFunction() const;
   void setVJPFunction(FuncDecl *decl);
 
   /// Get the derivative generic environment for the given `@differentiable`

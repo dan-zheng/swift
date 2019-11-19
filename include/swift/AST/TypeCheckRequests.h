@@ -1660,9 +1660,9 @@ public:
 };
 
 // SWIFT_ENABLE_TENSORFLOW
-class DifferentiableAttributeParameterIndicesRequest :
-    public SimpleRequest<DifferentiableAttributeParameterIndicesRequest,
-                         IndexSubset *(DifferentiableAttr *, Decl *),
+class DifferentiableAttributeTypeCheckRequest :
+    public SimpleRequest<DifferentiableAttributeTypeCheckRequest,
+                         IndexSubset *(DifferentiableAttr *),
                          CacheKind::SeparatelyCached> {
 public:
   using SimpleRequest::SimpleRequest;
@@ -1672,7 +1672,7 @@ private:
 
   // Evaluation.
   llvm::Expected<IndexSubset *>
-  evaluate(Evaluator &evaluator, DifferentiableAttr *attr, Decl *decl) const;
+  evaluate(Evaluator &evaluator, DifferentiableAttr *attr) const;
 
 public:
   // Separate caching.
