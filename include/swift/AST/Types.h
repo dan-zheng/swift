@@ -1828,7 +1828,9 @@ class ParameterTypeFlags {
     NonEphemeral = 1 << 2,
     OwnershipShift = 3,
     Ownership    = 7 << OwnershipShift,
-    NoDerivative = 1 << 7,
+    // SWIFT_ENABLE_TENSORFLOW
+    NonDifferentiable = 1 << 6,
+
     NumBits = 7
   };
   OptionSet<ParameterFlags> value;
@@ -1843,18 +1845,20 @@ public:
   }
 
   ParameterTypeFlags(bool variadic, bool autoclosure, bool nonEphemeral,
-                     ValueOwnership ownership, bool noDerivative)
+                     // SWIFT_ENABLE_TENSORFLOW
+                     ValueOwnership ownership, bool nonDifferentiable)
       : value((variadic ? Variadic : 0) | (autoclosure ? AutoClosure : 0) |
               (nonEphemeral ? NonEphemeral : 0) |
-              uint8_t(ownership) << OwnershipShift |
-              (noDerivative ? NoDerivative : 0)) {}
+              // SWIFT_ENABLE_TENSORFLOW
+              (uint8_t(ownership) << OwnershipShift) |
+              (nonDifferentiable ? NonDifferentiable : 0)) {}
 
   /// Create one from what's present in the parameter type
   inline static ParameterTypeFlags
   // SWIFT_ENABLE_TENSORFLOW
   fromParameterType(Type paramTy, bool isVariadic, bool isAutoClosure,
                     bool isNonEphemeral, ValueOwnership ownership,
-                    bool isNoDerivative);
+                    bool isNonDifferentiable);
 
   bool isNone() const { return !value; }
   bool isVariadic() const { return value.contains(Variadic); }
@@ -1863,7 +1867,8 @@ public:
   bool isInOut() const { return getValueOwnership() == ValueOwnership::InOut; }
   bool isShared() const { return getValueOwnership() == ValueOwnership::Shared;}
   bool isOwned() const { return getValueOwnership() == ValueOwnership::Owned; }
-  bool isNoDerivative() const { return value.contains(NoDerivative); }
+  // SWIFT_ENABLE_TENSORFLOW
+  bool isNonDifferentiable() const { return value.contains(NonDifferentiable); }
 
   ValueOwnership getValueOwnership() const {
     return ValueOwnership((value.toRaw() & Ownership) >> OwnershipShift);
@@ -1900,16 +1905,17 @@ public:
                               : value - ParameterTypeFlags::AutoClosure);
   }
 
+  // SWIFT_ENABLE_TENSORFLOW
+  ParameterTypeFlags withNonDifferentiable(bool nonDifferentiable) const {
+    return ParameterTypeFlags(nonDifferentiable
+                              ? value | ParameterTypeFlags::NonDifferentiable
+                              : value - ParameterTypeFlags::NonDifferentiable);
+  }
+
   ParameterTypeFlags withNonEphemeral(bool isNonEphemeral) const {
     return ParameterTypeFlags(isNonEphemeral
                                   ? value | ParameterTypeFlags::NonEphemeral
                                   : value - ParameterTypeFlags::NonEphemeral);
-  }
-
-  ParameterTypeFlags withNoDerivative(bool noDerivative) const {
-    return ParameterTypeFlags(noDerivative
-                                  ? value | ParameterTypeFlags::NoDerivative
-                                  : value - ParameterTypeFlags::NoDerivative);
   }
 
   bool operator ==(const ParameterTypeFlags &other) const {
@@ -1978,8 +1984,10 @@ public:
   ParameterTypeFlags asParamFlags() const {
     return ParameterTypeFlags(/*variadic*/ false,
                               /*autoclosure*/ false,
-                              /*nonEphemeral*/ false, getValueOwnership(),
-                              /*noDerivative*/ false);
+                              /*nonEphemeral*/ false,
+                              // SWIFT_ENABLE_TENSORFLOW
+                              getValueOwnership(),
+                              /*nondifferentiable*/ false);
   }
 
   bool operator ==(const YieldTypeFlags &other) const {
@@ -2851,8 +2859,9 @@ public:
     /// Whether the parameter is marked '@_nonEphemeral'
     bool isNonEphemeral() const { return Flags.isNonEphemeral(); }
 
-    /// Whether the parameter is marked '@noDerivative'.
-    bool isNoDerivative() const { return Flags.isNoDerivative(); }
+    // SWIFT_ENABLE_TENSORFLOW
+    /// Whether the parameter is marked '@nondiff'.
+    bool isNonDifferentiable() const { return Flags.isNonDifferentiable(); }
 
     ValueOwnership getValueOwnership() const {
       return Flags.getValueOwnership();
@@ -3238,6 +3247,12 @@ public:
   /// Given the type of an autodiff derivative function, returns the
   /// corresponding original function type.
   AnyFunctionType *getAutoDiffOriginalFunctionType();
+
+  /// Determine whether the static self type of the transpose
+  /// method is the same as the one in the parameters/result (assuming this
+  /// function is curried i.e. static)
+  bool transposeSelfTypesMatch(bool wrtSelf, Type *staticSelfType,
+                               Type *instSelfType);
 
   /// Given the type of a transpose function, returns the corresponding original
   /// function type.
@@ -4507,7 +4522,7 @@ public:
 
   /// Returns a bit vector that specifices which parameters you can
   /// differentiate with respect to for this differentiable function type. (e.g.
-  /// which parameters are not `@noDerivative`). The function type must be
+  /// which parameters are not `@nondiff`). The function type must be
   /// differentiable.
   IndexSubset *getDifferentiationParameterIndices();
 
@@ -6043,9 +6058,12 @@ inline TupleTypeElt TupleTypeElt::getWithType(Type T) const {
 }
 
 /// Create one from what's present in the parameter decl and type
-inline ParameterTypeFlags ParameterTypeFlags::fromParameterType(
-    Type paramTy, bool isVariadic, bool isAutoClosure, bool isNonEphemeral,
-    ValueOwnership ownership, bool isNoDerivative) {
+inline ParameterTypeFlags
+ParameterTypeFlags::fromParameterType(Type paramTy, bool isVariadic,
+                                      bool isAutoClosure, bool isNonEphemeral,
+                                      // SWIFT_ENABLE_TENSORFLOW
+                                      ValueOwnership ownership,
+                                      bool isNonDifferentiable) {
   // FIXME(Remove InOut): The last caller that needs this is argument
   // decomposition.  Start by enabling the assertion there and fixing up those
   // callers, then remove this, then remove
@@ -6055,7 +6073,9 @@ inline ParameterTypeFlags ParameterTypeFlags::fromParameterType(
            ownership == ValueOwnership::InOut);
     ownership = ValueOwnership::InOut;
   }
-  return {isVariadic, isAutoClosure, isNonEphemeral, ownership, isNoDerivative};
+  // SWIFT_ENABLE_TENSORFLOW
+  return {isVariadic, isAutoClosure, isNonEphemeral, ownership,
+          isNonDifferentiable};
 }
 
 inline const Type *BoundGenericType::getTrailingObjectsPointer() const {

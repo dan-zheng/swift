@@ -5068,6 +5068,35 @@ makeFunctionType(ArrayRef<AnyFunctionType::Param> params, Type retTy,
   return FunctionType::get(params, retTy);
 }
 
+// Determine whether the static self type of the transpose
+// method is the same as the one in the parameters/result (assuming this
+// function is curried i.e. static)
+bool AnyFunctionType::transposeSelfTypesMatch(bool wrtSelf, Type *staticSelfType,
+                                              Type *instSelfType) {
+  auto methodType = getResult()->castTo<AnyFunctionType>();
+  auto transposeParams = methodType->getParams();
+  auto transposeResult = methodType->getResult();
+
+  SmallVector<TupleTypeElt, 4> transposeResultTypes;
+  // Return type of transpose function can be a singular type or a tuple type.
+  if (auto transposeResultTupleType = transposeResult->getAs<TupleType>()) {
+    transposeResultTypes.append(transposeResultTupleType->getElements().begin(),
+                                transposeResultTupleType->getElements().end());
+  } else {
+    transposeResultTypes.push_back(transposeResult);
+  }
+  assert(!transposeResultTypes.empty());
+
+  *staticSelfType = getParams().front().getPlainType();
+  if (wrtSelf) {
+    *instSelfType = transposeResultTypes.front().getType();
+  } else {
+    *instSelfType = transposeParams.front().getPlainType();
+  }
+
+  return (*staticSelfType)->isEqual(*instSelfType);
+}
+
 // Compute the original function type corresponding to the given transpose
 // function type.
 AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
@@ -5084,19 +5113,10 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
     transposeResult = methodType->getResult();
   }
 
-  Type originalResult;
-  if (isCurried) {
-    // If it's curried, then the first parameter in the curried type, which is
-    // the 'Self' type, is the original result (no matter if we are
-    // transposing wrt self or not).
-    originalResult = getParams().front().getPlainType();
-  } else {
-    // If it's not curried, the last parameter, the tangent, is always the
-    // original result type as we require the last parameter of the transposing
-    // function to be the original result.
-    originalResult = transposeParams.back().getPlainType();
-  }
-  assert(originalResult);
+  // The last parameter, the tangent, is always the
+  // original result type as we require the last parameter of the transposing
+  // function to be the original result.
+  Type originalResult = transposeParams.back().getPlainType();
 
   SmallVector<TupleTypeElt, 4> transposeResultTypes;
   // Return type of transpose function can be a singular type or a tuple type.
@@ -5112,7 +5132,7 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
   // the type from the result list (guaranteed to be the first since 'self'
   // is first in wrt list) and remove it. If it is still curried but not
   // transposing wrt 'self', then the 'Self' type is the first parameter
-  // in the method.
+  // in the static method.
   unsigned transposeResultTypesIndex = 0;
   Type selfType;
   if (isCurried && wrtSelf) {
@@ -5164,7 +5184,7 @@ AnyFunctionType *AnyFunctionType::getWithoutDifferentiability() const {
   SmallVector<Param, 8> newParams;
   for (auto &param : getParams()) {
     Param newParam(param.getPlainType(), param.getLabel(),
-                   param.getParameterFlags().withNoDerivative(false));
+                   param.getParameterFlags().withNonDifferentiable(false));
     newParams.push_back(newParam);
   }
   auto nonDiffExtInfo = getExtInfo()
