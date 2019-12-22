@@ -35,8 +35,15 @@
 #include "swift/Sema/IDETypeChecking.h"
 #include "clang/Basic/CharInfo.h"
 #include "llvm/Support/Debug.h"
+// SWIFT_ENABLE_TENSORFLOW
+#include "llvm/Support/Options.h"
 
 using namespace swift;
+
+// SWIFT_ENABLE_TENSORFLOW
+static llvm::cl::opt<bool> EnableExperimentalCrossFileDerivativeRegistration(
+    "enable-experimental-cross-file-derivative-registration",
+    llvm::cl::init(false));
 
 namespace {
   /// This emits a diagnostic with a fixit to remove the attribute.
@@ -3646,7 +3653,8 @@ void AttributeChecker::visitDerivativeAttr(DerivativeAttr *attr) {
 
   // Reject different-file derivative registration.
   // TODO(TF-1021): Lift this restriction.
-  if (originalAFD->getParentSourceFile() != derivative->getParentSourceFile()) {
+  if (!EnableExperimentalCrossFileDerivativeRegistration &&
+      originalAFD->getParentSourceFile() != derivative->getParentSourceFile()) {
     diagnoseAndRemoveAttr(attr,
                           diag::derivative_attr_not_in_same_file_as_original);
     return;
@@ -3849,10 +3857,12 @@ DifferentiableAttributeParameterIndicesRequest::evaluate(
       original = nullptr;
     }
   }
-  // Setters are not yet supported.
-  // TODO(TF-129): Remove this when differentiation supports inout parameters.
+  // Non-`get` accessors are not yet supported: `set`, `read`, and `modify`.
+  // TODO(TF-129): Enable `set` when differentiation supports inout parameters.
+  // TODO(TF-1080): Enable `read` and `modify` when differentiation supports
+  // coroutines.
   if (auto *accessor = dyn_cast_or_null<AccessorDecl>(original))
-    if (accessor->isSetter())
+    if (!accessor->isGetter())
       original = nullptr;
 
   // Global immutable vars, for example, have no getter, and therefore trigger
@@ -4199,8 +4209,9 @@ static IndexSubset *computeTransposedParameters(
   } else {
     transposeResultTypes = ArrayRef<TupleTypeElt>(transposeResultType);
   }
-  auto isInstanceMethod = transposeFunction->isInstanceMember();
+
   // Transposes can only be static if they are curried.
+  auto isInstanceMethod = transposeFunction->isInstanceMember();
   if (isCurried && isInstanceMethod) {
     diags.diagnose(
         attrLoc, diag::transpose_func_needs_static);
@@ -4302,8 +4313,6 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   auto *transposeInterfaceType =
       transpose->getInterfaceType()->castTo<AnyFunctionType>();
 
-  bool isCurried = transposeInterfaceType->getResult()->is<AnyFunctionType>();
-
   // Get checked wrt param indices.
   auto *wrtParamIndices = attr->getParameterIndices();
 
@@ -4312,6 +4321,7 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   auto parsedWrtParams = attr->getParsedParameters();
 
   // If checked wrt param indices are not specified, compute them.
+  bool isCurried = transposeInterfaceType->getResult()->is<AnyFunctionType>();
   if (!wrtParamIndices)
     wrtParamIndices = computeTransposedParameters(
         parsedWrtParams, transpose, isCurried,
@@ -4336,20 +4346,6 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   if (!parsedWrtParams.empty())
     wrtSelf = parsedWrtParams.front().getKind() ==
         ParsedAutoDiffParameter::Kind::Self;
-
-  // Make sure the instance 'Self' type and static 'Self' type are the same if
-  // the function is curried.
-  Type staticSelfType, instSelfType;
-  if (isCurried &&
-      transposeInterfaceType->transposeSelfTypesMatch(
-          wrtSelf, &staticSelfType, &instSelfType)) {
-    diagnose(attr->getLocation(),
-             diag::transpose_func_self_static_types_not_match, staticSelfType,
-             instSelfType);
-    D->getAttrs().removeAttribute(attr);
-    attr->setInvalid();
-    return;
-  }
 
   auto *expectedOriginalFnType =
       transposeInterfaceType->getTransposeOriginalFunctionType(
