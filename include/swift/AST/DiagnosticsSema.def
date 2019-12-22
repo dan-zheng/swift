@@ -3038,9 +3038,9 @@ ERROR(transpose_attr_result_value_not_differentiable,none,
       "'@transpose(of:)' attribute requires original function result %0 to "
       "conform to 'Differentiable'", (Type))
 NOTE(transpose_func_needs_static,none,
-     "The transpose of an instance method needs to be static.", ())
+     "the transpose of an instance method needs to be static.", ())
 NOTE(transpose_func_self_static_types_not_match,none,
-     "The static self type of the transpose must equal the self type of the "
+     "the static self type of the transpose must equal the self type of the "
      "original function: %0 != %1.", (Type, Type))
 
 // Automatic differentiation attributes

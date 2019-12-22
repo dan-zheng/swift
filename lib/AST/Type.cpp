@@ -5127,7 +5127,6 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
     transposeResultTypes.push_back(transposeResult);
   }
   assert(!transposeResultTypes.empty());
-
   // If the function is curried and is transposing wrt 'self', then grab
   // the type from the result list (guaranteed to be the first since 'self'
   // is first in wrt list) and remove it. If it is still curried but not
@@ -5144,8 +5143,8 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
   }
 
   SmallVector<AnyFunctionType::Param, 8> originalParams;
-  unsigned originalParameterCount =
-      transposeParams.size() + wrtParamIndices->getNumIndices() - 1;
+  unsigned originalParameterCount = transposeParams.size() +
+      wrtParamIndices->getNumIndices() - 1 - (unsigned)isCurried;
   for (auto i : range(originalParameterCount)) {
     // Need to check if it is the 'self' param since we handle it differently
     // above.
@@ -5157,11 +5156,13 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
           transposeResultTypes[transposeResultTypesIndex].getType();
       originalParams.push_back(AnyFunctionType::Param(resultType));
       transposeResultTypesIndex++;
+      llvm::outs() << "A\n";
     } else {
       // Else if not in the wrt list, the parameter in the transposing function
       // is a parameter in the original function.
       originalParams.push_back(transposeParams[transposeParamsIndex]);
       transposeParamsIndex++;
+      llvm::outs() << "B\n";
     }
   }
 

@@ -4347,6 +4347,20 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
     wrtSelf = parsedWrtParams.front().getKind() ==
         ParsedAutoDiffParameter::Kind::Self;
 
+  // Make sure the instance 'Self' type and static 'Self' type are the same if
+  // the function is curried.
+  Type staticSelfType, instSelfType;
+  if (isCurried &&
+      transposeInterfaceType->transposeSelfTypesMatch(
+          wrtSelf, &staticSelfType, &instSelfType)) {
+    diagnose(attr->getLocation(),
+             diag::transpose_func_self_static_types_not_match, staticSelfType,
+             instSelfType);
+    D->getAttrs().removeAttribute(attr);
+    attr->setInvalid();
+    return;
+  }
+
   auto *expectedOriginalFnType =
       transposeInterfaceType->getTransposeOriginalFunctionType(
           wrtParamIndices, wrtSelf);
