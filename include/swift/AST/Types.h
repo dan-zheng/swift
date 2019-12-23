@@ -3242,8 +3242,7 @@ public:
   /// Determine whether the static self type of the transpose
   /// method is the same as the one in the parameters/result (assuming this
   /// function is curried i.e. static)
-  bool transposeSelfTypesMatch(bool wrtSelf, Type *staticSelfType,
-                               Type *instSelfType);
+  bool transposeSelfTypesMatch(Type *staticSelfType, Type *instSelfType);
 
   /// Given the type of a transpose function, returns the corresponding original
   /// function type.

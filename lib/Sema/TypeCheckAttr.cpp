@@ -4256,7 +4256,7 @@ static IndexSubset *computeTransposedParameters(
   auto &ctx = transposeFunction->getASTContext();
   auto &diags = ctx.Diags;
 
-  // Get function type and parameters.
+  // Get function type.
   auto *transposeFunctionType =
       transposeFunction->getInterfaceType()->castTo<AnyFunctionType>();
 
@@ -4273,9 +4273,14 @@ static IndexSubset *computeTransposedParameters(
     transposeResultTypes = ArrayRef<TupleTypeElt>(transposeResultType);
   }
 
-  // Transposes can only be static if they are curried.
-  auto isInstanceMethod = transposeFunction->isInstanceMember();
-  if (isCurried && isInstanceMethod) {
+  // Transposes need to be static if they are curried and are differentiating
+  // wrt 'self'.
+  auto isStaticMethod = !transposeFunction->isInstanceMember();
+  bool wrtSelf = false;
+  if (!parsedWrtParams.empty())
+    wrtSelf = parsedWrtParams.front().getKind() ==
+        ParsedAutoDiffParameter::Kind::Self;
+  if (isCurried && wrtSelf && !isStaticMethod) {
     diags.diagnose(
         attrLoc, diag::transpose_func_needs_static);
     return nullptr;
@@ -4411,11 +4416,11 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
         ParsedAutoDiffParameter::Kind::Self;
 
   // Make sure the instance 'Self' type and static 'Self' type are the same if
-  // the function is curried.
+  // the function is curried and are transposing W.R.T. 'self'.
   Type staticSelfType, instSelfType;
-  if (isCurried &&
-      transposeInterfaceType->transposeSelfTypesMatch(
-          wrtSelf, &staticSelfType, &instSelfType)) {
+  if (isCurried && wrtSelf &&
+      transposeInterfaceType->transposeSelfTypesMatch(&staticSelfType,
+                                                      &instSelfType)) {
     diagnose(attr->getLocation(),
              diag::transpose_func_self_static_types_not_match, staticSelfType,
              instSelfType);

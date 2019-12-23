@@ -5068,15 +5068,15 @@ makeFunctionType(ArrayRef<AnyFunctionType::Param> params, Type retTy,
   return FunctionType::get(params, retTy);
 }
 
-// Determine whether the static self type of the transpose
-// method is the same as the one in the parameters/result (assuming this
-// function is curried i.e. static)
-bool AnyFunctionType::transposeSelfTypesMatch(bool wrtSelf, Type *staticSelfType,
+// Determine whether the static self type of the transpose method is the
+// same as the one in the result. This should only be called when we are
+// transposing W.R.T. 'self'.
+bool AnyFunctionType::transposeSelfTypesMatch(Type *staticSelfType,
                                               Type *instSelfType) {
   auto methodType = getResult()->castTo<AnyFunctionType>();
-  auto transposeParams = methodType->getParams();
   auto transposeResult = methodType->getResult();
 
+  // Get the 'self' type from the results of the transpose function.
   SmallVector<TupleTypeElt, 4> transposeResultTypes;
   // Return type of transpose function can be a singular type or a tuple type.
   if (auto transposeResultTupleType = transposeResult->getAs<TupleType>()) {
@@ -5087,12 +5087,10 @@ bool AnyFunctionType::transposeSelfTypesMatch(bool wrtSelf, Type *staticSelfType
   }
   assert(!transposeResultTypes.empty());
 
+  // Set the values in case they don't match and want a descriptive error
+  // message.
   *staticSelfType = getParams().front().getPlainType();
-  if (wrtSelf) {
-    *instSelfType = transposeResultTypes.front().getType();
-  } else {
-    *instSelfType = transposeParams.front().getPlainType();
-  }
+  *instSelfType = transposeResultTypes.front().getType();
 
   return (*staticSelfType)->isEqual(*instSelfType);
 }
@@ -5130,21 +5128,20 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
   // If the function is curried and is transposing wrt 'self', then grab
   // the type from the result list (guaranteed to be the first since 'self'
   // is first in wrt list) and remove it. If it is still curried but not
-  // transposing wrt 'self', then the 'Self' type is the first parameter
-  // in the static method.
+  // transposing wrt 'self', then the 'Self' type is the first parameter of
+  // the curried function.
   unsigned transposeResultTypesIndex = 0;
   Type selfType;
   if (isCurried && wrtSelf) {
     selfType = transposeResultTypes.front().getType();
     transposeResultTypesIndex++;
   } else if (isCurried) {
-    selfType = transposeParams.front().getPlainType();
-    transposeParamsIndex++;
+    selfType = getParams().front().getPlainType();
   }
 
   SmallVector<AnyFunctionType::Param, 8> originalParams;
   unsigned originalParameterCount = transposeParams.size() +
-      wrtParamIndices->getNumIndices() - 1 - (unsigned)isCurried;
+      wrtParamIndices->getNumIndices() - 1 - (unsigned)wrtSelf;
   for (auto i : range(originalParameterCount)) {
     // Need to check if it is the 'self' param since we handle it differently
     // above.
@@ -5156,13 +5153,11 @@ AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
           transposeResultTypes[transposeResultTypesIndex].getType();
       originalParams.push_back(AnyFunctionType::Param(resultType));
       transposeResultTypesIndex++;
-      llvm::outs() << "A\n";
     } else {
       // Else if not in the wrt list, the parameter in the transposing function
       // is a parameter in the original function.
       originalParams.push_back(transposeParams[transposeParamsIndex]);
       transposeParamsIndex++;
-      llvm::outs() << "B\n";
     }
   }
 
