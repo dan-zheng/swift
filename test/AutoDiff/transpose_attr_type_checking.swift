@@ -214,12 +214,10 @@ extension Float {
   func getDouble() -> Double {
       return Double(self)
   }
-}
 
-extension Double {
   @transpose(of: Float.getDouble, wrt: self)
-  func structTranspose() -> Float {
-    return Float(self)
+  static func structTranspose(v: Double) -> Float {
+    return Float(v)
   }
 }
 
@@ -235,13 +233,13 @@ extension Float {
   }
 
   @transpose(of: Float.adding, wrt: self)
-  func addingT2(_ double: Double) -> Float {
-    return self + Float(double)
+  static func addingT2(_ double: Double, t: Float) -> Float {
+    return Float(double) + t
   }
 
   @transpose(of: Float.adding, wrt: (self, 0))
-  func addingT3() -> (Float, Double) {
-    return (self, Double(self))
+  static func addingT3(t: Float) -> (Float, Double) {
+    return (t, Double(t))
   }
 }
 
@@ -250,18 +248,16 @@ extension Int {
   func myAdding(_ double: Double) -> Float {
     return Float(double)
   }
-}
-
-extension Float {
+  
   @transpose(of: Int.myAdding, wrt: 0)
-  func addingT3(t: Int) -> Double {
-    return Double(self)
+  func addingT3(t: Float) -> Double {
+    return Double(t)
   }
 
   // expected-error @+1 {{can only transpose with respect to parameters that conform to 'Differentiable' and where 'Int == Int.TangentVector'}}
   @transpose(of: Int.myAdding, wrt: (self, 0))
-  func addingT3() -> (Int, Double) {
-    return (Int(self), Double(self))
+  static func addingT3(v: Float) -> (Int, Double) {
+    return (Int(v), Double(v))
   }
 }
 
@@ -275,8 +271,8 @@ struct A : Differentiable & AdditiveArithmetic {
   }
 
   @transpose(of: -, wrt: 0)
-  func transposeNegate(a: A.Type) -> A {
-    return A(x: -x)
+  static func transposeNegate(t: A) -> A {
+    return A(x: -t.x)
   }
 
   static prefix func +(a: A) -> A {
@@ -285,8 +281,8 @@ struct A : Differentiable & AdditiveArithmetic {
 
   // TODO(TF-1065): Consider disallowing qualified operator names.
   @transpose(of: A.+, wrt: 0)
-  func transposeIdQualified(a: A.Type) -> A {
-    return self
+  static func transposeIdQualified(t: A) -> A {
+    return t
   }
 }
 
@@ -297,30 +293,28 @@ extension Float {
 
   @transpose(of: Float.myMultiply, wrt: 0)
   @transpose(of: Float.myMultiply, wrt: 1)
-  func myMultiplyT(selfType: Float.Type, param: Float) -> Float {
-    return self + param
+  static func myMultiplyT(param: Float, v: Float) -> Float {
+    return param + v
   }
 
   static func threeParamsStatic(_ x: Float, _ y: Double, _ z: Float) -> Double {
     return Double(x + z) + y
   }
-}
-
-extension Double {
+  
   @transpose(of: Float.threeParamsStatic, wrt: (0, 1, 2))
-  func threeParamsT12(staticSelf: Float.Type) -> (Float, Double, Float) {
-    return (Float(self), self, Float(self))
+  static func threeParamsT12(v: Double) -> (x: Float, y: Double, z: Float) {
+    return (Float(v), v, Float(v))
   }
 
   @transpose(of: Float.threeParamsStatic, wrt: (0, 2))
-  func threeParamsT12(staticSelf: Float.Type, _ y: Double) -> (Float, Float) {
-    let ret = Float(self + y)
+  static func threeParamsT12(_ y: Double, v: Double) -> (x: Float, z: Float) {
+    let ret = Float(y + v)
     return (ret, ret)
   }
 
   @transpose(of: Float.threeParamsStatic, wrt: 1)
-  func threeParamsT12(staticSelf: Float.Type, _ x: Float, _ z: Float) -> Double {
-    return self + Double(x + z)
+  static func threeParamsT12(_ x: Float, _ z: Float, v: Double) -> Double {
+    return v + Double(x + z)
   }
 }
 
@@ -329,77 +323,75 @@ extension Float {
   func threeParams(_ x: Float, _ y: Double, _ z: Float) -> Double {
     return Double(self + x + z) + y
   }
-}
 
-extension Double {
   @transpose(of: Float.threeParams, wrt: 0)
-  func threeParamsT1(_ s: Float, _ y: Double, _ z: Float) -> Float {
-    return Float(self + y) + s + z
+  func threeParamsT1(_ y: Double, _ z: Float, t: Double) -> Float {
+    return self + Float(t + y) + z
   }
 
   @transpose(of: Float.threeParams, wrt: 1)
-  func threeParamsT2(_ s: Float, _ x: Float, _ y: Float) -> Double {
-    return self + Double(x + s + y)
+  func threeParamsT2(_ x: Float, _ z: Float, t: Double) -> Double {
+    return t + Double(x + z + self)
   }
 
   @transpose(of: Float.threeParams, wrt: 2)
-  func threeParamsT3(_ s: Float, _ x: Float, _ y: Double) -> Float {
-    return s + x + Float(self + y)
+  func threeParamsT3(_ x: Float, _ y: Double, t: Double) -> Float {
+    return x + Float(y + t) + self
   }
 
   @transpose(of: Float.threeParams, wrt: (0, 1))
-  func threeParamsT4(_ s: Float, _ z: Float) -> (Float, Double) {
-    return (Float(self) + s + z, self + Double(s + z))
+  func threeParamsT4(_ z: Float, t: Double) -> (x: Float, y: Double) {
+    return (Float(t) + z + self, t + Double(z + self))
   }
 
   @transpose(of: Float.threeParams, wrt: (0, 2))
-  func threeParamsT5(_ s: Float, _ y: Double) -> (Float, Float) {
-    let ret = Float(self + y) + s
+  func threeParamsT5(_ y: Double, t: Double) -> (x: Float, z: Float) {
+    let ret = Float(y + t) + self
     return (ret, ret)
   }
 
   @transpose(of: Float.threeParams, wrt: (0, 1, 2))
-  func threeParamsT6(s: Float) -> (Float, Double, Float) {
-    return (s + Float(self), Double(s) + self, s + Float(self))
+  func threeParamsT6(t: Double) -> (x: Float, y: Double, z: Float) {
+    return (Float(t) + self, t + Double(self), Float(t) + self)
   }
 
   @transpose(of: Float.threeParams, wrt: self)
-  func threeParamsT6(_ x: Float, _ y: Double, _ z: Float) -> Float {
-    return Float(self + y) + x
+  static func threeParamsT6(_ x: Float, _ y: Double, _ z: Float, t: Double) -> Float {
+    return x + z + Float(y + t)
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 0))
-  func threeParamsT7(_ y: Double, _ z: Float) -> (Float, Float) {
-    let ret = Float(self) + Float(y) + z
+  static func threeParamsT7(_ y: Double, _ z: Float, t: Double) -> (self: Float, x: Float) {
+    let ret =  Float(y + t) + z
     return (ret, ret)
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 1))
-  func threeParamsT7(_ x: Float, _ z: Float) -> (Float, Double) {
-    return (Float(self) + x + z, self + Double(x + z))
+  static func threeParamsT7(_ x: Float, _ z: Float, t: Double) -> (self: Float, y: Double) {
+    return (x + z + Float(t), t + Double(x + z))
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 2))
-  func threeParamsT9(_ x: Float, _ y: Double) -> (Float, Float) {
-    let ret = Float(self + y) + x
+  static func threeParamsT9(_ x: Float, _ y: Double, t: Double) -> (self: Float, z: Float) {
+    let ret = Float(y + t) + x
     return (ret, ret)
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 0, 1))
-  func threeParamsT10(_ z: Float) -> (Float, Float, Double) {
-    let retF = Float(self) + z
-    return (retF, retF, self + Double(z))
+  static func threeParamsT10(_ z: Float, t: Double) -> (self: Float, x: Float, y: Double) {
+    let ret = Float(t) + z
+    return (ret, ret, Double(ret))
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 0, 2))
-  func threeParamsT11(_ y: Double) -> (Float, Float, Float) {
-    let ret = Float(self + y)
+  static func threeParamsT11(_ y: Double, t: Double) -> (self: Float, x: Float, z: Float) {
+    let ret = Float(t + y)
     return (ret, ret, ret)
   }
 
   @transpose(of: Float.threeParams, wrt: (self, 0, 1, 2))
-  func threeParamsT12() -> (Float, Float, Double, Float) {
-    return (Float(self), Float(self), self, Float(self))
+  static func threeParamsT12(t: Double) -> (self: Float, x: Float, y: Double, z: Float) {
+    return (Float(t), Float(t), t, Float(t))
   }
 }
 
@@ -417,58 +409,61 @@ struct level1 {
   }
 }
 
-extension Float {
-  @transpose(of: level1.level2.foo, wrt: 0)
-  func t(x: level1.level2) -> Float {
-    return self
+extension level1.level2 {
+  @transpose(of: foo, wrt: 0)
+  func trans(t: Float) -> Float {
+    return t
   }
 
-  @transpose(of: level1.level2.foo, wrt: (self, 0))
-  func t() -> (level1.level2, Float) {
-    return (level1.level2(), self)
+  @transpose(of: foo, wrt: (self, 0))
+  static func trans(t: Float) -> (self: level1.level2, x: Float) {
+    return (level1.level2(), t)
   }
+}
 
+extension level1.level2_nondiff {
   // expected-error @+1 {{can only transpose with respect to parameters that conform to 'Differentiable' and where 'level1.level2_nondiff == level1.level2_nondiff.TangentVector'}}
   @transpose(of: level1.level2_nondiff.foo, wrt: (self, 0))
-  func t() -> (level1.level2_nondiff, Float) {
-    return (level1.level2_nondiff(), self)
+  static func trans(t: Float) -> (self: level1.level2_nondiff, x: Float) {
+    return (level1.level2_nondiff(), t)
   }
 }
 
 // Generics
 extension Float {
   func genericOneParamFloatOneParam<T: Differentiable & BinaryFloatingPoint>(
-    t: T, f: Float
+    x: T, y: Float
   ) -> Float where T == T.TangentVector {
-    return f
+    return y + Float(x)
   }
 
   @transpose(of: Float.genericOneParamFloatOneParam, wrt: 0)
   func genericOneParamFloatOneParamT1<T: Differentiable & BinaryFloatingPoint>(
-    f1: Float, f2: Float
+    y: Float, t: Float
   ) -> T where T == T.TangentVector {
-    return T(1)
+    return T(y + t)
   }
 
   @transpose(of: Float.genericOneParamFloatOneParam, wrt: (0, 1))
   func genericOneParamFloatOneParamT2<T: Differentiable & BinaryFloatingPoint>(
-    f1: Float
-  ) -> (T, Float) where T == T.TangentVector {
-    return (T(1), 1)
+    t: Float
+  ) -> (x: T, y: Float) where T == T.TangentVector {
+    return (T(t), t)
   }
 
   @transpose(of: Float.genericOneParamFloatOneParam, wrt: (self, 1))
-  func genericOneParamFloatOneParamT1<T: Differentiable & BinaryFloatingPoint>(
-    t: T
-  ) -> (Float, Float) where T == T.TangentVector {
-    return (1, 1)
+  static func genericOneParamFloatOneParamT1<T: Differentiable & BinaryFloatingPoint>(
+    x: T,
+    t: Float
+  ) -> (self: Float, y: Float) where T == T.TangentVector {
+    return (Float(x) + t, Float(x) + t)
   }
 
   @transpose(of: Float.genericOneParamFloatOneParam, wrt: (self, 0, 1))
-  func genericOneParamFloatOneParamT1<
-    T: Differentiable & BinaryFloatingPoint
-  >() -> (Float, T, Float) where T == T.TangentVector {
-    return (1, T(1), 1)
+  static func genericOneParamFloatOneParamT1<T: Differentiable & BinaryFloatingPoint>(
+    t: Float
+  ) -> (self: Float, x: T, y: Float) where T == T.TangentVector {
+    return (t, T(t), t)
   }
 }
 
@@ -524,18 +519,18 @@ extension Struct {
 
 extension Struct where T: Differentiable & AdditiveArithmetic {
   @transpose(of: subscript, wrt: self)
-  func vjpSubscript() -> Self {
-    self
+  static func vjpSubscript(self: Struct) -> Struct {
+    return Struct()
   }
 
   @transpose(of: subscript(float:), wrt: self)
-  func vjpSubscriptLabelled(_ float: Float) -> Self {
-    self
+  static func vjpSubscriptLabelled(_ float: Float, v: Struct) -> Struct {
+    return v
   }
 
   @transpose(of: subscript(_:), wrt: self)
-  func vjpSubscriptGeneric<U: Differentiable>(x: U) -> Self {
-    self
+  static func vjpSubscriptGeneric<U: Differentiable>(x: U, v: Struct) -> Struct {
+    return v
   }
 }
 
@@ -549,7 +544,7 @@ struct StoredProperty: Differentiable {
 
   // expected-error @+1 {{could not find function 'stored' with expected type '(StoredProperty) -> () -> StoredProperty'}}
   @transpose(of: stored, wrt: self)
-  func vjpStored() -> Self {
+  static func vjpStored(v: Self) -> Self {
     fatalError()
   }
 }
