@@ -4273,29 +4273,35 @@ static IndexSubset *computeTransposedParameters(
     transposeResultTypes = ArrayRef<TupleTypeElt>(transposeResultType);
   }
 
-  // Transposes need to be static if they are curried and are differentiating
-  // wrt 'self'.
+  // Transposes need to be static if:
+  //   - they are curried and are differentiating wrt 'self', or...
+  //   - are an initializer.
+  auto isInitializer = transposeFunction->isMemberwiseInitializer();
   auto isStaticMethod = !transposeFunction->isInstanceMember();
   bool wrtSelf = false;
   if (!parsedWrtParams.empty())
     wrtSelf = parsedWrtParams.front().getKind() ==
         ParsedAutoDiffParameter::Kind::Self;
-  if (isCurried && wrtSelf && !isStaticMethod) {
+  if (!isStaticMethod && ((isCurried && wrtSelf) || isInitializer)) {
     diags.diagnose(
         attrLoc, diag::transpose_func_needs_static);
     return nullptr;
   }
 
-  // Otherwise, build parameter indices from parsed differentiation parameters.
+  // Build parameter indices from parsed differentiation parameters.
   auto numUncurriedParams = transposeFunctionType->getNumParams();
   if (auto *resultFnType =
       transposeFunctionType->getResult()->getAs<AnyFunctionType>()) {
     numUncurriedParams += resultFnType->getNumParams();
   }
-  auto numParams = numUncurriedParams + parsedWrtParams.size() - 1;
+  auto numParams = numUncurriedParams + parsedWrtParams.size() - 1 - (unsigned)wrtSelf;
+//  llvm::outs() << "numUncurriedParams: " << numUncurriedParams << "\n";
+//  llvm::outs() << "parsedWrtParams.size(): " << parsedWrtParams.size() << "\n";
+//  llvm::outs() << "numParams: " << numParams << "\n";
   auto parameterBits = SmallBitVector(numParams);
   int lastIndex = -1;
   for (unsigned i : indices(parsedWrtParams)) {
+//    llvm::outs() << "i: " << i << "\n";
     auto paramLoc = parsedWrtParams[i].getLoc();
     switch (parsedWrtParams[i].getKind()) {
     case ParsedAutoDiffParameter::Kind::Named: {
@@ -4433,29 +4439,6 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
       transposeInterfaceType->getTransposeOriginalFunctionType(
           wrtParamIndices, wrtSelf);
 
-  // `R` result type must conform to `Differentiable`.
-  auto expectedOriginalResultType = expectedOriginalFnType->getResult();
-  if (isCurried) {
-    expectedOriginalResultType = transpose->mapTypeIntoContext(
-        expectedOriginalResultType->getAs<AnyFunctionType>()->getResult());
-  }
-  if (expectedOriginalResultType->hasTypeParameter())
-    expectedOriginalResultType = transpose->mapTypeIntoContext(
-        expectedOriginalResultType);
-  auto diffableProto = Ctx.getProtocol(KnownProtocolKind::Differentiable);
-  auto valueResultConf = TypeChecker::conformsToProtocol(
-      expectedOriginalResultType, diffableProto, transpose->getDeclContext(),
-      None);
-
-  if (!valueResultConf) {
-    diagnose(attr->getLocation(),
-             diag::transpose_attr_result_value_not_differentiable,
-             expectedOriginalResultType);
-    D->getAttrs().removeAttribute(attr);
-    attr->setInvalid();
-    return;
-  }
-
   // Returns true if the generic parameters in `source` satisfy the generic
   // requirements in `target`.
   std::function<bool(GenericSignature, GenericSignature)>
@@ -4547,10 +4530,15 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
 
   attr->setOriginalFunction(originalAFD);
 
+//  for (auto ind: *wrtParamIndices)
+//    llvm::outs() << ind << "\n";
+
   // Get the transposed parameter types.
   SmallVector<Type, 4> wrtParamTypes;
   autodiff::getSubsetParameterTypes(wrtParamIndices, expectedOriginalFnType,
-                                    wrtParamTypes);
+                                    wrtParamTypes, true);
+//  for (auto type : wrtParamTypes)
+//    type.dump(llvm::outs());
 
   // Check if transposed parameter indices are valid.
   if (checkTransposedParameters(originalAFD, wrtParamTypes,

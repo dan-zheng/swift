@@ -155,7 +155,7 @@ func missingDiffSelfRequirement<T: AdditiveArithmetic>(x: T) -> T {
   return x
 }
 
-// expected-error @+1 {{'@transpose(of:)' attribute requires original function result 'T' to conform to 'Differentiable'}}
+// expected-error @+1 {{can only transpose with respect to parameters that conform to 'Differentiable' and where 'T == T.TangentVector'}}
 @transpose(of: missingDiffSelfRequirement, wrt: 0)
 func missingDiffSelfRequirementT<T: AdditiveArithmetic>(x: T) -> T {
   return x
@@ -201,9 +201,8 @@ func transposingIntT1(x: Float, t: Float) -> Int {
   return Int(x)
 }
 
-// expected-error @+1 {{'@transpose(of:)' attribute requires original function result 'Int' to conform to 'Differentiable'}}
 @transpose(of: transposingInt, wrt: 0)
-func tangentNotLast(t: Float, y: Int) -> Float {
+func tangentNotLast(y: Int, t: Float) -> Float {
   return t
 }
 
@@ -480,8 +479,8 @@ extension Struct {
 }
 extension Struct where T: Differentiable & AdditiveArithmetic {
   @transpose(of: computedProperty, wrt: self)
-  func transposeProperty() -> Self {
-    self
+  static func transposeProperty(t: Self) -> Self {
+    return t
   }
 }
 
@@ -491,18 +490,19 @@ extension Struct {
   init(_ x: T, y: Float) {}
 }
 
-extension Struct where T: Differentiable & AdditiveArithmetic {
-  // TODO(TF-997): Support `@transpose` attribute with initializer original declaration.
-  // expected-error @+1 {{'@transpose(of:)' attribute requires original function result 'Struct<T>.Type' to conform to 'Differentiable'}}
+extension Struct where T: Differentiable, T == T.TangentVector {
   @transpose(of: init, wrt: 0)
   static func vjpInit(_ x: Self) -> Float {
     fatalError()
   }
 
-  // TODO(TF-997): Support `@transpose` attribute with initializer original declaration.
-  // expected-error @+1 {{'@transpose(of:)' attribute requires original function result 'Struct<T>.Type' to conform to 'Differentiable'}}
+  @transpose(of: init, wrt: 0)
+  func vjpInit2(_ x: Self) -> Float {
+    fatalError()
+  }
+
   @transpose(of: init(_:y:), wrt: (0, 1))
-  static func vjpInit2(_ x: Self) -> (T, Float) {
+  static func vjpInit3(_ x: Self) -> (T, Float) {
     fatalError()
   }
 }
@@ -519,18 +519,18 @@ extension Struct {
 
 extension Struct where T: Differentiable & AdditiveArithmetic {
   @transpose(of: subscript, wrt: self)
-  static func vjpSubscript(self: Struct) -> Struct {
-    return Struct()
+  static func vjpSubscript(t: Struct) -> Struct {
+    return t
   }
 
   @transpose(of: subscript(float:), wrt: self)
-  static func vjpSubscriptLabelled(_ float: Float, v: Struct) -> Struct {
-    return v
+  static func vjpSubscriptLabelled(float: Float, t: Struct) -> Struct {
+    return t
   }
 
   @transpose(of: subscript(_:), wrt: self)
-  static func vjpSubscriptGeneric<U: Differentiable>(x: U, v: Struct) -> Struct {
-    return v
+  static func vjpSubscriptGeneric<U: Differentiable>(x: U, t: Struct) -> Struct {
+    return t
   }
 }
 
