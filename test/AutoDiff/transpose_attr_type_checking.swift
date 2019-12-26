@@ -496,10 +496,13 @@ extension Struct where T: Differentiable, T == T.TangentVector {
     fatalError()
   }
 
+  // TODO(TF-1015): throw an error since the initializer needs to be static
+/*
   @transpose(of: init, wrt: 0)
   func vjpInit2(_ x: Self) -> Float {
     fatalError()
   }
+*/
 
   @transpose(of: init(_:y:), wrt: (0, 1))
   static func vjpInit3(_ x: Self) -> (T, Float) {

@@ -4273,16 +4273,14 @@ static IndexSubset *computeTransposedParameters(
     transposeResultTypes = ArrayRef<TupleTypeElt>(transposeResultType);
   }
 
-  // Transposes need to be static if:
-  //   - they are curried and are differentiating wrt 'self', or...
-  //   - are an initializer.
-  auto isInitializer = transposeFunction->isMemberwiseInitializer();
+  // Transposes need to be static they are curried and are differentiating
+  // wrt 'self'.
   auto isStaticMethod = !transposeFunction->isInstanceMember();
   bool wrtSelf = false;
   if (!parsedWrtParams.empty())
     wrtSelf = parsedWrtParams.front().getKind() ==
         ParsedAutoDiffParameter::Kind::Self;
-  if (!isStaticMethod && ((isCurried && wrtSelf) || isInitializer)) {
+  if (!isStaticMethod && isCurried && wrtSelf) {
     diags.diagnose(
         attrLoc, diag::transpose_func_needs_static);
     return nullptr;
@@ -4295,13 +4293,9 @@ static IndexSubset *computeTransposedParameters(
     numUncurriedParams += resultFnType->getNumParams();
   }
   auto numParams = numUncurriedParams + parsedWrtParams.size() - 1 - (unsigned)wrtSelf;
-//  llvm::outs() << "numUncurriedParams: " << numUncurriedParams << "\n";
-//  llvm::outs() << "parsedWrtParams.size(): " << parsedWrtParams.size() << "\n";
-//  llvm::outs() << "numParams: " << numParams << "\n";
   auto parameterBits = SmallBitVector(numParams);
   int lastIndex = -1;
   for (unsigned i : indices(parsedWrtParams)) {
-//    llvm::outs() << "i: " << i << "\n";
     auto paramLoc = parsedWrtParams[i].getLoc();
     switch (parsedWrtParams[i].getKind()) {
     case ParsedAutoDiffParameter::Kind::Named: {
@@ -4530,15 +4524,10 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
 
   attr->setOriginalFunction(originalAFD);
 
-//  for (auto ind: *wrtParamIndices)
-//    llvm::outs() << ind << "\n";
-
   // Get the transposed parameter types.
   SmallVector<Type, 4> wrtParamTypes;
   autodiff::getSubsetParameterTypes(wrtParamIndices, expectedOriginalFnType,
                                     wrtParamTypes, true);
-//  for (auto type : wrtParamTypes)
-//    type.dump(llvm::outs());
 
   // Check if transposed parameter indices are valid.
   if (checkTransposedParameters(originalAFD, wrtParamTypes,

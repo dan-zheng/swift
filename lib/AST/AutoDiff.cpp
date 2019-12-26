@@ -61,10 +61,9 @@ void autodiff::getSubsetParameterTypes(IndexSubset *subset,
     auto *curryLevel = curryLevels[curryLevelIndex];
     unsigned parameterIndexOffset =
         curryLevelParameterIndexOffsets[curryLevelIndex];
-    for (unsigned paramIndex : range(curryLevel->getNumParams())) {
+    for (unsigned paramIndex : range(curryLevel->getNumParams()))
       if (subset->contains(parameterIndexOffset + paramIndex))
         results.push_back(curryLevel->getParams()[paramIndex].getOldType());
-    }
   }
 }
 
