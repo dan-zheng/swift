@@ -405,7 +405,7 @@ static std::string getDifferentiationParametersClauseString(
     if (parameterCount > 1)
       printer << '(';
     // Check if differentiating wrt `self`. If so, manually print it first.
-    // Special case that for transpose functions, they need to be static.
+    // Special case that for transpose functions, they need to be 'static'.
     if ((isInstanceMethod || (isStaticMethod && isTranspose)) &&
         parameters.test(parameters.size() - 1)) {
       parameters.reset(parameters.size() - 1);
@@ -951,7 +951,7 @@ bool DeclAttribute::printImpl(ASTPrinter &Printer, const PrintOptions &Options,
     auto *transpose = cast<AbstractFunctionDecl>(D);
     auto transParamsString = getDifferentiationParametersClauseString(
         transpose, attr->getParameterIndices(), attr->getParsedParameters(),
-        DifferentiationParameterPrintingStyle::Index, true);
+        DifferentiationParameterPrintingStyle::Index, /*isTranspose*/ true);
     if (!transParamsString.empty())
       Printer << ", " << transParamsString;
     Printer << ')';

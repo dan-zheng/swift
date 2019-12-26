@@ -576,7 +576,8 @@ extension Float {
   }
 }
 extension Double {
-  // expected-error @+1 {{the static self type of the transpose must equal the self type of the original function: 'Double' != 'Float'.}}
+  // expected-error @+2 {{the transpose of an instance method must be a 'static' method in the same type when 'self' is a linearity parameter}}
+  // expected-note @+1 {{the transpose is declared in 'Double' but the original function is declared in 'Float'}}
   @transpose(of: Float.convertToDouble, wrt: self)
   static func t1(t: Double) -> Float {
     Float(t)

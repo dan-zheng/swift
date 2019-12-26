@@ -5068,34 +5068,6 @@ makeFunctionType(ArrayRef<AnyFunctionType::Param> params, Type retTy,
   return FunctionType::get(params, retTy);
 }
 
-// Determine whether the static self type of the transpose method is the
-// same as the one in the result. This should only be called when we are
-// transposing W.R.T. 'self'.
-bool AnyFunctionType::transposeSelfTypesMatch(Type *staticSelfType,
-                                              Type *instSelfType) {
-  auto methodType = getResult()->castTo<AnyFunctionType>();
-  auto transposeResult = methodType->getResult();
-
-  // Get the 'self' type from the results of the transpose function.
-  SmallVector<TupleTypeElt, 4> transposeResultTypes;
-  // Return type of transpose function can be a singular type or a tuple type.
-  if (auto transposeResultTupleType = transposeResult->getAs<TupleType>()) {
-    transposeResultTypes.append(transposeResultTupleType->getElements().begin(),
-                                transposeResultTupleType->getElements().end());
-  } else {
-    transposeResultTypes.push_back(transposeResult);
-  }
-  assert(!transposeResultTypes.empty());
-
-  // Set the values in case they don't match and want a descriptive error
-  // message.
-  *staticSelfType =
-      getParams().front().getPlainType()->getMetatypeInstanceType();
-  *instSelfType = transposeResultTypes.front().getType();
-
-  return (*staticSelfType)->isEqual(*instSelfType);
-}
-
 // Compute the original function type corresponding to the given transpose
 // function type.
 AnyFunctionType *AnyFunctionType::getTransposeOriginalFunctionType(
