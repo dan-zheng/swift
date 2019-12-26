@@ -4273,7 +4273,7 @@ static IndexSubset *computeTransposedParameters(
     transposeResultTypes = ArrayRef<TupleTypeElt>(transposeResultType);
   }
 
-  // Transposes need to be static they are curried and are differentiating
+  // Transposes need to be static if they are curried and are differentiating
   // wrt 'self'.
   auto isStaticMethod = !transposeFunction->isInstanceMember();
   bool wrtSelf = false;
@@ -4418,9 +4418,8 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   // Make sure the instance 'Self' type and static 'Self' type are the same if
   // the function is curried and are transposing W.R.T. 'self'.
   Type staticSelfType, instSelfType;
-  if (isCurried && wrtSelf &&
-      transposeInterfaceType->transposeSelfTypesMatch(&staticSelfType,
-                                                      &instSelfType)) {
+  if (isCurried && wrtSelf && !transposeInterfaceType->transposeSelfTypesMatch(
+      &staticSelfType, &instSelfType)) {
     diagnose(attr->getLocation(),
              diag::transpose_func_self_static_types_not_match, staticSelfType,
              instSelfType);
@@ -4432,6 +4431,33 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   auto *expectedOriginalFnType =
       transposeInterfaceType->getTransposeOriginalFunctionType(
           wrtParamIndices, wrtSelf);
+
+  // `R` result type must conform to `Differentiable` and satisfy
+  // `Self == Self.TangentVector`.
+  auto expectedOriginalResultType = expectedOriginalFnType->getResult();
+  if (isCurried) {
+    expectedOriginalResultType = transpose->mapTypeIntoContext(
+        expectedOriginalResultType->getAs<AnyFunctionType>()->getResult());
+  }
+  if (expectedOriginalResultType->hasTypeParameter())
+    expectedOriginalResultType = transpose->mapTypeIntoContext(
+        expectedOriginalResultType);
+  auto diffableProto = Ctx.getProtocol(KnownProtocolKind::Differentiable);
+  auto valueResultConf = TypeChecker::conformsToProtocol(
+      expectedOriginalResultType, diffableProto, transpose->getDeclContext(),
+      None);
+  auto tangentVectorSelf = false;
+  if (valueResultConf)
+    tangentVectorSelf = tangentVectorEqualSelf(expectedOriginalResultType,
+                                               transpose->getDeclContext());
+  if (!valueResultConf || !tangentVectorSelf) {
+   diagnose(attr->getLocation(),
+            diag::transpose_params_clause_param_not_differentiable,
+            expectedOriginalResultType.getString());
+   D->getAttrs().removeAttribute(attr);
+   attr->setInvalid();
+   return;
+  }
 
   // Returns true if the generic parameters in `source` satisfy the generic
   // requirements in `target`.

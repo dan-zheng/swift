@@ -3239,9 +3239,9 @@ public:
   /// corresponding original function type.
   AnyFunctionType *getAutoDiffOriginalFunctionType();
 
-  /// Determine whether the static self type of the transpose
-  /// method is the same as the one in the parameters/result (assuming this
-  /// function is curried i.e. static)
+  /// Determine whether the static self type of the transpose method is the
+  /// same as the one in the result. This should only be called when we are
+  /// transposing W.R.T. 'self'.
   bool transposeSelfTypesMatch(Type *staticSelfType, Type *instSelfType);
 
   /// Given the type of a transpose function, returns the corresponding original

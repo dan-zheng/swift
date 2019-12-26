@@ -5089,7 +5089,8 @@ bool AnyFunctionType::transposeSelfTypesMatch(Type *staticSelfType,
 
   // Set the values in case they don't match and want a descriptive error
   // message.
-  *staticSelfType = getParams().front().getPlainType();
+  *staticSelfType =
+      getParams().front().getPlainType()->getMetatypeInstanceType();
   *instSelfType = transposeResultTypes.front().getType();
 
   return (*staticSelfType)->isEqual(*instSelfType);

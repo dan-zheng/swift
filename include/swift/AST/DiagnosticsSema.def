@@ -3043,9 +3043,6 @@ ERROR(transpose_attr_overload_not_found,none,
 ERROR(transpose_attr_cannot_use_named_wrt_params,none,
       "cannot use named 'wrt' parameters in '@transpose(of:)' attribute, found "
       "%0", (Identifier))
-ERROR(transpose_attr_result_value_not_differentiable,none,
-      "'@transpose(of:)' attribute requires original function result %0 to "
-      "conform to 'Differentiable'", (Type))
 ERROR(transpose_func_needs_static,none,
      "the transpose of an instance method needs to be static when "
      "differentiating wrt 'self'.", ())

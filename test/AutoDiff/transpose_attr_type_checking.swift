@@ -361,7 +361,7 @@ extension Float {
 
   @transpose(of: Float.threeParams, wrt: (self, 0))
   static func threeParamsT7(_ y: Double, _ z: Float, t: Double) -> (self: Float, x: Float) {
-    let ret =  Float(y + t) + z
+    let ret = Float(y + t) + z
     return (ret, ret)
   }
 
@@ -480,7 +480,7 @@ extension Struct {
 extension Struct where T: Differentiable & AdditiveArithmetic {
   @transpose(of: computedProperty, wrt: self)
   static func transposeProperty(t: Self) -> Self {
-    return t
+    t
   }
 }
 
@@ -523,24 +523,32 @@ extension Struct {
 extension Struct where T: Differentiable & AdditiveArithmetic {
   @transpose(of: subscript, wrt: self)
   static func vjpSubscript(t: Struct) -> Struct {
-    return t
+    t
   }
 
   @transpose(of: subscript(float:), wrt: self)
   static func vjpSubscriptLabelled(float: Float, t: Struct) -> Struct {
-    return t
+    t
   }
 
   @transpose(of: subscript(_:), wrt: self)
   static func vjpSubscriptGeneric<U: Differentiable>(x: U, t: Struct) -> Struct {
-    return t
+    t
   }
 }
 
 // Check that `@transpose` attribute rejects stored property original declarations.
 
-struct StoredProperty: Differentiable {
+struct StoredProperty: Differentiable & AdditiveArithmetic {
   var stored: Float
+  typealias TangentVector = StoredProperty
+  static var zero: StoredProperty { StoredProperty(stored: 0) }
+  static func + (_: StoredProperty, _: StoredProperty) -> StoredProperty {
+    StoredProperty(stored: 0)
+  }
+  static func - (_: StoredProperty, _: StoredProperty) -> StoredProperty {
+    StoredProperty(stored: 0)
+  }
 
   // Note: `@transpose` support for instance members is currently too limited
   // to properly register a transpose for a non-`Self`-typed member.
@@ -549,5 +557,28 @@ struct StoredProperty: Differentiable {
   @transpose(of: stored, wrt: self)
   static func vjpStored(v: Self) -> Self {
     fatalError()
+  }
+}
+
+// Check that the self type of the method and the result type are the same when 
+// transposing WRT self. Needed to make sure they are defined within the same
+// context.
+
+extension Float {
+  func convertToDouble() -> Double {
+    Double(self)
+  }
+
+  // Ok
+  @transpose(of: convertToDouble, wrt: self)
+  static func t1(t: Double) -> Float {
+    Float(t)
+  }
+}
+extension Double {
+  // expected-error @+1 {{the static self type of the transpose must equal the self type of the original function: 'Double' != 'Float'.}}
+  @transpose(of: Float.convertToDouble, wrt: self)
+  static func t1(t: Double) -> Float {
+    Float(t)
   }
 }
