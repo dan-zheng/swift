@@ -4373,15 +4373,16 @@ static bool checkTransposedParameters(
 }
 
 // SWIFT_ENABLE_TENSORFLOW
-// Determine whether the 'static' 'self' type of the transpose method is the
-// same as the one in the result. This should only be called when a linearity
-// parameter is 'self'.
-static bool transposeSelfTypesMatch(
-    AnyFunctionType *functionType, Type *staticSelfType, Type *instSelfType) {
+// Determine whether the 'static' 'Self' type of the transpose method is the
+// same as the one in the result. Modifies 'staticSelfType' and 'instSelfType'
+// to the value of the 'static' 'Self' type and expected instance 'Self' type.
+// This should only be called when a linearity parameter is 'self'.
+static bool transposeSelfTypesMatch(AnyFunctionType *functionType,
+                                    Type &staticSelfType, Type &instSelfType) {
   auto methodType = functionType->getResult()->castTo<AnyFunctionType>();
   auto transposeResult = methodType->getResult();
 
-  // Get the 'self' type from the results of the transpose function.
+  // Get the 'Self' type from the results of the transpose function.
   SmallVector<TupleTypeElt, 4> transposeResultTypes;
   // Return type of transpose function can be a singular type or a tuple type.
   if (auto transposeResultTupleType = transposeResult->getAs<TupleType>()) {
@@ -4394,11 +4395,11 @@ static bool transposeSelfTypesMatch(
 
   // Set the values in case they don't match and want a descriptive error
   // message.
-  *staticSelfType = functionType->getParams().front().getPlainType()
+  staticSelfType = functionType->getParams().front().getPlainType()
       ->getMetatypeInstanceType();
-  *instSelfType = transposeResultTypes.front().getType();
+  instSelfType = transposeResultTypes.front().getType();
 
-  return (*staticSelfType)->isEqual(*instSelfType);
+  return staticSelfType->isEqual(instSelfType);
 }
 
 void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
@@ -4446,16 +4447,19 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   // Make sure the instance 'Self' type and 'static' 'Self' type are the same if
   // the function is curried and are transposing W.R.T. 'self'.
   Type staticSelfType, instSelfType;
-  if (isCurried && wrtSelf && !transposeSelfTypesMatch(transposeInterfaceType,
-      &staticSelfType, &instSelfType)) {
-    diagnose(attr->getLocation(),
-             diag::transpose_func_wrt_self_must_be_static);
-    diagnose(attr->getLocation(),
-             diag::transpose_func_wrt_self_self_type_mismatch_note,
-             staticSelfType, instSelfType);
-    D->getAttrs().removeAttribute(attr);
-    attr->setInvalid();
-    return;
+  if (isCurried && wrtSelf) {
+    bool selfTypesMatch = transposeSelfTypesMatch(transposeInterfaceType,
+                                                  staticSelfType, instSelfType);
+    if (!selfTypesMatch) {
+      diagnose(attr->getLocation(),
+               diag::transpose_func_wrt_self_must_be_static);
+      diagnose(attr->getLocation(),
+               diag::transpose_func_wrt_self_self_type_mismatch_note,
+               staticSelfType, instSelfType);
+      D->getAttrs().removeAttribute(attr);
+      attr->setInvalid();
+      return;
+    }
   }
 
   auto *expectedOriginalFnType =
@@ -4481,12 +4485,10 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
     tangentVectorSelf = tangentVectorEqualSelf(expectedOriginalResultType,
                                                transpose->getDeclContext());
   if (!valueResultConf || !tangentVectorSelf) {
-   diagnose(attr->getLocation(),
-            diag::transpose_params_clause_param_not_differentiable,
-            expectedOriginalResultType.getString());
-   D->getAttrs().removeAttribute(attr);
-   attr->setInvalid();
-   return;
+    diagnoseAndRemoveAttr(
+        attr, diag::transpose_params_clause_param_not_differentiable,
+        expectedOriginalResultType.getString());
+    return;
   }
 
   // Returns true if the generic parameters in `source` satisfy the generic
