@@ -343,10 +343,14 @@ SILDifferentiabilityWitness *getOrCreateMinimalASTDifferentiabilityWitness(
   if (!minimalConfig)
     return nullptr;
 
+  llvm::errs() << "getOrCreateMinimalASTDifferentiabilityWitness: "
+               << original->getName() << ", " << originalAFD->getEffectiveFullName()
+               << ", FOREIGN? " << requiresForeignEntryPoint(originalAFD) << "\n";
   std::string originalName = original->getName();
   // If original function requires a foreign entry point, look up the
   // differentiability witness for the foreign function.
   if (requiresForeignEntryPoint(originalAFD)) {
+    llvm::errs() << "FOREIGN!\n";
     originalName = SILDeclRef(originalAFD).asForeign().mangle();
     original = module.lookUpFunction(SILDeclRef(originalAFD).asForeign());
   }

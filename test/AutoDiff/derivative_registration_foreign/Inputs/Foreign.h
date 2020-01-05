@@ -1,1 +1,1 @@
-float foo(float);
+float cFunction(float);

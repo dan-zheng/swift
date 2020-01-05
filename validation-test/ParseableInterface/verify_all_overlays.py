@@ -7,6 +7,8 @@
 # RUN: %{python} %s %target-os %target-cpu %platform-sdk-overlay-dir %t \
 # RUN:   %target-swift-frontend -build-module-from-parseable-interface \
 # RUN:     -Fsystem %sdk/System/Library/PrivateFrameworks/ \
+# SWIFT_ENABLE_TENSORFLOW
+# RUN:     -Xllvm -enable-experimental-cross-file-derivative-registration \
 # RUN:     | sort > %t/failures.txt
 # RUN: grep '# %target-os:' %s > %t/filter.txt || true
 # RUN: test ! -e %t/failures.txt || \

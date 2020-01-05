@@ -1,3 +1,3 @@
-float foo(float x) {
+float cFunction(float x) {
   return x;
 }

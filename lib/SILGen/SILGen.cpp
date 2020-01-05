@@ -867,7 +867,8 @@ void SILGenModule::emitDifferentiabilityWitness(
   auto *diffWitness = M.lookUpDifferentiabilityWitness(key);
   if (!diffWitness) {
     diffWitness = SILDifferentiabilityWitness::createDefinition(
-        M, originalFunction->getLinkage(), originalFunction,
+        // M, originalFunction->getLinkage(), originalFunction,
+        M, stripExternalFromLinkage(originalFunction->getLinkage()), originalFunction,
         silConfig.parameterIndices, silConfig.resultIndices,
         config.derivativeGenericSignature, /*jvp*/ nullptr, /*vjp*/ nullptr,
         /*isSerialized*/ hasPublicVisibility(originalFunction->getLinkage()),
