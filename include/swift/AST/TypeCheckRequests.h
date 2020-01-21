@@ -34,6 +34,9 @@ class AbstractStorageDecl;
 class AccessorDecl;
 enum class AccessorKind;
 class DefaultArgumentExpr;
+// SWIFT_ENABLE_TENSORFLOW
+struct DifferentiableAttrConfiguration;
+// SWIFT_ENABLE_TENSORFLOW END
 class GenericParamList;
 class PrecedenceGroupDecl;
 struct PropertyWrapperBackingPropertyInfo;
@@ -1661,9 +1664,11 @@ public:
 };
 
 // SWIFT_ENABLE_TENSORFLOW
-class DifferentiableAttributeParameterIndicesRequest :
-    public SimpleRequest<DifferentiableAttributeParameterIndicesRequest,
-                         IndexSubset *(DifferentiableAttr *, Decl *),
+class DifferentiableAttributeTypeCheckRequest :
+    public SimpleRequest<DifferentiableAttributeTypeCheckRequest,
+                         DifferentiableAttrConfiguration(DifferentiableAttr *),
+                         // std::tuple<IndexSubset *, FuncDecl *, FuncDecl *, GenericSignature>(DifferentiableAttr *),
+                         // IndexSubset *(DifferentiableAttr *),
                          CacheKind::SeparatelyCached> {
 public:
   using SimpleRequest::SimpleRequest;
@@ -1672,14 +1677,17 @@ private:
   friend SimpleRequest;
 
   // Evaluation.
-  llvm::Expected<IndexSubset *>
-  evaluate(Evaluator &evaluator, DifferentiableAttr *attr, Decl *decl) const;
+  // llvm::Expected<IndexSubset *>
+  // llvm::Expected<std::tuple<IndexSubset *, FuncDecl *, FuncDecl *, GenericSignature>>
+  llvm::Expected<DifferentiableAttrConfiguration>
+  evaluate(Evaluator &evaluator, DifferentiableAttr *attr) const;
 
 public:
   // Separate caching.
   bool isCached() const { return true; }
-  Optional<IndexSubset *> getCachedResult() const;
-  void cacheResult(IndexSubset *value) const;
+  // Optional<IndexSubset *> getCachedResult() const;
+  Optional<DifferentiableAttrConfiguration> getCachedResult() const;
+  void cacheResult(DifferentiableAttrConfiguration value) const;
 };
 // SWIFT_ENABLE_TENSORFLOW END
 

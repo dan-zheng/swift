@@ -1527,32 +1527,72 @@ void DifferentiableAttr::setOriginalDeclaration(Decl *decl) {
   OriginalDeclaration = decl;
 }
 
-bool DifferentiableAttr::hasComputedParameterIndices() const {
-  return ParameterIndicesAndBit.getInt();
+bool DifferentiableAttr::hasComputedConfiguration() const {
+  return HasComputedConfiguration;
 }
+
+DifferentiableAttrConfiguration DifferentiableAttr::getConfiguration() const {
+  assert(getOriginalDeclaration() &&
+         "Original declaration must have been resolved");
+  auto &ctx = getOriginalDeclaration()->getASTContext();
+  auto config = evaluateOrDefault(
+      ctx.evaluator,
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      DifferentiableAttrConfiguration());
+  return config;
+};
 
 IndexSubset *DifferentiableAttr::getParameterIndices() const {
+  return getConfiguration().parameterIndices;
+}
+
+void DifferentiableAttr::setParameterIndices(IndexSubset *parameterIndices) {
   assert(getOriginalDeclaration() &&
          "Original declaration must have been resolved");
   auto &ctx = getOriginalDeclaration()->getASTContext();
-  return evaluateOrDefault(
+  auto config = evaluateOrDefault(
       ctx.evaluator,
-      DifferentiableAttributeParameterIndicesRequest{
-          const_cast<DifferentiableAttr *>(this), getOriginalDeclaration()},
-      nullptr);
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      DifferentiableAttrConfiguration());
+  config.parameterIndices = parameterIndices;
+  ctx.evaluator.cacheOutput(
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      std::move(config));
 }
 
-void DifferentiableAttr::setParameterIndices(IndexSubset *paramIndices) {
+FuncDecl *DifferentiableAttr::getJVPFunction() const {
+  return getConfiguration().jvp;
+}
+
+FuncDecl *DifferentiableAttr::getVJPFunction() const {
+  return getConfiguration().vjp;
+}
+
+GenericSignature DifferentiableAttr::getDerivativeGenericSignature() const {
+  return getConfiguration().derivativeGenericSignature;
+}
+
+void DifferentiableAttr::setDerivativeGenericSignature(
+    GenericSignature derivativeGenericSignature) {
   assert(getOriginalDeclaration() &&
          "Original declaration must have been resolved");
   auto &ctx = getOriginalDeclaration()->getASTContext();
+  auto config = evaluateOrDefault(
+      ctx.evaluator,
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      DifferentiableAttrConfiguration());
+  config.derivativeGenericSignature = derivativeGenericSignature;
   ctx.evaluator.cacheOutput(
-      DifferentiableAttributeParameterIndicesRequest{
-          const_cast<DifferentiableAttr *>(this), getOriginalDeclaration()},
-      std::move(paramIndices));
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      std::move(config));
 }
-// SWIFT_ENABLE_TENSORFLOW END
 
+#if 0
 void DifferentiableAttr::setJVPFunction(FuncDecl *decl) {
   JVPFunction = decl;
   if (decl && !JVP)
@@ -1564,6 +1604,22 @@ void DifferentiableAttr::setVJPFunction(FuncDecl *decl) {
   if (decl && !VJP)
     VJP = {decl->createNameRef(), DeclNameLoc(decl->getNameLoc())};
 }
+#endif
+
+void
+DifferentiableAttr::setConfiguration(DifferentiableAttrConfiguration config) {
+#if 0
+  Config = config;
+#endif
+  assert(getOriginalDeclaration() &&
+         "Original declaration must have been resolved");
+  auto &ctx = getOriginalDeclaration()->getASTContext();
+  ctx.evaluator.cacheOutput(
+      DifferentiableAttributeTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this)},
+      std::move(config));
+}
+// SWIFT_ENABLE_TENSORFLOW END
 
 GenericEnvironment *DifferentiableAttr::getDerivativeGenericEnvironment(
     AbstractFunctionDecl *original) const {

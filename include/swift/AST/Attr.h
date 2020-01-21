@@ -1700,6 +1700,31 @@ struct DeclNameRefWithLoc {
   DeclNameLoc Loc;
 };
 
+struct DifferentiableAttrConfiguration {
+  /// The JVP function (optional), resolved by the type checker if JVP name is
+  /// specified.
+  FuncDecl *jvp = nullptr;
+  /// The VJP function (optional), resolved by the type checker if VJP name is
+  /// specified.
+  FuncDecl *vjp = nullptr;
+  /// The differentiation parameters' indices, resolved by the type checker.
+  /// The bit stores whether the parameter indices have been computed.
+  IndexSubset *parameterIndices = nullptr;
+  /// The generic signature for autodiff derivative functions. Resolved by the
+  /// type checker based on the original function's generic signature and the
+  /// attribute's where clause requirements. This is set only if the attribute
+  /// has a where clause.
+  GenericSignature derivativeGenericSignature = GenericSignature();
+
+  DifferentiableAttrConfiguration() = default;
+  DifferentiableAttrConfiguration(
+      FuncDecl *jvp, FuncDecl *vjp, IndexSubset *parameterIndices,
+      GenericSignature derivativeGenericSignature):
+    jvp(jvp), vjp(vjp), parameterIndices(parameterIndices),
+    derivativeGenericSignature(derivativeGenericSignature) {}
+};
+
+// SWIFT_ENABLE_TENSORFLOW
 /// Attribute that marks a function as differentiable and optionally specifies
 /// custom associated derivative functions: 'jvp' and 'vjp'.
 ///
@@ -1712,7 +1737,7 @@ class DifferentiableAttr final
                                     ParsedAutoDiffParameter> {
   friend TrailingObjects;
   // SWIFT_ENABLE_TENSORFLOW
-  friend class DifferentiableAttributeParameterIndicesRequest;
+  friend class DifferentiableAttributeTypeCheckRequest;
   // SWIFT_ENABLE_TENSORFLOW END
 
   // SWIFT_ENABLE_TENSORFLOW
@@ -1728,6 +1753,9 @@ class DifferentiableAttr final
   Optional<DeclNameRefWithLoc> JVP;
   /// The VJP function.
   Optional<DeclNameRefWithLoc> VJP;
+  /// The trailing where clause (optional).
+  TrailingWhereClause *WhereClause = nullptr;
+#if 0
   /// The JVP function (optional), resolved by the type checker if JVP name is
   /// specified.
   FuncDecl *JVPFunction = nullptr;
@@ -1740,14 +1768,16 @@ class DifferentiableAttr final
   /// The differentiability parameter indices, resolved by the type checker.
   /// The bit stores whether the parameter indices have been computed.
   llvm::PointerIntPair<IndexSubset *, 1, bool> ParameterIndicesAndBit;
-  // SWIFT_ENABLE_TENSORFLOW END
-  /// The trailing where clause (optional).
-  TrailingWhereClause *WhereClause = nullptr;
-  /// The generic signature for autodiff associated functions. Resolved by the
+  /// The generic signature for autodiff derivative functions. Resolved by the
   /// type checker based on the original function's generic signature and the
   /// attribute's where clause requirements. This is set only if the attribute
   /// has a where clause.
-  GenericSignature DerivativeGenericSignature;
+  GenericSignature DerivativeGenericSignature = GenericSignature();
+#endif
+  /// The resolved `@differentiable` attribute configuration.
+  DifferentiableAttrConfiguration Config;
+  /// Whether the `@differentiable` attribute configuration has been resolved.
+  bool HasComputedConfiguration;
 
   explicit DifferentiableAttr(bool implicit, SourceLoc atLoc,
                               SourceRange baseRange, bool linear,
@@ -1783,6 +1813,10 @@ public:
   Decl *getOriginalDeclaration() const { return OriginalDeclaration; }
   void setOriginalDeclaration(Decl *decl);
 
+  bool hasComputedConfiguration() const;
+  DifferentiableAttrConfiguration getConfiguration() const;
+  void setConfiguration(DifferentiableAttrConfiguration config);
+
   /// Get the optional 'jvp:' function name and location.
   /// Use this instead of `getJVPFunction` to check whether the attribute has a
   /// registered JVP.
@@ -1794,11 +1828,10 @@ public:
   Optional<DeclNameRefWithLoc> getVJP() const { return VJP; }
 
   // SWIFT_ENABLE_TENSORFLOW
-  // NOTE: Parameter indices requestification is done on `tensorflow` branch but
-  // has not yet been upstreamed to `master` branch.
-  bool hasComputedParameterIndices() const;
   IndexSubset *getParameterIndices() const;
+// #if 0
   void setParameterIndices(IndexSubset *paramIndices);
+// #endif
   // SWIFT_ENABLE_TENSORFLOW END
 
   /// The parsed differentiability parameters, i.e. the list of parameters
@@ -1817,17 +1850,19 @@ public:
 
   TrailingWhereClause *getWhereClause() const { return WhereClause; }
 
-  GenericSignature getDerivativeGenericSignature() const {
-    return DerivativeGenericSignature;
-  }
-  void setDerivativeGenericSignature(GenericSignature derivativeGenSig) {
-    DerivativeGenericSignature = derivativeGenSig;
-  }
+  GenericSignature getDerivativeGenericSignature() const;
+// #if 0
+  void setDerivativeGenericSignature(GenericSignature derivativeGenSig);
+// #endif
 
-  FuncDecl *getJVPFunction() const { return JVPFunction; }
+  FuncDecl *getJVPFunction() const;
+#if 0
   void setJVPFunction(FuncDecl *decl);
-  FuncDecl *getVJPFunction() const { return VJPFunction; }
+#endif
+  FuncDecl *getVJPFunction() const;
+#if 0
   void setVJPFunction(FuncDecl *decl);
+#endif
 
   /// Get the derivative generic environment for the given `@differentiable`
   /// attribute and original function.

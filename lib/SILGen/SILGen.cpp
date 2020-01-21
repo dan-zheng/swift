@@ -765,6 +765,8 @@ void SILGenModule::postEmitFunction(SILDeclRef constant,
       !constant.isThunk()) {
     auto *AFD = constant.getAbstractFunctionDecl();
     auto emitWitnesses = [&](DeclAttributes &Attrs) {
+      for (auto *diffAttr : Attrs.getAttributes<DifferentiableAttr>())
+        (void)diffAttr->getConfiguration();
       for (auto *diffAttr : Attrs.getAttributes<DifferentiableAttr>()) {
         SILFunction *jvp = nullptr;
         SILFunction *vjp = nullptr;
