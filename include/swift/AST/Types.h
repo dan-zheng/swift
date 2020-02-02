@@ -4628,9 +4628,8 @@ public:
   ///   function results. At the Swift level, this enables differentiating wrt
   ///   multiple tuple elements for tuple-returning functions.
   CanSILFunctionType getAutoDiffDerivativeFunctionType(
-      IndexSubset *parameterIndices, unsigned resultIndex,
-      AutoDiffDerivativeFunctionKind kind, Lowering::TypeConverter &TC,
-      LookupConformanceFn lookupConformance,
+      IndexSubset *parameterIndices, AutoDiffDerivativeFunctionKind kind,
+      Lowering::TypeConverter &TC, LookupConformanceFn lookupConformance,
       CanGenericSignature derivativeFunctionGenericSignature = nullptr,
       bool isReabstractionThunk = false);
 

@@ -3726,9 +3726,8 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   if (auto derivativeGenSig = config.derivativeGenericSignature)
     derivativeCanGenSig = derivativeGenSig->getCanonicalSignature();
   auto thunkFnTy = origFnTy->getAutoDiffDerivativeFunctionType(
-      indices.parameters, indices.source,
-      kind, Types, LookUpConformanceInModule(M.getSwiftModule()),
-      derivativeCanGenSig);
+      indices.parameters, kind, Types,
+      LookUpConformanceInModule(M.getSwiftModule()), derivativeCanGenSig);
   assert(!thunkFnTy->getExtInfo().hasContext());
 
   // TODO(TF-685): Use principled thunk mangling.

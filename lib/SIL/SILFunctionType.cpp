@@ -226,9 +226,8 @@ CanSILFunctionType SILFunctionType::getWithoutDifferentiability() {
 }
 
 CanSILFunctionType SILFunctionType::getAutoDiffDerivativeFunctionType(
-    IndexSubset *parameterIndices, unsigned resultIndex,
-    AutoDiffDerivativeFunctionKind kind, TypeConverter &TC,
-    LookupConformanceFn lookupConformance,
+    IndexSubset *parameterIndices, AutoDiffDerivativeFunctionKind kind,
+    TypeConverter &TC, LookupConformanceFn lookupConformance,
     CanGenericSignature derivativeFnGenSig, bool isReabstractionThunk) {
   auto &ctx = getASTContext();
   auto *resultIndices = IndexSubset::get(
@@ -2753,8 +2752,8 @@ TypeConverter::getConstantInfo(TypeExpansionContext expansion,
     auto loweredIndices = autodiff::getLoweredParameterIndices(
         autoDiffFuncId->getParameterIndices(), formalInterfaceType);
     silFnType = origFnConstantInfo.SILFnType->getAutoDiffDerivativeFunctionType(
-        loweredIndices, /*resultIndex*/ 0, autoDiffFuncId->getKind(),
-        *this, LookUpConformanceInModule(&M));
+        loweredIndices, autoDiffFuncId->getKind(), *this,
+        LookUpConformanceInModule(&M));
   }
   // SWIFT_ENABLE_TENSORFLOW END
 

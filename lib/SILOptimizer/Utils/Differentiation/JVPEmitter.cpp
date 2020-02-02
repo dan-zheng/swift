@@ -1344,9 +1344,6 @@ void JVPEmitter::visitApplyInst(ApplyInst *ai) {
 
     // Record the `differentiable_function` instruction.
     context.addDifferentiableFunctionInstToWorklist(diffFuncInst);
-    // TODO(TF-689): Make `differentiable_function` store result indices and
-    // remove `ADContext::resultIndices`.
-    context.setResultIndex(diffFuncInst, activeResultIndices.front());
 
     auto borrowedADFunc = builder.emitBeginBorrowOperation(loc, diffFuncInst);
     auto extractedJVP = builder.createDifferentiableFunctionExtract(

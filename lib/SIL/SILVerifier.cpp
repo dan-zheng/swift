@@ -5478,8 +5478,7 @@ void SILDifferentiabilityWitness::verify(const SILModule &M) const {
     // TODO(TF-893): Change `SILFunctionType::getAutoDiffDerivativeFunctionType`
     // to accept result indices.
     auto expectedJVPType = origFnType->getAutoDiffDerivativeFunctionType(
-        getParameterIndices(), /*resultIndex*/ *getResultIndices()->begin(),
-        AutoDiffDerivativeFunctionKind::JVP, M.Types,
+        getParameterIndices(), AutoDiffDerivativeFunctionKind::JVP, M.Types,
         LookUpConformanceInModule(M.getSwiftModule()), derivativeCanGenSig,
         origIsReabstractionThunk);
     requireSameType(jvp->getLoweredFunctionType(), expectedJVPType,
@@ -5489,8 +5488,7 @@ void SILDifferentiabilityWitness::verify(const SILModule &M) const {
     // TODO(TF-893): Change `SILFunctionType::getAutoDiffDerivativeFunctionType`
     // to result indices.
     auto expectedVJPType = origFnType->getAutoDiffDerivativeFunctionType(
-        getParameterIndices(), /*resultIndex*/ *getResultIndices()->begin(),
-        AutoDiffDerivativeFunctionKind::VJP, M.Types,
+        getParameterIndices(), AutoDiffDerivativeFunctionKind::VJP, M.Types,
         LookUpConformanceInModule(M.getSwiftModule()), derivativeCanGenSig,
         origIsReabstractionThunk);
     requireSameType(vjp->getLoweredFunctionType(), expectedVJPType,

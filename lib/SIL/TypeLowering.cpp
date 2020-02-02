@@ -269,11 +269,11 @@ namespace {
       // `SILFunctionType:getAutoDiffDerivativeFunctionType` for correct type
       // lowering.
       auto jvpTy = origTy->getAutoDiffDerivativeFunctionType(
-          type->getDifferentiabilityParameterIndices(), /*resultIndex*/ 0,
+          type->getDifferentiationParameterIndices(),
           AutoDiffDerivativeFunctionKind::JVP, TC,
           LookUpConformanceInModule(&M), origType.getGenericSignatureOrNull());
       auto vjpTy = origTy->getAutoDiffDerivativeFunctionType(
-          type->getDifferentiabilityParameterIndices(), /*resultIndex*/ 0,
+          type->getDifferentiationParameterIndices(),
           AutoDiffDerivativeFunctionKind::VJP, TC,
           LookUpConformanceInModule(&M), origType.getGenericSignatureOrNull());
       RecursiveProperties props;
@@ -941,8 +941,7 @@ namespace {
                {AutoDiffDerivativeFunctionKind::JVP,
                 AutoDiffDerivativeFunctionKind::VJP}) {
         auto derivativeFnTy = origFnTy->getAutoDiffDerivativeFunctionType(
-            paramIndices, 0, kind, TC,
-            LookUpConformanceInModule(&TC.M));
+            paramIndices, kind, TC, LookUpConformanceInModule(&TC.M));
         auto silTy = SILType::getPrimitiveObjectType(derivativeFnTy);
         NormalDifferentiableFunctionTypeComponent extractee(kind);
         // Assert that we have the right extractee. A terrible bug in the past
