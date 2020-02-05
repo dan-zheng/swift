@@ -625,6 +625,7 @@ SILFunction *SILParser::getGlobalNameForDefinition(Identifier name,
 
     // Verify that the types match up.
     if (fn->getLoweredFunctionType() != ty) {
+      llvm::errs() << "HI 1\n";
       P.diagnose(sourceLoc, diag::sil_value_use_type_mismatch, name.str(),
                  fn->getLoweredFunctionType(), ty);
       P.diagnose(iter->second.Loc, diag::sil_prior_reference);
@@ -670,6 +671,7 @@ SILFunction *SILParser::getGlobalNameForReference(Identifier name,
       return fn;
     }
 
+      llvm::errs() << "HI 2\n";
     P.diagnose(sourceLoc, diag::sil_value_use_type_mismatch, name.str(),
                fn->getLoweredFunctionType(), funcTy);
 
@@ -751,6 +753,12 @@ SILValue SILParser::getLocalValue(UnresolvedValueName Name, SILType Type,
 
     if (EntryTy != Type) {
       HadError = true;
+      llvm::errs() << "HI 3\n";
+      EntryTy.dump();
+      Type.dump();
+      EntryTy.getASTType()->dump();
+      Type.getASTType()->dump();
+      llvm::errs() << "EQUAL? " << (EntryTy.getASTType() == Type.getASTType()) << "\n";
       P.diagnose(Name.NameLoc, diag::sil_value_use_type_mismatch, Name.Name,
                  EntryTy.getASTType(), Type.getASTType());
       // Make sure to return something of the requested type.
