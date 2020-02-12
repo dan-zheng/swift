@@ -209,12 +209,12 @@ void AutoDiffConfig::dump() const {
 
 // TODO(TF-874): Simplify this helper. See TF-874 for WIP.
 IndexSubset *
-autodiff::getLoweredParameterIndices(IndexSubset *indices,
-                                     AnyFunctionType *type) {
+autodiff::getLoweredParameterIndices(IndexSubset *parameterIndices,
+                                     AnyFunctionType *functionType) {
   SmallVector<AnyFunctionType *, 2> curryLevels;
-  unwrapCurryLevels(type, curryLevels);
+  unwrapCurryLevels(functionType, curryLevels);
 
-  // Calculate the lowered sizes of all the parameters.
+  // Compute the lowered sizes of all AST parameter types.
   SmallVector<unsigned, 8> paramLoweredSizes;
   unsigned totalLoweredSize = 0;
   auto addLoweredParamInfo = [&](Type type) {
@@ -222,25 +222,32 @@ autodiff::getLoweredParameterIndices(IndexSubset *indices,
     paramLoweredSizes.push_back(paramLoweredSize);
     totalLoweredSize += paramLoweredSize;
   };
-  for (auto *curryLevel : llvm::reverse(curryLevels))
+  for (auto *curryLevel : curryLevels)
     for (auto &param : curryLevel->getParams())
       addLoweredParamInfo(param.getPlainType());
 
-  // Construct the result by setting each range of bits that corresponds to each
-  // "on" parameter.
-  llvm::SmallVector<unsigned, 8> loweredIndices;
+  auto rotate = [&](unsigned i) -> unsigned {
+    if (curryLevels.size() == 1)
+      return i;
+    return (i + 1) % parameterIndices->getCapacity();
+  };
+
+  // Build lowered SIL parameter indices by setting the range of bits that
+  // corresponds to each "set" AST parameter.
+  llvm::SmallVector<unsigned, 8> loweredSILIndices;
   unsigned currentBitIndex = 0;
-  for (unsigned i : range(indices->getCapacity())) {
+  for (unsigned i : range(parameterIndices->getCapacity())) {
+    i = rotate(i);
     auto paramLoweredSize = paramLoweredSizes[i];
-    if (indices->contains(i)) {
+    if (parameterIndices->contains(i)) {
       auto indices = range(currentBitIndex, currentBitIndex + paramLoweredSize);
-      loweredIndices.append(indices.begin(), indices.end());
+      loweredSILIndices.append(indices.begin(), indices.end());
     }
     currentBitIndex += paramLoweredSize;
   }
 
   return IndexSubset::get(
-      type->getASTContext(), totalLoweredSize, loweredIndices);
+      functionType->getASTContext(), totalLoweredSize, loweredSILIndices);
 }
 
 // Given the rest of a `Builtin.applyDerivative_{jvp|vjp}` or

@@ -330,6 +330,17 @@ CanSILFunctionType SILFunctionType::getAutoDiffDerivativeFunctionType(
       auto paramTan =
           param.getInterfaceType()->getAutoDiffTangentSpace(
               lookupConformance);
+      if (!paramTan) {
+        llvm::errs() << "DIFF PARAMS:\n";
+        interleave(diffParams.begin(), diffParams.end(),
+                   [&](SILParameterInfo param) { llvm::errs() << param.getInterfaceType(); },
+                   [&] { llvm::errs() << "\n"; });
+        llvm::errs() << "\n";
+        llvm::errs() << "PARAM INDICES:\n";
+        parameterIndices->dump();
+        llvm::errs() << "THIS:\n";
+        dump();
+      }
       assert(paramTan && "Parameter type does not have a tangent space?");
       differentialParams.push_back(
           {paramTan->getCanonicalType(), param.getConvention()});
@@ -364,6 +375,17 @@ CanSILFunctionType SILFunctionType::getAutoDiffDerivativeFunctionType(
       auto paramTan =
           param.getInterfaceType()->getAutoDiffTangentSpace(
               lookupConformance);
+      if (!paramTan) {
+        llvm::errs() << "DIFF PARAMS:\n";
+        interleave(diffParams.begin(), diffParams.end(),
+                   [&](SILParameterInfo param) { llvm::errs() << param.getInterfaceType(); },
+                   [&] { llvm::errs() << "\n"; });
+        llvm::errs() << "\n";
+        llvm::errs() << "PARAM INDICES:\n";
+        parameterIndices->dump();
+        llvm::errs() << "THIS:\n";
+        dump();
+      }
       assert(paramTan && "Parameter type does not have a tangent space?");
       pullbackResults.push_back(getTangentResultInfoForOriginalParameter(
           paramTan->getCanonicalType(), param.getConvention()));
