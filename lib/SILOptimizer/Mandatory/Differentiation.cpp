@@ -496,9 +496,11 @@ emitDerivativeFunctionReference(
   // Find local function reference.
   if (auto *originalFRI =
           peerThroughFunctionConversions<FunctionRefInst>(original)) {
+    llvm::errs() << "ORIGINAL FRI: " << *originalFRI << "\n";
     auto loc = originalFRI->getLoc();
     auto *originalFn = originalFRI->getReferencedFunctionOrNull();
     assert(originalFn);
+    originalFn->dump();
     auto originalFnTy = originalFn->getLoweredFunctionType();
     auto *desiredResultIndices =
         IndexSubset::get(context.getASTContext(), originalFnTy->getNumResults(),
@@ -638,7 +640,7 @@ emitDerivativeFunctionReference(
                            minimalWitness->getParameterIndices()));
   }
 
-  // Find witness method retrieval.
+  // Find witness method.
   if (auto *witnessMethod =
           peerThroughFunctionConversions<WitnessMethodInst>(original)) {
     auto loc = witnessMethod->getLoc();

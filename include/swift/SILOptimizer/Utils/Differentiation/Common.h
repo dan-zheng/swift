@@ -126,6 +126,10 @@ template <class Inst> Inst *peerThroughFunctionConversions(SILValue value) {
     return peerThroughFunctionConversions<Inst>(cfi->getOperand());
   if (auto *pai = dyn_cast<PartialApplyInst>(value))
     return peerThroughFunctionConversions<Inst>(pai->getCallee());
+  if (auto *ai = dyn_cast<ApplyInst>(value))
+    if (auto *callee = ai->getReferencedFunctionOrNull())
+      if (callee->isThunk() == IsThunk)
+        return peerThroughFunctionConversions<Inst>(ai->getCallee());
   return nullptr;
 }
 

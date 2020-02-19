@@ -325,6 +325,7 @@ findMinimalDerivativeConfiguration(AbstractFunctionDecl *original,
 SILDifferentiabilityWitness *getOrCreateMinimalASTDifferentiabilityWitness(
     SILModule &module, SILFunction *original, IndexSubset *parameterIndices,
     IndexSubset *resultIndices) {
+  llvm::errs() << "getOrCreateMinimalASTDifferentiabilityWitness: " << original->getName() << "\n";
   // AST differentiability witnesses always have a single result.
   if (resultIndices->getCapacity() != 1 || !resultIndices->contains(0))
     return nullptr;
@@ -332,14 +333,18 @@ SILDifferentiabilityWitness *getOrCreateMinimalASTDifferentiabilityWitness(
   // Explicit differentiability witnesses only exist on SIL functions that come
   // from AST functions.
   auto *originalAFD = findAbstractFunctionDecl(original);
-  if (!originalAFD)
+  if (!originalAFD) {
+    llvm::errs() << "NO ORIGINAL AFD\n";
     return nullptr;
+  }
 
   IndexSubset *minimalASTParameterIndices = nullptr;
   auto minimalConfig = findMinimalDerivativeConfiguration(
       originalAFD, parameterIndices, minimalASTParameterIndices);
-  if (!minimalConfig)
+  if (!minimalConfig) {
+    llvm::errs() << "NO MINIMAL CONFIG\n";
     return nullptr;
+  }
 
   std::string originalName = original->getName();
   // If original function requires a foreign entry point, use the foreign SIL
@@ -354,9 +359,15 @@ SILDifferentiabilityWitness *getOrCreateMinimalASTDifferentiabilityWitness(
   if (existingWitness)
     return existingWitness;
 
+  if (original->getName() == SILDeclRef(originalAFD).asCurried().mangle()) {
+    llvm::errs() << "HELLO!\n";
+    return nullptr;
+  }
+
   assert(original->isExternalDeclaration() &&
          "SILGen should create differentiability witnesses for all function "
          "definitions with explicit differentiable attributes");
+  llvm::errs() << "CREATING FOR ORIG: " << original->getName() << "\n";
 
   return SILDifferentiabilityWitness::createDeclaration(
       module, SILLinkage::PublicExternal, original,
