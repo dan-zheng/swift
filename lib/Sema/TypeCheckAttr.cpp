@@ -3186,6 +3186,7 @@ static bool checkDifferentiabilityParameters(
     else
       diffParamType = AFD->mapTypeIntoContext(diffParamType);
     // Parameter must conform to `Differentiable`.
+    diffParamType->dump();
     if (!conformsToDifferentiable(diffParamType, AFD)) {
       diags.diagnose(loc, diag::diff_params_clause_param_not_differentiable,
                      diffParamType);
