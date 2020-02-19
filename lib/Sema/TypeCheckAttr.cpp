@@ -4146,7 +4146,8 @@ llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
 
   // Resolve the original `AbstractFunctionDecl`.
   auto *original = resolveDifferentiableAttrOriginalFunction(attr);
-  if (!original)
+  auto *originalEnumEltDecl = dyn_cast<EnumElementDecl>(attr->getOriginalDeclaration());
+  if (!original && !originalEnumEltDecl)
     return nullptr;
 
   auto *originalFnTy = original->getInterfaceType()->castTo<AnyFunctionType>();

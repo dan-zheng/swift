@@ -508,8 +508,8 @@ SIMPLE_DECL_ATTR(_nonEphemeral, NonEphemeral,
   90)
 
 DECL_ATTR(differentiable, Differentiable,
-  OnAccessor | OnConstructor | OnFunc | OnVar | OnSubscript | LongAttribute |
-  AllowMultipleAttributes |
+  OnAccessor | OnConstructor | OnEnumElement | OnFunc | OnVar | OnSubscript |
+  LongAttribute | AllowMultipleAttributes |
   ABIStableToAdd | ABIBreakingToRemove | APIStableToAdd | APIBreakingToRemove,
   91)
 

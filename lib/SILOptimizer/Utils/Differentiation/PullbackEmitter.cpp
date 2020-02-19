@@ -39,6 +39,14 @@ namespace autodiff {
 class ADContext;
 class VJPEmitter;
 
+static void requireSameType(SILType type1, SILType type2, const Twine &complaint) {
+  if (type1 == type2)
+    return;
+  llvm::dbgs() << complaint << '\n';
+  llvm::dbgs() << "  " << type1 << "\n  " << type2 << '\n';
+  // exit(1);
+}
+
 PullbackEmitter::PullbackEmitter(VJPEmitter &vjpEmitter)
     : vjpEmitter(vjpEmitter), builder(getPullback()),
       localAllocBuilder(getPullback()) {
@@ -207,8 +215,13 @@ void PullbackEmitter::setAdjointValue(SILBasicBlock *origBB,
   assert(adjointValue.getType().isObject());
   assert(originalValue->getFunction() == &getOriginal());
   // The adjoint value must be in the tangent space.
+// #if 0
+  requireSameType(adjointValue.getType(), getRemappedTangentType(originalValue->getType()), "Adjoint value type does not match remapped original value type");
+// #endif
+// #if 0
   assert(adjointValue.getType() ==
          getRemappedTangentType(originalValue->getType()));
+// #endif
   auto insertion = valueMap.try_emplace({origBB, originalValue}, adjointValue);
   LLVM_DEBUG(getADDebugStream()
              << "The new adjoint value, replacing the existing one, is: "
@@ -560,7 +573,9 @@ bool PullbackEmitter::run() {
     }
     // Booleans tracking whether active-value-related errors have been emitted.
     // This prevents duplicate diagnostics for the same active values.
+#if 0
     bool diagnosedActiveEnumValue = false;
+#endif
     bool diagnosedActiveValueTangentValueCategoryIncompatible = false;
     // Mark the activity of a value if it has not yet been visited.
     auto markValueActivity = [&](SILValue v) {
@@ -568,6 +583,7 @@ bool PullbackEmitter::run() {
         return;
       visited.insert(v);
       auto type = v->getType();
+#if 0
       // Diagnose active enum values. Differentiation of enum values requires
       // special adjoint value handling and is not yet supported. Diagnose
       // only the first active enum value to prevent too many diagnostics.
@@ -577,6 +593,7 @@ bool PullbackEmitter::run() {
         errorOccurred = true;
         diagnosedActiveEnumValue = true;
       }
+#endif
       // Diagnose active values whose value category is incompatible with their
       // tangent types's value category.
       //
@@ -929,8 +946,28 @@ SILBasicBlock *PullbackEmitter::buildPullbackSuccessor(
       if (!pullbackTrampolineBlockMap.count(concreteActiveValueAdj)) {
         concreteActiveValueAdj =
             builder.emitCopyValueOperation(loc, concreteActiveValueAdj);
-        setAdjointValue(origBB, activeValue,
-                        makeConcreteAdjointValue(concreteActiveValueAdj));
+        auto *enumType = activeValue->getType().getEnumOrBoundGenericEnum();
+        auto *predTermInst = dyn_cast<SwitchEnumInstBase>(origPredBB->getTerminator());
+        llvm::errs() << "ORIG BB: " << origBB->getDebugID() << ", PRED BB: " << origPredBB->getDebugID() << "\n";
+        llvm::errs() << "ACTIVE VALUE: " << activeValue;
+        llvm::errs() << "CONCRETE ADJ VALUE: " << concreteActiveValueAdj;
+        if (enumType) {
+#if 0
+          llvm::errs() << "ENUM TYPE\n";
+          enumType->print(llvm::errs());
+#endif
+          activeValue->getType().dump();
+          concreteActiveValueAdj->getType().dump();
+          auto enumTanType = getTangentSpace(remapType(activeValue->getType()).getASTType())->getCanonicalType();
+          llvm::errs() << "ENUM TAN TYPE: " << enumTanType->getString() << "\n";
+          activeValue->dump();
+          origPredBB->getTerminator()->dump();
+          setAdjointValue(origBB, activeValue,
+                          makeConcreteAdjointValue(concreteActiveValueAdj));
+        } else {
+          setAdjointValue(origBB, activeValue,
+                          makeConcreteAdjointValue(concreteActiveValueAdj));
+        }
       }
       auto insertion = pullbackTrampolineBlockMap.try_emplace(
           concreteActiveValueAdj, TrampolineBlockSet());
@@ -1036,6 +1073,33 @@ void PullbackEmitter::visitSILBasicBlock(SILBasicBlock *bb) {
     for (auto pair : incomingValues) {
       auto *predBB = std::get<0>(pair);
       auto incomingValue = std::get<1>(pair);
+      auto *enumType = incomingValue->getType().getEnumOrBoundGenericEnum();
+      if (enumType && incomingValue->getType() != concreteBBArgAdjCopy->getType()) {
+        auto *predTermInst = cast<SwitchEnumInstBase>(predBB->getTerminator());
+        llvm::errs() << "concreteBBArgAdjCopy: " << concreteBBArgAdjCopy;
+        llvm::errs() << "incomingValue: " << incomingValue;
+        llvm::errs() << "HELLO!\n";
+        predTermInst->dump();
+        auto *enumEltDecl = predTermInst->getUniqueCaseForDestination(bb).getPtrOrNull();
+        assert(enumEltDecl);
+        enumEltDecl->dump();
+        auto *enumTanType = getTangentSpace(remapType(incomingValue->getType()).getASTType())->getCanonicalType().getEnumOrBoundGenericEnum();
+        assert(enumTanType);
+        EnumElementDecl *enumTanEltDecl = nullptr;
+        for (auto *eltDecl : enumTanType->getAllElements()) {
+          if (eltDecl->getName() != enumEltDecl->getName())
+            continue;
+          assert(!enumTanEltDecl && "Enum tangent element declaration already found");
+          enumTanEltDecl = eltDecl;
+        }
+        assert(enumTanEltDecl && "Enum tangent element declaration not found");
+        auto *enumTan = builder.createEnum(pbLoc, concreteBBArgAdjCopy, enumTanEltDecl, getRemappedTangentType(incomingValue->getType()));
+        enumTan->dump();
+        blockTemporaries[getPullbackBlock(predBB)].insert(concreteBBArgAdjCopy);
+        setAdjointValue(predBB, incomingValue,
+                        makeConcreteAdjointValue(enumTan));
+        continue;
+      }
       blockTemporaries[getPullbackBlock(predBB)].insert(concreteBBArgAdjCopy);
       setAdjointValue(predBB, incomingValue,
                       makeConcreteAdjointValue(concreteBBArgAdjCopy));
