@@ -3170,20 +3170,12 @@ static bool checkDifferentiabilityParameters(
   }
 
   // Check that differentiability parameters have allowed types.
-  SmallVector<Type, 4> diffParamTypes;
-  autodiff::getSubsetParameterTypes(diffParamIndices, functionType,
-                                    diffParamTypes);
-  for (unsigned i : range(diffParamTypes.size())) {
+  SmallVector<AnyFunctionType::Param, 4> diffParams;
+  functionType->getSubsetParameters(diffParamIndices, diffParams);
+  for (unsigned i : range(diffParams.size())) {
     SourceLoc loc =
         parsedDiffParams.empty() ? attrLoc : parsedDiffParams[i].getLoc();
-    auto diffParamType = diffParamTypes[i];
-    // `inout` parameters are not yet supported.
-    if (diffParamType->is<InOutType>()) {
-      diags.diagnose(loc,
-                     diag::diff_params_clause_cannot_diff_wrt_inout_parameter,
-                     diffParamType);
-      return true;
-    }
+    auto diffParamType = diffParams[i].getPlainType();
     if (!diffParamType->hasTypeParameter())
       diffParamType = diffParamType->mapTypeOutOfContext();
     if (derivativeGenEnv)
@@ -3643,8 +3635,6 @@ resolveDifferentiableAttrOriginalFunction(DifferentiableAttr *attr) {
     // If `@differentiable` attribute is declared directly on a
     // `AbstractStorageDecl` (a stored/computed property or subscript),
     // forward the attribute to the storage's getter.
-    // TODO(TF-129): Forward `@differentiable` attributes to setters after
-    // differentiation supports inout parameters.
     // TODO(TF-1080): Forward `@differentiable` attributes to `read` and
     // `modify` accessors after differentiation supports `inout` parameters.
     if (!asd->getDeclContext()->isModuleScopeContext()) {
@@ -3654,11 +3644,10 @@ resolveDifferentiableAttrOriginalFunction(DifferentiableAttr *attr) {
     }
   }
   // Non-`get` accessors are not yet supported: `set`, `read`, and `modify`.
-  // TODO(TF-129): Enable `set` when differentiation supports inout parameters.
   // TODO(TF-1080): Enable `read` and `modify` when differentiation supports
   // coroutines.
   if (auto *accessor = dyn_cast_or_null<AccessorDecl>(original))
-    if (!accessor->isGetter())
+    if (!accessor->isGetter() && !accessor->isSetter())
       original = nullptr;
   // Diagnose if original `AbstractFunctionDecl` could not be resolved.
   if (!original) {
@@ -3912,6 +3901,7 @@ bool resolveDifferentiableAttrDerivativeFunctions(
 
 llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
     Evaluator &evaluator, DifferentiableAttr *attr) const {
+#if 0
   // Skip type-checking for implicit `@differentiable` attributes. We currently
   // assume that all implicit `@differentiable` attributes are valid.
   //
@@ -3920,6 +3910,7 @@ llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
   // clauses and requirements consistently is a larger problem, to be revisited.
   if (attr->isImplicit())
     return nullptr;
+#endif
 
   auto *D = attr->getOriginalDeclaration();
   auto &ctx = D->getASTContext();
@@ -3957,6 +3948,43 @@ llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
   if (!original)
     return nullptr;
 
+  if (auto *asd = dyn_cast<AbstractStorageDecl>(D)) {
+    // Remove `@differentiable` attribute from storage declaration to prevent
+    // duplicate attribute registration during SILGen.
+    D->getAttrs().removeAttribute(attr);
+    // Transfer `@differentiable` attribute from storage declaration to
+    // accessors.
+    for (auto *accessor : asd->getAllAccessors()) {
+      // Only getter and setter accessors are currently supported.
+      if (accessor->getAccessorKind() != AccessorKind::Get &&
+          accessor->getAccessorKind() != AccessorKind::Set)
+        continue;
+      auto *newAttr = DifferentiableAttr::create(
+          ctx, /*implicit*/ true, attr->AtLoc, attr->getRange(), attr->isLinear(),
+          attr->getParsedParameters(), attr->getJVP(), attr->getVJP(),
+          attr->getWhereClause());
+      newAttr->setOriginalDeclaration(accessor);
+      accessor->getAttrs().add(newAttr);
+    }
+#if 0
+    auto addDifferentiableAttributeOnAccessor = [&](AccessorKind accessorKind) {
+      auto *accessor = asd->getAccessor(accessorKind);
+      if (!accessor)
+        return;
+      auto *newAttr = DifferentiableAttr::create(
+          ctx, /*implicit*/ true, attr->AtLoc, attr->getRange(), attr->isLinear(),
+          attr->getParsedParameters(), attr->getJVP(), attr->getVJP(),
+          attr->getWhereClause());
+      newAttr->setOriginalDeclaration(accessor);
+      accessor->getAttrs().add(newAttr);
+    };
+    addDifferentiableAttributeOnAccessor(AccessorKind::Get);
+    if (asd->supportsMutation())
+      addDifferentiableAttributeOnAccessor(AccessorKind::Set);
+#endif
+    return nullptr;
+  }
+
   auto *originalFnTy = original->getInterfaceType()->castTo<AnyFunctionType>();
   bool isMethod = original->hasImplicitSelfDecl();
 
@@ -3965,14 +3993,6 @@ llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
   auto originalResultTy = originalFnTy->getResult();
   if (isMethod)
     originalResultTy = originalResultTy->castTo<AnyFunctionType>()->getResult();
-  if (originalResultTy->isEqual(ctx.TheEmptyTupleType)) {
-    diags
-        .diagnose(attr->getLocation(), diag::differentiable_attr_void_result,
-                  original->getFullName())
-        .highlight(original->getSourceRange());
-    attr->setInvalid();
-    return nullptr;
-  }
 
   // Diagnose if original function is an invalid class member.
   bool isOriginalClassMember = original->getDeclContext() &&
@@ -4036,6 +4056,54 @@ llvm::Expected<IndexSubset *> DifferentiableAttributeTypeCheckRequest::evaluate(
     originalResultTy = derivativeGenEnv->mapTypeIntoContext(originalResultTy);
   else
     originalResultTy = original->mapTypeIntoContext(originalResultTy);
+
+  SmallVector<AnyFunctionType::Param, 8> diffParams;
+  originalFnTy->getSubsetParameters(resolvedDiffParamIndices, diffParams,
+                                    /*reverseCurryLevels*/ false);
+
+  // Check `inout` arguments.
+  bool hasInoutArgument = false;
+  bool hasMultipleOriginalResults = false;
+  auto setNewOriginalResultType = [&](Type type) {
+    if (!originalResultTy->isEqual(ctx.TheEmptyTupleType)) {
+      hasMultipleOriginalResults = true;
+      return;
+    }
+    originalResultTy = type;
+  };
+  for (auto param : originalFnTy->getParams()) {
+    if (param.isInOut()) {
+      hasInoutArgument = true;
+      setNewOriginalResultType(param.getPlainType());
+    }
+  }
+  if (auto originalResultFnTy =
+          originalFnTy->getResult()->getAs<AnyFunctionType>()) {
+    for (auto param : originalResultFnTy->getParams()) {
+      if (param.isInOut()) {
+        hasInoutArgument = true;
+        setNewOriginalResultType(param.getPlainType());
+      }
+    }
+  }
+  if (originalResultTy->isEqual(ctx.TheEmptyTupleType) && !hasInoutArgument) {
+    diags
+        .diagnose(attr->getLocation(), diag::differentiable_attr_void_result,
+                  original->getFullName())
+        .highlight(original->getSourceRange());
+    attr->setInvalid();
+    return nullptr;
+  }
+  if (hasMultipleOriginalResults) {
+    diags
+        .diagnose(attr->getLocation(),
+                  diag::differentiable_attr_multiple_original_results,
+                  original->getFullName())
+        .highlight(original->getSourceRange());
+    attr->setInvalid();
+    return nullptr;
+  }
+
   if (!conformsToDifferentiable(originalResultTy, original)) {
     diags.diagnose(attr->getLocation(),
                    diag::differentiable_attr_result_not_differentiable,
@@ -4164,18 +4232,49 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   }
   attr->setDerivativeKind(kind);
   // `value: R` result tuple element must conform to `Differentiable`.
-  auto diffableProto = Ctx.getProtocol(KnownProtocolKind::Differentiable);
+  auto *diffableProto = Ctx.getProtocol(KnownProtocolKind::Differentiable);
   auto valueResultType = valueResultElt.getType();
-  if (valueResultType->hasTypeParameter())
-    valueResultType = derivative->mapTypeIntoContext(valueResultType);
+  // Check `inout` arguments.
+  Type originalResultType = valueResultType;
+  bool hasInoutArgument = false;
+  bool hasMultipleOriginalResults = false;
+  auto setNewOriginalResultType = [&](Type type) {
+    if (!originalResultType->isEqual(ctx.TheEmptyTupleType)) {
+      hasMultipleOriginalResults = true;
+      return;
+    }
+    originalResultType = type;
+  };
+  for (auto param : derivativeInterfaceType->getParams()) {
+    if (param.isInOut()) {
+      hasInoutArgument = true;
+      setNewOriginalResultType(param.getPlainType());
+    }
+  }
+  if (auto originalResultFnTy =
+          derivativeInterfaceType->getResult()->getAs<AnyFunctionType>()) {
+    for (auto param : originalResultFnTy->getParams()) {
+      if (param.isInOut()) {
+        hasInoutArgument = true;
+        setNewOriginalResultType(param.getPlainType());
+      }
+    }
+  }
+  if (originalResultType->hasTypeParameter())
+    originalResultType = derivative->mapTypeIntoContext(originalResultType);
+
+  SmallVector<Type, 4> resultTanTypes;
   auto valueResultConf = TypeChecker::conformsToProtocol(
-      valueResultType, diffableProto, derivative->getDeclContext(), None);
+      originalResultType, diffableProto, derivative->getDeclContext(), None);
   if (!valueResultConf) {
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_result_value_not_differentiable,
                    valueResultElt.getType());
     return true;
   }
+  // Get the `TangentVector` associated type of the `value:` result type.
+  auto resultTanType = valueResultConf.getTypeWitnessByName(
+      originalResultType, Ctx.Id_TangentVector);
 
   // Compute expected original function type and look up original function.
   auto *originalFnType =
@@ -4357,27 +4456,34 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   attr->setParameterIndices(resolvedDiffParamIndices);
 
   // Gather differentiability parameters.
-  SmallVector<Type, 4> diffParamTypes;
-  autodiff::getSubsetParameterTypes(resolvedDiffParamIndices, originalFnType,
-                                    diffParamTypes);
+  SmallVector<AnyFunctionType::Param, 4> diffParams;
+  originalFnType->getSubsetParameters(resolvedDiffParamIndices, diffParams);
 
   // Get the differentiability parameters' `TangentVector` associated types.
-  auto diffParamTanTypes =
-      map<SmallVector<TupleTypeElt, 4>>(diffParamTypes, [&](Type paramType) {
-        if (paramType->hasTypeParameter())
-          paramType = derivative->mapTypeIntoContext(paramType);
-        auto conf = TypeChecker::conformsToProtocol(paramType, diffableProto,
-                                                    derivative, None);
-        assert(conf &&
-               "Expected resolved parameter to conform to `Differentiable`");
-        auto paramAssocType =
-            conf.getTypeWitnessByName(paramType, Ctx.Id_TangentVector);
-        return TupleTypeElt(paramAssocType);
-      });
-
-  // Get the `TangentVector` associated type of the `value:` result type.
-  auto resultTanType = valueResultConf.getTypeWitnessByName(
-      valueResultType, Ctx.Id_TangentVector);
+  SmallVector<AnyFunctionType::Param, 4> inoutParamTanParams;
+  SmallVector<TupleTypeElt, 4> diffParamTanTypes;
+  // includes `inout` parameters
+  SmallVector<TupleTypeElt, 4> diffParamTanTypes2;
+  for (auto diffParam : diffParams) {
+    auto paramType = diffParam.getPlainType();
+    if (paramType->hasTypeParameter())
+      paramType = derivative->mapTypeIntoContext(paramType);
+    auto conf = TypeChecker::conformsToProtocol(paramType, diffableProto,
+                                                derivative, None);
+    assert(conf &&
+           "Expected resolved parameter to conform to `Differentiable`");
+    auto paramAssocType =
+        conf.getTypeWitnessByName(paramType, Ctx.Id_TangentVector);
+    diffParamTanTypes2.push_back(TupleTypeElt(paramAssocType, Identifier(),
+                                              diffParam.getParameterFlags()));
+    if (diffParam.isInOut()) {
+      auto flags = ParameterTypeFlags().withInOut(true);
+      inoutParamTanParams.push_back(
+          AnyFunctionType::Param(paramAssocType, Identifier(), flags));
+      continue;
+    }
+    diffParamTanTypes.push_back(TupleTypeElt(paramAssocType));
+  }
 
   // Compute the actual differential/pullback type that we use for comparison
   // with the expected type. We must canonicalize the derivative interface type
@@ -4395,15 +4501,27 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   // Compute expected differential/pullback type.
   Type expectedFuncEltType;
   if (kind == AutoDiffDerivativeFunctionKind::JVP) {
-    auto diffParams = map<SmallVector<AnyFunctionType::Param, 4>>(
-        diffParamTanTypes, [&](TupleTypeElt elt) {
-          return AnyFunctionType::Param(elt.getType());
-        });
-    expectedFuncEltType = FunctionType::get(diffParams, resultTanType);
+    // TODO: Adjust for 'inout'
+    SmallVector<AnyFunctionType::Param, 4> diffParams;
+    for (auto diffParamTanType : diffParamTanTypes2)
+      diffParams.push_back(
+          AnyFunctionType::Param(diffParamTanType.getRawType(), Identifier(),
+                                 diffParamTanType.getParameterFlags()));
+    if (!inoutParamTanParams.empty()) {
+      expectedFuncEltType =
+          FunctionType::get(diffParams, Ctx.TheEmptyTupleType);
+    } else {
+      expectedFuncEltType = FunctionType::get(diffParams, resultTanType);
+    }
   } else {
-    expectedFuncEltType =
-        FunctionType::get({AnyFunctionType::Param(resultTanType)},
-                          TupleType::get(diffParamTanTypes, Ctx));
+    if (!inoutParamTanParams.empty()) {
+      expectedFuncEltType = FunctionType::get(
+          inoutParamTanParams, TupleType::get(diffParamTanTypes, Ctx));
+    } else {
+      expectedFuncEltType =
+          FunctionType::get({AnyFunctionType::Param(resultTanType)},
+                            TupleType::get(diffParamTanTypes, Ctx));
+    }
   }
   expectedFuncEltType = expectedFuncEltType->mapTypeOutOfContext();
 
@@ -4588,15 +4706,16 @@ computeLinearityParameters(ArrayRef<ParsedAutoDiffParameter> parsedLinearParams,
 // The parsed differentiability parameters and attribute location are used in
 // diagnostics.
 static bool checkLinearityParameters(
-    AbstractFunctionDecl *originalAFD, SmallVector<Type, 4> linearParamTypes,
+    AbstractFunctionDecl *originalAFD,
+    SmallVector<AnyFunctionType::Param, 4> linearParams,
     GenericEnvironment *derivativeGenEnv, ModuleDecl *module,
     ArrayRef<ParsedAutoDiffParameter> parsedLinearParams, SourceLoc attrLoc) {
   auto &ctx = originalAFD->getASTContext();
   auto &diags = ctx.Diags;
 
   // Check that linearity parameters have allowed types.
-  for (unsigned i : range(linearParamTypes.size())) {
-    auto linearParamType = linearParamTypes[i];
+  for (unsigned i : range(linearParams.size())) {
+    auto linearParamType = linearParams[i].getPlainType();
     if (!linearParamType->hasTypeParameter())
       linearParamType = linearParamType->mapTypeOutOfContext();
     if (derivativeGenEnv)
@@ -4819,13 +4938,12 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   attr->setOriginalFunction(originalAFD);
 
   // Get the linearity parameter types.
-  SmallVector<Type, 4> linearParamTypes;
-  autodiff::getSubsetParameterTypes(linearParamIndices, expectedOriginalFnType,
-                                    linearParamTypes,
-                                    /*reverseCurryLevels*/ true);
+  SmallVector<AnyFunctionType::Param, 4> linearParams;
+  expectedOriginalFnType->getSubsetParameters(linearParamIndices, linearParams,
+                                              /*reverseCurryLevels*/ true);
 
   // Check if linearity parameter indices are valid.
-  if (checkLinearityParameters(originalAFD, linearParamTypes,
+  if (checkLinearityParameters(originalAFD, linearParams,
                                transpose->getGenericEnvironment(),
                                transpose->getModuleContext(),
                                parsedLinearParams, attr->getLocation())) {

@@ -3213,6 +3213,14 @@ public:
     return getExtInfo().getRepresentation();
   }
 
+  /// Appends the parameters indicated by `parameterIndices` to `results`.
+  ///
+  /// For curried function types: if `reverseCurryLevels` is true, append
+  /// the `self` parameter last instead of first.
+  void getSubsetParameters(IndexSubset *parameterIndices,
+                           SmallVectorImpl<AnyFunctionType::Param> &results,
+                           bool reverseCurryLevels = false);
+
   /// Returns the derivative function type for the given parameter indices,
   /// result index, derivative function kind, derivative function generic
   /// signature (optional), and other auxiliary parameters.
@@ -3285,6 +3293,7 @@ public:
 
   // SWIFT_ENABLE_TENSORFLOW
   AnyFunctionType *getWithoutDifferentiability() const;
+  // SWIFT_ENABLE_TENSORFLOW END
 
   /// True if the parameter declaration it is attached to is guaranteed
   /// to not persist the closure for longer than the duration of the call.
@@ -4417,6 +4426,28 @@ public:
   /// a method.
   SILParameterInfo getSelfParameter() const {
     return getParameters().back();
+  }
+
+  struct IndirectMutatingParameterFilter {
+    bool operator()(SILParameterInfo param) const {
+      return param.isIndirectMutating();
+    }
+  };
+  using IndirectMutatingParameterIter =
+      llvm::filter_iterator<const SILParameterInfo *,
+                            IndirectMutatingParameterFilter>;
+  using IndirectMutatingParameterRange =
+      iterator_range<IndirectMutatingParameterIter>;
+
+  /// A range of SILParameterInfo for all indirect mutating parameters.
+  IndirectMutatingParameterRange getIndirectMutatingParameters() const {
+    return llvm::make_filter_range(getParameters(),
+                                   IndirectMutatingParameterFilter());
+  }
+
+  /// Returns the number of indirect mutating parameters.
+  unsigned getNumIndirectMutatingParameters() const {
+    return llvm::count_if(getParameters(), IndirectMutatingParameterFilter());
   }
 
   /// Get the generic signature used to apply the substitutions of a substituted function type

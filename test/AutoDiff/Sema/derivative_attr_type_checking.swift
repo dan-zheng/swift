@@ -167,12 +167,14 @@ func vjpFunctionParameter(_ fn: (Float) -> Float) -> (
   return (functionParameter(fn), { $0 })
 }
 
+// expected-note @+1 {{'inoutParameter' defined here}}
 func inoutParameter(_ x: inout Float) -> Float {
   return x
 }
-// expected-error @+1 {{cannot differentiate with respect to 'inout' parameter ('inout Float'}}
+// expected-error @+1 {{function result's 'pullback' type does not match 'inoutParameter'}}
 @derivative(of: inoutParameter)
-func vjpInoutParameter(x: inout Float) -> (
+func vjpInoutParameterWrongPullbackType(x: inout Float) -> (
+  // expected-note @+1 {{'pullback' does not have expected type '(inout Float.TangentVector) -> ()' (aka '(inout Float) -> ()')}}
   value: Float, pullback: (Float) -> Float
 ) {
   return (inoutParameter(&x), { $0 })

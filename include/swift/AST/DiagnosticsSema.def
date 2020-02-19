@@ -2979,6 +2979,9 @@ ERROR(differentiable_attr_void_result,none,
 ERROR(differentiable_attr_no_vjp_or_jvp_when_linear,none,
       "cannot specify 'vjp:' or 'jvp:' for linear functions; use '@transpose' "
       "attribute for transpose registration instead", ())
+ERROR(differentiable_attr_multiple_original_results,none,
+      "cannot differentiate function %0 with respect to more than one result "
+      "and 'inout' argument", (DeclName))
 ERROR(differentiable_attr_overload_not_found,none,
       "%0 does not have expected type %1", (DeclNameRef, Type))
 // TODO(TF-482): Change duplicate `@differentiable` attribute diagnostic to also

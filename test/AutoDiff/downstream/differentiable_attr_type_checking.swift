@@ -53,8 +53,8 @@ struct ComputedPropertyDupeAttributes<T : Differentiable> : Differentiable {
 
   // TODO(TF-482): Remove diagnostics when `@differentiable` attributes are
   // also uniqued based on generic requirements.
-  @differentiable(where T == Float) // expected-error {{duplicate '@differentiable' attribute with same parameters}}
-  @differentiable(where T == Double) // expected-note {{other attribute declared here}}
+  @differentiable(where T == Float) // expected-note {{other attribute declared here}}
+  @differentiable(where T == Double) // expected-error {{duplicate '@differentiable' attribute with same parameters}}
   var computed2: T {
     get { value }
     set { value = newValue }
@@ -975,12 +975,12 @@ func two9(x: Float, y: Float) -> Float {
 
 // Inout 'wrt:' arguments.
 
-@differentiable(wrt: y) // expected-error {{cannot differentiate void function 'inout1(x:y:)'}}
+@differentiable(wrt: y)
 func inout1(x: Float, y: inout Float) -> Void {
   let _ = x + y
 }
 
-@differentiable(wrt: y) // expected-error {{cannot differentiate with respect to 'inout' parameter ('inout Float')}}
+@differentiable(wrt: y) // expected-error {{cannot differentiate function 'inout2(x:y:)' with respect to more than one result and 'inout' argument}}
 func inout2(x: Float, y: inout Float) -> Float {
   let _ = x + y
 }

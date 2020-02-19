@@ -4930,6 +4930,10 @@ makeFunctionType(ArrayRef<AnyFunctionType::Param> parameters, Type resultType,
   return FunctionType::get(parameters, resultType, extInfo);
 }
 
+void getSubsetParameters(IndexSubset *parameterIndices,
+                         SmallVectorImpl<AnyFunctionType::Param> &results,
+                         bool reverseCurryLevels = false);
+
 AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
     IndexSubset *parameterIndices, unsigned resultIndex,
     AutoDiffDerivativeFunctionKind kind, LookupConformanceFn lookupConformance,
@@ -4944,9 +4948,9 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
     derivativeGenSig = getOptGenericSignature();
 
   // Get differentiability parameter types.
-  SmallVector<Type, 8> diffParamTypes;
-  autodiff::getSubsetParameterTypes(parameterIndices, this, diffParamTypes,
-                                    /*reverseCurryLevels*/ !makeSelfParamFirst);
+  SmallVector<AnyFunctionType::Param, 8> diffParams;
+  getSubsetParameters(parameterIndices, diffParams,
+                      /*reverseCurryLevels*/ !makeSelfParamFirst);
 
   // Unwrap curry levels. At most, two parameter lists are necessary, for
   // curried method types with a `(Self)` parameter list.
@@ -4970,10 +4974,12 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
     // Differential function type, a result of the JVP:
     //   `LinearMapType = (T.TangentVector, ...) -> (R.TangentVector)`
     SmallVector<AnyFunctionType::Param, 8> differentialParams;
-    for (auto diffParamType : diffParamTypes)
+    for (auto diffParam : diffParams) {
+      auto diffParamType = diffParam.getPlainType();
       differentialParams.push_back(AnyFunctionType::Param(
           diffParamType->getAutoDiffTangentSpace(lookupConformance)
               ->getType()));
+    }
     SmallVector<TupleTypeElt, 8> differentialResults;
     if (auto *resultTuple = originalResult->getAs<TupleType>()) {
       auto resultTupleEltType = resultTuple->getElementType(resultIndex);
@@ -4981,7 +4987,8 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
           resultTupleEltType->getAutoDiffTangentSpace(lookupConformance)
               ->getType());
     } else {
-      assert(resultIndex == 0 && "resultIndex out of bounds");
+      assert(resultIndex == 0 &&
+             "Expected result index 0 for non-tuple result");
       differentialResults.push_back(
           originalResult->getAutoDiffTangentSpace(lookupConformance)
               ->getType());
@@ -5009,9 +5016,11 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
               ->getType()));
     }
     SmallVector<TupleTypeElt, 8> pullbackResults;
-    for (auto diffParamType : diffParamTypes)
+    for (auto diffParam : diffParams) {
+      auto diffParamType = diffParam.getPlainType();
       pullbackResults.push_back(
           diffParamType->getAutoDiffTangentSpace(lookupConformance)->getType());
+    }
     Type pullbackResult = pullbackResults.size() > 1
                               ? TupleType::get(pullbackResults, ctx)
                               : pullbackResults[0].getType();

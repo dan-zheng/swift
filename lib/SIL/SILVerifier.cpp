@@ -4043,8 +4043,8 @@ public:
                functionResultType.dump();
                llvm::dbgs() << "return inst type: ";
                instResultType.dump(););
-    require(functionResultType == instResultType,
-            "return value type does not match return type of function");
+    requireSameType(functionResultType, instResultType,
+                    "return value type does not match return type of function");
   }
 
   void checkThrowInst(ThrowInst *TI) {
