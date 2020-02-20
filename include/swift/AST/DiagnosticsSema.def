@@ -2962,6 +2962,9 @@ ERROR(differentiable_attr_invalid_access,none,
 ERROR(differentiable_attr_result_not_differentiable,none,
       "can only differentiate functions with results that conform to "
       "'Differentiable', but %0 does not conform to 'Differentiable'", (Type))
+ERROR(differentiable_attr_multiple_original_results,none,
+      "cannot yet differentiate functions with more than one semantic result "
+      "(formal function result or 'inout' parameter)", ())
 ERROR(differentiable_attr_protocol_req_where_clause,none,
       "'@differentiable' attribute on protocol requirement cannot specify "
       "'where' clause", ())
