@@ -4235,6 +4235,27 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   }
   attr->setOriginalFunction(originalAFD);
 
+  // Original function must have same effective access as derivative function.
+  if (originalAFD->getEffectiveAccess() != derivative->getEffectiveAccess()) {
+    auto diagID = diag::derivative_attr_access_level_higher_than_original;
+    AccessLevel originalAccess;
+    AccessLevel derivativeAccess;
+    if (originalAFD->getEffectiveAccess() < derivative->getEffectiveAccess()) {
+      diagID = diag::derivative_attr_access_level_higher_than_original;
+      originalAccess =
+          originalAFD->getFormalAccessScope().accessLevelForDiagnostics();
+      derivativeAccess = derivative->getEffectiveAccess();
+    } else {
+      diagID = diag::derivative_attr_access_level_lower_than_original;
+      originalAccess = originalAFD->getEffectiveAccess();
+      derivativeAccess =
+          derivative->getFormalAccessScope().accessLevelForDiagnostics();
+    }
+    diags.diagnose(originalName.Loc, diagID, originalAFD->getFullName(),
+                   originalAccess, derivative->getFullName(), derivativeAccess);
+    return true;
+  }
+
   // Get the resolved differentiability parameter indices.
   auto *resolvedDiffParamIndices = attr->getParameterIndices();
 
