@@ -1022,15 +1022,20 @@ func two9(x: Float, y: Float) -> Float {
 
 // Inout 'wrt:' arguments.
 
-@differentiable(wrt: y) // expected-error {{cannot differentiate void function 'inout1(x:y:)'}}
-func inout1(x: Float, y: inout Float) -> Void {
+@differentiable(wrt: y)
+func inoutVoid(x: Float, y: inout Float) -> Void {
   let _ = x + y
 }
 
-@differentiable(wrt: y) // expected-error {{cannot differentiate with respect to 'inout' parameter ('inout Float')}}
-func inout2(x: Float, y: inout Float) -> Float {
+// expected-error @+1 {{cannot yet differentiate functions with more than one semantic result (formal function result or 'inout' parameter)}}
+@differentiable(wrt: y)
+func inoutNonVoid(x: Float, y: inout Float) -> Float {
   let _ = x + y
 }
+
+// expected-error @+1 {{cannot yet differentiate functions with more than one semantic result (formal function result or 'inout' parameter)}}
+@differentiable(wrt: y)
+func swapTwoInouts(x: inout Float, y: inout Float) {}
 
 // Test refining protocol requirements with `@differentiable` attribute.
 

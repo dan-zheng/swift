@@ -240,12 +240,6 @@ using SILDifferentiabilityWitnessKey = std::pair<StringRef, AutoDiffConfig>;
 /// Automatic differentiation utility namespace.
 namespace autodiff {
 
-/// Appends the subset's parameter's types to `results`, in the order in
-/// which they appear in the function type.
-void getSubsetParameterTypes(IndexSubset *indices, AnyFunctionType *type,
-                             SmallVectorImpl<Type> &results,
-                             bool reverseCurryLevels = false);
-
 /// "Constrained" derivative generic signatures require all differentiability
 /// parameters to conform to the `Differentiable` protocol.
 ///

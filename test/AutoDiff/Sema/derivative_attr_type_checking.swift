@@ -83,7 +83,7 @@ func vjpResultIncorrectFirstLabel(x: Float) -> (Float, (Float) -> Float) {
 func vjpResultIncorrectSecondLabel(x: Float) -> (value: Float, (Float) -> Float) {
   return (x, { $0 })
 }
-// expected-error @+1 {{'@derivative(of:)' attribute requires function to return a two-element tuple (first element type 'Int' must conform to 'Differentiable')}}
+// expected-error @+1 {{could not find function 'incorrectDerivativeType' with expected type '(Int) -> Int'}}
 @derivative(of: incorrectDerivativeType)
 func vjpResultNotDifferentiable(x: Int) -> (
   value: Int, pullback: (Int) -> Int
@@ -91,7 +91,7 @@ func vjpResultNotDifferentiable(x: Int) -> (
   return (x, { $0 })
 }
 // expected-error @+2 {{function result's 'pullback' type does not match 'incorrectDerivativeType'}}
-// expected-note @+3 {{'pullback' does not have expected type '(Float.TangentVector) -> (Float.TangentVector)' (aka '(Float) -> Float')}}
+// expected-note @+3 {{'pullback' does not have expected type '(Float.TangentVector) -> Float.TangentVector' (aka '(Float) -> Float')}}
 @derivative(of: incorrectDerivativeType)
 func vjpResultIncorrectPullbackType(x: Float) -> (
   value: Float, pullback: (Double) -> Double
@@ -167,15 +167,45 @@ func vjpFunctionParameter(_ fn: (Float) -> Float) -> (
   return (functionParameter(fn), { $0 })
 }
 
-func inoutParameter(_ x: inout Float) -> Float {
+func multipleSemanticResults(_ x: inout Float) -> Float {
   return x
 }
-// expected-error @+1 {{cannot differentiate with respect to 'inout' parameter ('inout Float'}}
-@derivative(of: inoutParameter)
-func vjpInoutParameter(x: inout Float) -> (
+// expected-error @+1 {{cannot yet differentiate functions with more than one semantic result (formal function result or 'inout' parameter)}}
+@derivative(of: multipleSemanticResults)
+func vjpMultipleSemanticResults(x: inout Float) -> (
   value: Float, pullback: (Float) -> Float
 ) {
-  return (inoutParameter(&x), { $0 })
+  return (multipleSemanticResults(&x), { $0 })
+}
+
+struct InoutParameters {
+  func multipleSemanticResults(_ x: inout Float) -> Float {
+    x
+  }
+
+  // expected-error @+1 {{cannot yet differentiate functions with more than one semantic result (formal function result or 'inout' parameter)}}
+  @derivative(of: multipleSemanticResults)
+  func vjpMultipleSemanticResults(_ x: inout Float) -> (
+    value: Float, pullback: (inout Float) -> Void
+  ) {
+    fatalError()
+  }
+
+  func void(_ x: Float) {}
+
+  // expected-error @+1 {{could not find function 'void' with expected type '(InoutParameters) -> (inout Float) -> Void'}}
+  @derivative(of: void)
+  func vjpParameterInoutMismatch(_ x: inout Float) -> (value: Void, pullback: (inout Float) -> Void) {
+    fatalError()
+  }
+
+  func mut(_ x: Float) {}
+
+  // expected-error @+1 {{could not find function 'mut' with expected type '(inout InoutParameters) -> (Float) -> Void'}}
+  @derivative(of: mut)
+  mutating func vjpMut(_ x: Float) -> (value: Void, pullback: (inout Float) -> Void) {
+    fatalError()
+  }
 }
 
 // Test static methods.

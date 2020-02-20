@@ -51,12 +51,11 @@ static unsigned countNumFlattenedElementTypes(Type type) {
 
 // TODO(TF-874): Simplify this helper and remove the `reverseCurryLevels` flag.
 // See TF-874 for WIP.
-void autodiff::getSubsetParameterTypes(IndexSubset *subset,
-                                       AnyFunctionType *type,
-                                       SmallVectorImpl<Type> &results,
-                                       bool reverseCurryLevels) {
+void AnyFunctionType::getSubsetParameters(
+    IndexSubset *parameterIndices,
+    SmallVectorImpl<AnyFunctionType::Param> &results, bool reverseCurryLevels) {
   SmallVector<AnyFunctionType *, 2> curryLevels;
-  unwrapCurryLevels(type, curryLevels);
+  unwrapCurryLevels(this, curryLevels);
 
   SmallVector<unsigned, 2> curryLevelParameterIndexOffsets(curryLevels.size());
   unsigned currentOffset = 0;
@@ -77,8 +76,8 @@ void autodiff::getSubsetParameterTypes(IndexSubset *subset,
     unsigned parameterIndexOffset =
         curryLevelParameterIndexOffsets[curryLevelIndex];
     for (unsigned paramIndex : range(curryLevel->getNumParams()))
-      if (subset->contains(parameterIndexOffset + paramIndex))
-        results.push_back(curryLevel->getParams()[paramIndex].getOldType());
+      if (parameterIndices->contains(parameterIndexOffset + paramIndex))
+        results.push_back(curryLevel->getParams()[paramIndex]);
   }
 }
 
