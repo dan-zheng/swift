@@ -4330,6 +4330,66 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   }
   attr->setOriginalFunction(originalAFD);
 
+  // Original function must have same effective access as derivative function.
+  if (originalAFD->getEffectiveAccess() != derivative->getEffectiveAccess()) {
+#if 0
+    if (originalAFD->getFormalAccess() <= AccessLevel::Internal &&
+        derivative->getFormalAccess() <= AccessLevel::Internal &&
+        derivative->isUsableFromInline()) {
+      diags.diagnose(originalName.Loc,
+                     diag::derivative_attr_higher_than_original_access_level,
+                     derivative->getFormalAccess(), originalAFD->getFullName(),
+                     originalAFD->getFormalAccess());
+      diags.diagnose(originalAFD->getLoc(),
+                     diag::derivative_attr_result_func_original_note,
+                     originalAFD->getFullName());
+      return true;
+    }
+#endif
+#if 0
+    if (originalAFD->getEffectiveAccess() < derivative->getEffectiveAccess()) {
+      diags.diagnose(originalName.Loc,
+                     diag::derivative_attr_higher_than_original_access_level,
+                     // derivative->getFormalAccessScope().accessLevelForDiagnostics(),
+                     derivative->getEffectiveAccess(),
+                     originalAFD->getFullName(),
+                     originalAFD->getFormalAccessScope().accessLevelForDiagnostics());
+                     // originalAFD->getEffectiveAccess());
+      diags.diagnose(originalAFD->getLoc(),
+                     diag::derivative_attr_result_func_original_note,
+                     originalAFD->getFullName());
+      return true;
+    }
+    diags.diagnose(originalName.Loc,
+                   diag::derivative_attr_lower_than_original_access_level,
+                   originalAFD->getFullName(),
+                   // originalAFD->getFormalAccessScope().accessLevelForDiagnostics(),
+                   originalAFD->getEffectiveAccess(),
+                   derivative->getFullName(),
+                   derivative->getFormalAccessScope().accessLevelForDiagnostics());
+                   // derivative->getEffectiveAccess());
+#endif
+    auto diagID = diag::derivative_attr_higher_than_original_access_level;
+    AccessLevel originalAccess;
+    AccessLevel derivativeAccess;
+    if (originalAFD->getEffectiveAccess() < derivative->getEffectiveAccess()) {
+      diagID = diag::derivative_attr_higher_than_original_access_level;
+      originalAccess = originalAFD->getFormalAccessScope().accessLevelForDiagnostics();
+      derivativeAccess = derivative->getEffectiveAccess();
+    } else {
+      diagID = diag::derivative_attr_lower_than_original_access_level;
+      originalAccess = originalAFD->getEffectiveAccess();
+      derivativeAccess = derivative->getFormalAccessScope().accessLevelForDiagnostics();
+    }
+    diags.diagnose(originalName.Loc,
+                   diagID,
+                   originalAFD->getFullName(),
+                   originalAccess,
+                   derivative->getFullName(),
+                   derivativeAccess);
+    return true;
+  }
+
   // Get the resolved differentiability parameter indices.
   auto *resolvedDiffParamIndices = attr->getParameterIndices();
 
