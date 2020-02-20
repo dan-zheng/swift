@@ -21,5 +21,6 @@ private func dfoo3(_ x: Float) -> (value: Float, pullback: (Float) -> Float) { f
 
 // Error: vjp not exported.
 public func bar1(_ x: Float) -> Float { x }
+// expected-error @+1 {{derivative functions for public or '@usableFromInline' original function 'bar1' must also be public or '@usableFromInline', but 'dbar1' is private}}
 @derivative(of: bar1)
 private func dbar1(_ x: Float) -> (value: Float, pullback: (Float) -> Float) { fatalError() }

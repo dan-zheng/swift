@@ -154,6 +154,7 @@ func vjpFooExtraGenericRequirements<T : FloatingPoint & Differentiable & BinaryI
 // Test cross-file derivative registration. Currently unsupported.
 // TODO(TF-1021): Lift this restriction.
 extension FloatingPoint where Self: Differentiable {
+  @usableFromInline
   // expected-error @+1 {{derivative not in the same file as the original function}}
   @derivative(of: rounded)
   func vjpRounded() -> (value: Self, pullback: (TangentVector) -> TangentVector) {
