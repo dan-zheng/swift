@@ -11,6 +11,7 @@
 # ----------------------------------------------------------------------------
 
 import os
+import subprocess
 
 from . import product
 from .. import shell
@@ -117,19 +118,24 @@ class TensorFlow(product.Product):
         return self.args.build_tensorflow_swift_apis
 
     def build(self, host_target):
-        with shell.pushd(self.source_dir):
-            shell.call([
-                os.path.join(self.source_dir, '..', 'swift', 'utils',
-                             'configure-tensorflow-defaults'),
-            ])
-            shell.call([
-                self.toolchain.bazel,
-                "build",
-                "-c", "opt",
-                "--define", "framework_shared_object=false",
-                "//tensorflow:tensorflow",
-            ])
+        # Run the TensorFlow configure script: `yes "" | ./configure`.
+        configure_script_path = os.path.join(self.source_dir, 'configure')
+        yes_process = shell.Popen(['yes', ''], stdout=subprocess.PIPE)
+        shell.call([configure_script_path], stdin=yes_process.stdout)
 
+        # Build TensorFlow via bazel.
+        shell.call([
+            self.toolchain.bazel,
+            "build",
+            "-c", "opt",
+            "--define", "framework_shared_object=false",
+            "//tensorflow:tensorflow",
+        ])
+
+        # bazel builds libraries with version suffixes, e.g.
+        # "libtensorflow.{dylib,so}.x.y.z".
+        # Create a symlink to the standard unsuffixed name:
+        # "libtensorflow.{dylib,so}".
         if host_target.startswith('macosx'):
             suffixed_lib_name = 'libtensorflow.2.1.0.dylib'
             unsuffixed_lib_name = 'libtensorflow.dylib'

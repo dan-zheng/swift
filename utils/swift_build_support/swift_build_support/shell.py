@@ -151,6 +151,37 @@ def capture(command, stderr=None, env=None, dry_run=None, echo=True,
             "': " + e.strerror)
 
 
+def Popen(command, stdin=None, stdout=None, stderr=None, env=None, dry_run=None,
+          echo=True):
+    """
+    Popen(command, ...) -> str
+
+    Execute the given command in a new process.
+
+    This function will raise an exception on any command failure.
+    """
+    dry_run = _coerce_dry_run(dry_run)
+    if dry_run or echo:
+        _echo_command(dry_run, command, env=env)
+    if dry_run:
+        return
+    _env = None
+    if env is not None:
+        _env = dict(os.environ)
+        _env.update(env)
+    try:
+        return subprocess.Popen(command, stdin=stdin, stdout=stdout, stderr=stderr,
+                                env=env)
+    except subprocess.CalledProcessError as e:
+        _fatal_error(
+            "command terminated with a non-zero exit status " +
+            str(e.returncode) + ", aborting")
+    except OSError as e:
+        _fatal_error(
+            "could not execute '" + quote_command(command) +
+            "': " + e.strerror)
+
+
 @contextmanager
 def pushd(path, dry_run=None, echo=True):
     dry_run = _coerce_dry_run(dry_run)
