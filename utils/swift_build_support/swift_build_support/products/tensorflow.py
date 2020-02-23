@@ -12,6 +12,8 @@
 
 import os
 import shutil
+import stat
+import subprocess
 
 from . import product
 from .. import shell
@@ -167,6 +169,7 @@ class TensorFlow(product.Product):
         return self.args.build_tensorflow_swift_apis
 
     def install(self, host_target):
+        # Install `libtensorflow.{dylib,so}` in the toolchain.
         (suffixed_lib_name, unsuffixed_lib_name) = \
             self._get_tensorflow_library(host_target)
 
@@ -175,7 +178,6 @@ class TensorFlow(product.Product):
             subdir = 'macosx'
         if host_target.startswith('linux'):
             subdir = 'linux'
-
         if not subdir:
             raise RuntimeError('unknown host target {}'.format(host_target))
 
@@ -193,6 +195,12 @@ class TensorFlow(product.Product):
                                  'usr', 'lib', 'swift',
                                  subdir, suffixed_lib_name))
 
+        # Add write permissions to `libtensorflow.{dylib,so}`.
+        # This is required for symbol stripping and code signing.
+        os.chmod(os.path.join(self.install_toolchain_path(),
+                              'usr', 'lib', 'swift', subdir, suffixed_lib_name),
+                 0o755)
+
         try:
             os.unlink(os.path.join(self.install_toolchain_path(),
                                    'usr', 'lib', 'swift',
@@ -204,12 +212,12 @@ class TensorFlow(product.Product):
                                 'usr', 'lib', 'swift',
                                 subdir, unsuffixed_lib_name))
 
+        # Copy TensorFlow headers and `module.modulemap` to the toolchain.
+        toolchain_tensorflow_library_path = os.path.join(
+            self.install_toolchain_path(), 'usr', 'lib', 'swift', 'tensorflow')
         try:
-            shutil.rmtree(os.path.join(self.install_toolchain_path(),
-                                       'usr', 'lib', 'swift', 'tensorflow'))
-            os.makedirs(os.path.join(self.install_toolchain_path(),
-                                     'usr', 'lib', 'swift', 'tensorflow', 'c',
-                                     'eager'))
+            shutil.rmtree(toolchain_tensorflow_library_path, ignore_errors=True)
+            os.makedirs(os.path.join(toolchain_tensorflow_library_path,'c', 'eager'))
         except OSError:
             pass
         for header in (
@@ -222,9 +230,7 @@ class TensorFlow(product.Product):
                 'eager/c_api.h',
         ):
             shutil.copy(os.path.join(self.source_dir, 'tensorflow', 'c', header),
-                        os.path.join(self.install_toolchain_path(),
-                                     'usr', 'lib', 'swift', 'tensorflow', 'c',
-                                     header))
+                        os.path.join(toolchain_tensorflow_library_path, 'c', header))
 
         for name in (
                 'CTensorFlow.h',
@@ -233,7 +239,6 @@ class TensorFlow(product.Product):
             shutil.copy(os.path.join(self.source_dir, '..',
                                      'tensorflow-swift-apis', 'Sources',
                                      'CTensorFlow', name),
-                        os.path.join(self.install_toolchain_path(),
-                                     'usr', 'lib', 'swift', 'tensorflow', name))
+                        os.path.join(toolchain_tensorflow_library_path, name))
 
 # SWIFT_ENABLE_TENSORFLOW END
