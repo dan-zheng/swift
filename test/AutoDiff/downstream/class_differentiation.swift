@@ -166,4 +166,28 @@ ClassTests.test("ClassArgumentActivity") {
   expectEqual((100, 1), valueWithGradient(at: 10, in: squared))
 }
 
+// TF-1176: Test class stored property modify accessors.
+ClassTests.test("ClassStoredPropertyModifyAccessors") {
+  class Class: Differentiable {
+    @differentiable
+    var x: Float
+  
+    init(_ x: Float) {
+      self.x = x
+    }
+  }
+  
+  func inoutMutating(_ c: inout Class) {
+    c.x *= c.x
+  }
+  func squared(_ x: Float) -> Float {
+    var c = Class(x)
+    inoutMutating(&c)
+    return c.x
+  }
+  // FIXME(TF-1176): Fix activity analysis + incorrect derivatives.
+  // expectEqual((100, 20), valueWithGradient(at: 10, in: squared))
+  expectEqual((100, 1), valueWithGradient(at: 10, in: squared))
+}
+
 runAllTests()

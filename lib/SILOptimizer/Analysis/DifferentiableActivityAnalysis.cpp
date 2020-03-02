@@ -355,8 +355,8 @@ void DifferentiableActivityInfo::propagateUseful(
 
 void DifferentiableActivityInfo::propagateUsefulThroughAddress(
     SILValue value, unsigned dependentVariableIndex) {
-  assert(value->getType().isAddress() ||
-         value->getType().getClassOrBoundGenericClass());
+  bool isClassTypedValue = value->getType().getClassOrBoundGenericClass();
+  assert(value->getType().isAddress() || isClassTypedValue);
   // Skip already-useful values to prevent infinite recursion.
   if (isUseful(value, dependentVariableIndex))
     return;
@@ -378,8 +378,21 @@ void DifferentiableActivityInfo::propagateUsefulThroughAddress(
       SKIP_NODERIVATIVE(RefElementAddr)
 #undef SKIP_NODERIVATIVE
       if (Projection::isAddressProjection(res) || isa<BeginAccessInst>(res) ||
-          isa<BeginBorrowInst>(res))
+          isa<BeginBorrowInst>(res)) {
         propagateUsefulThroughAddress(res, dependentVariableIndex);
+      }
+      if (isClassTypedValue) {
+        if (isa<LoadInst>(res)) {
+          propagateUsefulThroughAddress(res, dependentVariableIndex);
+        } else {
+          // setUseful(value, dependentVariableIndex);
+          // setUseful(value, dependentVariableIndex);
+          propagateUseful(use->getUser(), dependentVariableIndex);
+        }
+#if 0
+        propagateUsefulThroughAddress(res, dependentVariableIndex);
+#endif
+      }
     }
   }
 }
