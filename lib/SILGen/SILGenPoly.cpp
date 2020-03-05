@@ -790,7 +790,15 @@ void SILGenFunction::collectThunkParams(
     SmallVectorImpl<SILArgument *> *indirectResults) {
   // Add the indirect results.
   for (auto resultTy : F.getConventions().getIndirectSILResultTypes()) {
+#if 0
+    auto paramTy = resultTy;
+    if (paramTy.hasArchetype())
+      paramTy = paramTy.mapTypeOutOfContext();
+    paramTy = F.mapTypeIntoContext(paramTy);
+#endif
+// #if 0
     auto paramTy = F.mapTypeIntoContext(resultTy);
+// #endif
     // Lower result parameters in the context of the function: opaque result
     // types will be lowered to their underlying type if allowed by resilience.
     auto inContextParamTy = F.getLoweredType(paramTy.getASTType())
@@ -803,7 +811,15 @@ void SILGenFunction::collectThunkParams(
   // Add the parameters.
   auto paramTypes = F.getLoweredFunctionType()->getParameters();
   for (auto param : paramTypes) {
+#if 0
+    auto paramTy = F.getConventions().getSILType(param);
+    if (paramTy.hasArchetype())
+      paramTy = paramTy.mapTypeOutOfContext();
+    paramTy = F.mapTypeIntoContext(paramTy);
+#endif
+// #if 0
     auto paramTy = F.mapTypeIntoContext(F.getConventions().getSILType(param));
+// #endif
     // Lower parameters in the context of the function: opaque result types will
     // be lowered to their underlying type if allowed by resilience.
     auto inContextParamTy = F.getLoweredType(paramTy.getASTType())
@@ -1595,6 +1611,16 @@ static ManagedValue applyTrivialConversions(SILGenFunction &SGF,
                                             SILType outerType) {
   auto innerASTTy = innerValue.getType().getASTType();
   auto outerASTTy = outerType.getASTType();
+#if 0
+  llvm::errs() << "INNER AST TYPE!\n";
+  innerASTTy->dump();
+  llvm::errs() << "OUTER AST TYPE!\n";
+  outerASTTy->dump();
+#endif
+  if (innerASTTy->hasArchetype())
+    innerASTTy = innerASTTy->mapTypeOutOfContext()->getCanonicalType();
+  if (outerASTTy->hasArchetype())
+    outerASTTy = outerASTTy->mapTypeOutOfContext()->getCanonicalType();
 
   if (innerASTTy == outerASTTy) {
     return innerValue;
@@ -1626,6 +1652,9 @@ static ManagedValue applyTrivialConversions(SILGenFunction &SGF,
     }
   }
 
+  llvm::errs() << "ERROR!\n";
+  innerASTTy->dump();
+  outerASTTy->dump();
   llvm_unreachable("unhandled reabstraction type mismatch");
 }
 
@@ -3535,6 +3564,18 @@ SILGenFunction::getThunkedAutoDiffLinearMap(
 
   // Partially-apply the thunk to `linearMap` and return the thunked value.
   auto getThunkedResult = [&]() {
+#if 0
+    if (linearMap.getType() != thunkDeclType->getParameters().back().getSILStorageInterfaceType()) {
+      llvm::errs() << "LINEAR MAP TYPE ISSUES\n";
+      linearMap.getType().dump();
+      linearMap.getType().castTo<SILFunctionType>()->getUnsubstitutedType(getModule());
+      thunkDeclType->getParameters().back().getSILStorageInterfaceType().dump();
+      // linearMap = B.createConvertFunction(loc, linearMap, thunkDeclType->getParameters().back().getSILStorageInterfaceType());
+      auto convertedType = SILType::getPrimitiveObjectType(linearMap.getType().castTo<SILFunctionType>()->getUnsubstitutedType(getModule()));
+      linearMap = B.createConvertFunction(loc, linearMap, convertedType);
+      linearMap.getType().dump();
+    }
+#endif
     auto thunkedFn = createPartialApplyOfThunk(
         *this, loc, thunk, interfaceSubs, dynamicSelfType, toType, linearMap);
     if (!toType->isNoEscape())
@@ -3790,8 +3831,11 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   SILGenFunctionBuilder fb(*this);
   // This thunk is publicly exposed and cannot be transparent.
   // Instead, mark it as "always inline" for optimization.
+  llvm::errs() << "THUNK TYPE\n";
+  thunkFnTy->dump();
   auto *thunk = fb.getOrCreateFunction(
       loc, name, customDerivativeFn->getLinkage(), thunkFnTy, IsBare,
+      // loc, name, customDerivativeFn->getLinkage(), thunkFnTy->getUnsubstitutedType(M), IsBare,
       IsNotTransparent, customDerivativeFn->isSerialized(),
       customDerivativeFn->isDynamicallyReplaceable(),
       customDerivativeFn->getEntryCount(), IsThunk,
@@ -3807,7 +3851,13 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   thunkSGF.collectThunkParams(loc, params, &indirectResults);
 
   auto *fnRef = thunkSGF.B.createFunctionRef(loc, customDerivativeFn);
-  auto fnRefType = fnRef->getType().castTo<SILFunctionType>();
+  // auto fnRefType = fnRef->getType().mapTypeOutOfContext().castTo<SILFunctionType>();
+  auto fnRefType = thunkSGF.F.mapTypeIntoContext(fnRef->getType().mapTypeOutOfContext()).castTo<SILFunctionType>();
+  llvm::errs() << "FN REF TYPE\n";
+  fnRefType->dump();
+  llvm::errs() << "FN REF TYPE 2\n";
+  fnRefType = fnRefType->getUnsubstitutedType(M);
+  fnRefType->dump();
 
   // Collect thunk arguments, converting ownership.
   SmallVector<SILValue, 8> arguments;
@@ -3848,6 +3898,12 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   // Create return instruction in the thunk, first deallocating local
   // allocations and freeing arguments-to-free.
   auto createReturn = [&](SILValue retValue) {
+    if (retValue->getType() != thunkFnTy->getAllResultsInterfaceType()) {
+      llvm::errs() << "DIFFERENT!\n";
+      retValue->getType().dump();
+      thunkFnTy->getAllResultsInterfaceType().dump();
+      // retValue = thunkSGF.B.createConvertFunction(loc, retValue, thunkFnTy->getAllResultsInterfaceType(), /*withoutActuallyEscaping*/ false);
+    }
     // Emit cleanups.
     thunkSGF.Cleanups.emitCleanupsForReturn(
         CleanupLocation::get(loc), NotForUnwind);
@@ -3888,6 +3944,14 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   auto linearMap = thunkSGF.emitManagedRValueWithCleanup(directResults.back());
   assert(linearMap.getType().castTo<SILFunctionType>() == linearMapFnType);
   auto linearMapKind = kind.getLinearMapKind();
+  llvm::errs() << "LINEAR MAP TYPE!\n";
+  linearMapFnType->dump();
+  targetLinearMapFnType->dump();
+  linearMapFnType = linearMapFnType->getUnsubstitutedType(thunkSGF.getModule());
+  targetLinearMapFnType = targetLinearMapFnType->getUnsubstitutedType(thunkSGF.getModule());
+  llvm::errs() << "LINEAR MAP TYPE AFTER!\n";
+  linearMapFnType->dump();
+  targetLinearMapFnType->dump();
   linearMap = thunkSGF.getThunkedAutoDiffLinearMap(
       linearMap, linearMapKind, linearMapFnType, targetLinearMapFnType,
       reorderSelf);
