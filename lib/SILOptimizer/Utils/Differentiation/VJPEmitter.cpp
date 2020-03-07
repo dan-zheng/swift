@@ -29,6 +29,7 @@
 namespace swift {
 namespace autodiff {
 
+#if 0
 /*static*/
 SubstitutionMap VJPEmitter::getSubstitutionMap(SILFunction *original,
                                                SILFunction *vjp) {
@@ -748,6 +749,7 @@ bool VJPEmitter::run() {
              << *vjp);
   return errorOccurred;
 }
+#endif
 
 } // end namespace autodiff
 } // end namespace swift

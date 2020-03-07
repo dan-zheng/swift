@@ -27,9 +27,12 @@
 namespace swift {
 namespace autodiff {
 
+#if 0
+
 //--------------------------------------------------------------------------//
 // Initialization helpers
 //--------------------------------------------------------------------------//
+
 
 /*static*/
 SubstitutionMap JVPEmitter::getSubstitutionMap(SILFunction *original,
@@ -1473,6 +1476,8 @@ void JVPEmitter::visitDifferentiableFunctionInst(
   auto *newDFI = cast<DifferentiableFunctionInst>(getOpValue(dfi));
   context.addDifferentiableFunctionInstToWorklist(newDFI);
 }
+
+#endif
 
 } // end namespace autodiff
 } // end namespace swift

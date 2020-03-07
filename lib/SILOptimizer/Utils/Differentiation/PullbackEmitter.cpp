@@ -39,6 +39,7 @@ namespace autodiff {
 class ADContext;
 class VJPEmitter;
 
+#if 0
 PullbackEmitter::PullbackEmitter(VJPEmitter &vjpEmitter)
     : vjpEmitter(vjpEmitter), builder(getPullback()),
       localAllocBuilder(getPullback()) {
@@ -2113,6 +2114,7 @@ void PullbackEmitter::accumulateIndirect(SILValue lhsDestAccess,
   }
   }
 }
+#endif
 
 } // end namespace autodiff
 } // end namespace swift
