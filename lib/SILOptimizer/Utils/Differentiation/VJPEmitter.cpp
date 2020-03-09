@@ -146,6 +146,7 @@ SILFunction *VJPEmitter::createEmptyPullback() {
   auto indices = witness->getSILAutoDiffIndices();
 
   // Add pullback parameter for the seed.
+<<<<<<< HEAD
   Optional<SILParameterInfo> inoutParam;
   bool isWrtInoutParam = false;
   for (auto i : range(origTy->getNumParameters())) {
@@ -177,6 +178,16 @@ SILFunction *VJPEmitter::createEmptyPullback() {
             ->getCanonicalType(),
         origResult.getConvention()));
   }
+=======
+  auto origResult = origTy->getResults()[*indices.results->begin()];
+  origResult = origResult.getWithInterfaceType(
+      origResult.getInterfaceType()->getCanonicalType(witnessCanGenSig));
+  pbParams.push_back(getTangentParameterInfoForOriginalResult(
+      origResult.getInterfaceType()
+          ->getAutoDiffTangentSpace(lookupConformance)
+          ->getCanonicalType(),
+      origResult.getConvention()));
+>>>>>>> [AutoDiff] Change "source" index to result indices.
 
   // Accept a pullback struct in the pullback parameter list. This is the
   // returned pullback's closure context.
@@ -513,10 +524,12 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
 
   // Form expected indices, assuming there's only one result.
   SILAutoDiffIndices indices(
-      activeResultIndices.front(),
       IndexSubset::get(getASTContext(),
-                       ai->getArgumentsWithoutIndirectResults().size(),
-                       activeParamIndices));
+                       ai->getSubstCalleeType()->getNumParameters(),
+                       activeParamIndices),
+      IndexSubset::get(getASTContext(),
+                       ai->getSubstCalleeType()->getNumResults(),
+                       activeResultIndices));
 
   // Emit the VJP.
   auto loc = ai->getLoc();
@@ -559,6 +572,7 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
           }
         }
         // Check and diagnose non-differentiable results.
+<<<<<<< HEAD
         SILType remappedResultType;
         if (indices.source >= originalFnTy->getNumResults()) {
           auto inoutArgIdx = indices.source - originalFnTy->getNumResults();
@@ -574,6 +588,19 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
               original, invoker, diag::autodiff_nondifferentiable_result);
           errorOccurred = true;
           return true;
+=======
+        for (unsigned resultIndex : range(originalFnTy->getNumResults())) {
+          if (indices.isWrtResult(resultIndex) &&
+              !originalFnTy->getResults()[resultIndex]
+                   .getSILStorageInterfaceType()
+                   .isDifferentiable(getModule())) {
+            context.emitNondifferentiabilityError(
+                allResults[resultIndex], invoker,
+                diag::autodiff_nondifferentiable_result);
+            errorOccurred = true;
+            return true;
+          }
+>>>>>>> [AutoDiff] Change "source" index to result indices.
         }
         return false;
       };
@@ -617,7 +644,7 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
     }
 
     auto *diffFuncInst = context.createDifferentiableFunction(
-        getBuilder(), loc, indices.parameters, original);
+        getBuilder(), loc, indices.parameters, indices.results, original);
 
     // Record the `differentiable_function` instruction.
     context.addDifferentiableFunctionInstToWorklist(diffFuncInst);

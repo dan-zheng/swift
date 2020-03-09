@@ -5430,7 +5430,12 @@ RValue RValueEmitter::visitDifferentiableFunctionExpr(
   auto origFunc = SGF.emitRValueAsSingleValue(E->getSubExpr());
   auto destTy = SGF.getLoweredType(E->getType()).castTo<SILFunctionType>();
   auto *diffFunc = SGF.B.createDifferentiableFunction(
+<<<<<<< HEAD
       E, destTy->getDifferentiabilityParameterIndices(), origFunc.forward(SGF));
+=======
+      E, destTy->getDifferentiationParameterIndices(),
+      destTy->getDifferentiationResultIndices(), origFunc.forward(SGF));
+>>>>>>> [AutoDiff] Change "source" index to result indices.
   return RValue(SGF, E, SGF.emitManagedRValueWithCleanup(diffFunc));
 }
 

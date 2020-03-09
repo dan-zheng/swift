@@ -3381,7 +3381,12 @@ static ManagedValue createAutoDiffThunk(SILGenFunction &SGF,
   auto vjpThunk = createDerivativeFnThunk(AutoDiffDerivativeFunctionKind::VJP);
 
   SILValue convertedBundle = SGF.B.createDifferentiableFunction(
+<<<<<<< HEAD
       loc, sourceType->getDifferentiabilityParameterIndices(),
+=======
+      loc, sourceType->getDifferentiationParameterIndices(),
+      sourceType->getDifferentiationResultIndices(),
+>>>>>>> [AutoDiff] Change "source" index to result indices.
       originalThunk.forward(SGF),
       std::make_pair(jvpThunk.forward(SGF), vjpThunk.forward(SGF)));
   return SGF.emitManagedRValueWithCleanup(convertedBundle);
@@ -3726,7 +3731,7 @@ SILFunction *SILGenModule::getOrCreateCustomDerivativeThunk(
   if (auto derivativeGenSig = config.derivativeGenericSignature)
     derivativeCanGenSig = derivativeGenSig->getCanonicalSignature();
   auto thunkFnTy = origFnTy->getAutoDiffDerivativeFunctionType(
-      indices.parameters, kind, Types,
+      indices.parameters, indices.results, kind, Types,
       LookUpConformanceInModule(M.getSwiftModule()), derivativeCanGenSig);
   assert(!thunkFnTy->getExtInfo().hasContext());
 
@@ -4397,9 +4402,11 @@ getWitnessFunctionRef(SILGenFunction &SGF,
           autoDiffFuncId->getParameterIndices(),
           witness.getDecl()->getInterfaceType()->castTo<AnyFunctionType>());
       auto autoDiffFn = SGF.B.createDifferentiableFunction(
-          loc, loweredIndices, originalFn);
+          loc, loweredIndices, IndexSubset::get(SGF.getASTContext(), 1, {0}),
+          originalFn);
       return SGF.B.createDifferentiableFunctionExtract(
-          loc, NormalDifferentiableFunctionTypeComponent(autoDiffFuncId->getKind()),
+          loc,
+          NormalDifferentiableFunctionTypeComponent(autoDiffFuncId->getKind()),
           autoDiffFn);
     }
 

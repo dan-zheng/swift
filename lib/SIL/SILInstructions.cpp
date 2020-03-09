@@ -607,10 +607,11 @@ TryApplyInst *TryApplyInst::create(
 
 // SWIFT_ENABLE_TENSORFLOW
 SILType DifferentiableFunctionInst::getDifferentiableFunctionType(
-    SILValue OriginalFunction, IndexSubset *ParameterIndices) {
+    SILValue OriginalFunction, IndexSubset *ParameterIndices,
+    IndexSubset *ResultIndices) {
   auto fnTy = OriginalFunction->getType().castTo<SILFunctionType>();
   auto diffTy = fnTy->getWithDifferentiability(
-      DifferentiabilityKind::Normal, ParameterIndices);
+      DifferentiabilityKind::Normal, ParameterIndices, ResultIndices);
   return SILType::getPrimitiveObjectType(diffTy);
 }
 
@@ -624,22 +625,24 @@ ValueOwnershipKind DifferentiableFunctionInst::getMergedOwnershipKind(
 
 DifferentiableFunctionInst::DifferentiableFunctionInst(
     SILDebugLocation Loc, IndexSubset *ParameterIndices,
-    SILValue OriginalFunction, ArrayRef<SILValue> DerivativeFunctions,
+    IndexSubset *ResultIndices, SILValue OriginalFunction, ArrayRef<SILValue> DerivativeFunctions,
     bool HasOwnership)
     : InstructionBaseWithTrailingOperands(
           OriginalFunction, DerivativeFunctions, Loc,
-          getDifferentiableFunctionType(OriginalFunction, ParameterIndices),
+          getDifferentiableFunctionType(
+              OriginalFunction, ParameterIndices, ResultIndices),
           HasOwnership
               ? getMergedOwnershipKind(OriginalFunction, DerivativeFunctions)
               : ValueOwnershipKind(ValueOwnershipKind::None)),
-      ParameterIndices(ParameterIndices),
+      ParameterIndices(ParameterIndices), ResultIndices(ResultIndices),
       HasDerivativeFunctions(!DerivativeFunctions.empty()) {
   assert(DerivativeFunctions.empty() || DerivativeFunctions.size() == 2);
 }
 
 DifferentiableFunctionInst *DifferentiableFunctionInst::create(
     SILModule &Module, SILDebugLocation Loc,
-    IndexSubset *ParameterIndices, SILValue OriginalFunction,
+    IndexSubset *ParameterIndices, IndexSubset *ResultIndices,
+    SILValue OriginalFunction,
     Optional<std::pair<SILValue, SILValue>> VJPAndJVPFunctions,
     bool HasOwnership) {
   auto derivativeFunctions = VJPAndJVPFunctions.hasValue()
@@ -649,15 +652,16 @@ DifferentiableFunctionInst *DifferentiableFunctionInst::create(
   size_t size = totalSizeToAlloc<Operand>(1 + derivativeFunctions.size());
   void *buffer = Module.allocateInst(size, alignof(DifferentiableFunctionInst));
   return ::new (buffer) DifferentiableFunctionInst(
-      Loc, ParameterIndices, OriginalFunction, derivativeFunctions,
-      HasOwnership);
+      Loc, ParameterIndices, ResultIndices, OriginalFunction,
+      derivativeFunctions, HasOwnership);
 }
 
 SILType LinearFunctionInst::getLinearFunctionType(
     SILValue OriginalFunction, IndexSubset *ParameterIndices) {
   auto fnTy = OriginalFunction->getType().castTo<SILFunctionType>();
   auto diffTy = fnTy->getWithDifferentiability(
-      DifferentiabilityKind::Linear, ParameterIndices);
+      DifferentiabilityKind::Linear, ParameterIndices,
+      IndexSubset::get(fnTy->getASTContext(), /*capacity*/ 1, /*indices*/ {0}));
   return SILType::getPrimitiveObjectType(diffTy);
 }
 
@@ -705,8 +709,14 @@ getExtracteeType(
     return SILType::getPrimitiveObjectType(originalFnTy);
   }
   auto resultFnTy = originalFnTy->getAutoDiffDerivativeFunctionType(
+<<<<<<< HEAD
       fnTy->getDifferentiationParameterIndices(), *kindOpt, module.Types,
       LookUpConformanceInModule(module.getSwiftModule()));
+=======
+        fnTy->getDifferentiationParameterIndices(),
+        fnTy->getDifferentiationResultIndices(), *kindOpt, module.Types,
+        LookUpConformanceInModule(module.getSwiftModule()));
+>>>>>>> [AutoDiff] Change "source" index to result indices.
   return SILType::getPrimitiveObjectType(resultFnTy);
 }
 
@@ -762,11 +772,12 @@ SILType DifferentiabilityWitnessFunctionInst::getDifferentiabilityWitnessType(
   if (auto witnessGenSig = witness->getDerivativeGenericSignature())
     witnessCanGenSig = witnessGenSig->getCanonicalSignature();
   auto *parameterIndices = witness->getParameterIndices();
+  auto *resultIndices = witness->getResultIndices();
   if (auto derivativeKind = witnessKind.getAsDerivativeFunctionKind()) {
     bool isReabstractionThunk =
         witness->getOriginalFunction()->isThunk() == IsReabstractionThunk;
     auto diffFnTy = fnTy->getAutoDiffDerivativeFunctionType(
-        parameterIndices, *derivativeKind, module.Types,
+        parameterIndices, resultIndices, *derivativeKind, module.Types,
         LookUpConformanceInModule(module.getSwiftModule()), witnessCanGenSig,
         isReabstractionThunk);
     return SILType::getPrimitiveObjectType(diffFnTy);

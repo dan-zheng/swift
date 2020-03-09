@@ -270,10 +270,12 @@ namespace {
       // lowering.
       auto jvpTy = origTy->getAutoDiffDerivativeFunctionType(
           type->getDifferentiationParameterIndices(),
+          type->getDifferentiationResultIndices(),
           AutoDiffDerivativeFunctionKind::JVP, TC,
           LookUpConformanceInModule(&M), origType.getGenericSignatureOrNull());
       auto vjpTy = origTy->getAutoDiffDerivativeFunctionType(
           type->getDifferentiationParameterIndices(),
+          type->getDifferentiationResultIndices(),
           AutoDiffDerivativeFunctionKind::VJP, TC,
           LookUpConformanceInModule(&M), origType.getGenericSignatureOrNull());
       RecursiveProperties props;
@@ -921,9 +923,14 @@ namespace {
                               ArrayRef<SILValue> values) const override {
       assert(values.size() == 3);
       auto fnTy = getLoweredType().castTo<SILFunctionType>();
+<<<<<<< HEAD
       auto paramIndices = fnTy->getDifferentiabilityParameterIndices();
+=======
+>>>>>>> [AutoDiff] Change "source" index to result indices.
       return B.createDifferentiableFunction(
-          loc, paramIndices, values[0], std::make_pair(values[1], values[2]));
+          loc, fnTy->getDifferentiationParameterIndices(),
+          fnTy->getDifferentiationResultIndices(), values[0],
+          std::make_pair(values[1], values[2]));
     }
 
     void lowerChildren(TypeConverter &TC,
@@ -932,7 +939,12 @@ namespace {
       auto numDerivativeFns = 2;
       children.reserve(numDerivativeFns + 1);
       auto origFnTy = fnTy->getWithoutDifferentiability();
+<<<<<<< HEAD
       auto paramIndices = fnTy->getDifferentiabilityParameterIndices();
+=======
+      auto paramIndices = fnTy->getDifferentiationParameterIndices();
+      auto resultIndices = fnTy->getDifferentiationResultIndices();
+>>>>>>> [AutoDiff] Change "source" index to result indices.
       children.push_back(Child{
         NormalDifferentiableFunctionTypeComponent::Original,
         TC.getTypeLowering(origFnTy, getExpansionContext())
@@ -941,7 +953,12 @@ namespace {
                {AutoDiffDerivativeFunctionKind::JVP,
                 AutoDiffDerivativeFunctionKind::VJP}) {
         auto derivativeFnTy = origFnTy->getAutoDiffDerivativeFunctionType(
+<<<<<<< HEAD
             paramIndices, kind, TC, LookUpConformanceInModule(&TC.M));
+=======
+            paramIndices, resultIndices, kind, TC,
+            LookUpConformanceInModule(&TC.M));
+>>>>>>> [AutoDiff] Change "source" index to result indices.
         auto silTy = SILType::getPrimitiveObjectType(derivativeFnTy);
         NormalDifferentiableFunctionTypeComponent extractee(kind);
         // Assert that we have the right extractee. A terrible bug in the past

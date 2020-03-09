@@ -524,7 +524,7 @@ bool PullbackEmitter::run() {
 
   SmallVector<SILValue, 8> origFormalResults;
   collectAllFormalResultsInTypeOrder(original, origFormalResults);
-  auto origResult = origFormalResults[getIndices().source];
+  auto origResult = origFormalResults[*getIndices().results->begin()];
 
   // If original result is non-varied, it will always have a zero derivative.
   // Skip full pullback generation and simply emit zero derivatives for wrt
@@ -1200,6 +1200,7 @@ void PullbackEmitter::visitApplyInst(ApplyInst *ai) {
   });
   SmallVector<SILValue, 8> origAllResults;
   collectAllActualResultsInTypeOrder(ai, origDirectResults, origAllResults);
+<<<<<<< HEAD
   // Append `inout` arguments after original results.
   for (auto paramIdx : applyInfo.indices.parameters->getIndices()) {
     auto paramInfo = ai->getSubstCalleeConv().getParamInfoForSILArg(
@@ -1212,6 +1213,9 @@ void PullbackEmitter::visitApplyInst(ApplyInst *ai) {
 
   assert(applyInfo.indices.source < origAllResults.size());
   auto origResult = origAllResults[applyInfo.indices.source];
+=======
+  auto origResult = origAllResults[*applyInfo.indices.results->begin()];
+>>>>>>> [AutoDiff] Change "source" index to result indices.
   assert(origResult);
   auto origNumIndRes = ai->getNumIndirectResults();
 
