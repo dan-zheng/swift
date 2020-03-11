@@ -67,6 +67,8 @@ VJPEmitter::VJPEmitter(ADContext &context, SILFunction *original,
       activityInfo(getActivityInfo(context, original,
                                    witness->getSILAutoDiffIndices(), vjp)),
       pullbackInfo(context, AutoDiffLinearMapKind::Pullback, original, vjp,
+                   // consider replacing with autodiff config?
+                   witness->getDerivativeGenericSignature(),
                    witness->getSILAutoDiffIndices(), activityInfo) {
   // Create empty pullback function.
   pullback = createEmptyPullback();
@@ -166,7 +168,7 @@ SILFunction *VJPEmitter::createEmptyPullback() {
     SILParameterInfo inoutParamTanParam(
         origResult.getInterfaceType()
             ->getAutoDiffTangentSpace(lookupConformance)
-            ->getCanonicalType(),
+            ->getType()->getCanonicalType(witnessCanGenSig),
         inoutParamTanConvention);
     pbParams.push_back(inoutParamTanParam);
   } else {
@@ -176,7 +178,7 @@ SILFunction *VJPEmitter::createEmptyPullback() {
     pbParams.push_back(getTangentParameterInfoForOriginalResult(
         origResult.getInterfaceType()
             ->getAutoDiffTangentSpace(lookupConformance)
-            ->getCanonicalType(),
+            ->getType()->getCanonicalType(witnessCanGenSig),
         origResult.getConvention()));
   }
 
@@ -184,7 +186,7 @@ SILFunction *VJPEmitter::createEmptyPullback() {
   // returned pullback's closure context.
   auto *origExit = &*original->findReturnBB();
   auto *pbStruct = pullbackInfo.getLinearMapStruct(origExit);
-  auto pbStructType = pbStruct->getDeclaredInterfaceType()->getCanonicalType();
+  auto pbStructType = pbStruct->getDeclaredInterfaceType()->getCanonicalType(witnessCanGenSig);
   pbParams.push_back({pbStructType, ParameterConvention::Direct_Owned});
 
   // Add pullback results for the requested wrt parameters.
@@ -197,7 +199,7 @@ SILFunction *VJPEmitter::createEmptyPullback() {
     adjResults.push_back(getTangentResultInfoForOriginalParameter(
         origParam.getInterfaceType()
             ->getAutoDiffTangentSpace(lookupConformance)
-            ->getCanonicalType(),
+            ->getType()->getCanonicalType(witnessCanGenSig),
         origParam.getConvention()));
   }
 
@@ -267,6 +269,7 @@ void VJPEmitter::visitSILInstruction(SILInstruction *inst) {
 
 SILType VJPEmitter::getLoweredType(Type type) {
   auto vjpGenSig = vjp->getLoweredFunctionType()->getSubstGenericSignature();
+  // auto vjpGenSig = vjp->getLoweredFunctionType()->getInvocationGenericSignature();
   Lowering::AbstractionPattern pattern(
       vjpGenSig, type->getCanonicalType(vjpGenSig));
   return vjp->getLoweredType(pattern, type);
@@ -337,6 +340,14 @@ void VJPEmitter::visitReturnInst(ReturnInst *ri) {
                          ? vjpGenericEnv->getForwardingSubstitutionMap()
                          : vjp->getForwardingSubstitutionMap();
   auto *pullbackRef = builder.createFunctionRef(loc, pullback);
+#if 0
+  llvm::errs() << "VJP SUBST MAP\n";
+  vjpSubstMap.dump();
+  llvm::errs() << "PULLBACK REF TYPE\n";
+  pullbackRef->getType().dump();
+  llvm::errs() << "PULLBACK STRUCT VAL\n";
+  pbStructVal->dump();
+#endif
   auto *pullbackPartialApply =
       builder.createPartialApply(loc, pullbackRef, vjpSubstMap, {pbStructVal},
                                  ParameterConvention::Direct_Guaranteed);

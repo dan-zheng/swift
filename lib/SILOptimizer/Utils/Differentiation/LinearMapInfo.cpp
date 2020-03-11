@@ -55,9 +55,11 @@ static GenericParamList *cloneGenericParameters(ASTContext &ctx,
 
 LinearMapInfo::LinearMapInfo(ADContext &context, AutoDiffLinearMapKind kind,
                              SILFunction *original, SILFunction *derivative,
+                             GenericSignature witnessGenericSignature,
                              SILAutoDiffIndices indices,
                              const DifferentiableActivityInfo &activityInfo)
     : kind(kind), original(original), derivative(derivative),
+      witnessGenericSignature(witnessGenericSignature),
       activityInfo(activityInfo), indices(indices),
       typeConverter(context.getTypeConverter()) {
   generateDifferentiationDataStructures(context, indices, derivative);

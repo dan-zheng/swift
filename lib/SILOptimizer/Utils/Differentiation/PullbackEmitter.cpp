@@ -149,18 +149,35 @@ void PullbackEmitter::cleanUpTemporariesForBlock(SILBasicBlock *bb,
 //--------------------------------------------------------------------------//
 
 const Lowering::TypeLowering &PullbackEmitter::getTypeLowering(Type type) {
+#if 0
   auto pbGenSig =
       getPullback().getLoweredFunctionType()->getSubstGenericSignature();
   Lowering::AbstractionPattern pattern(
       pbGenSig, type->getCanonicalType(pbGenSig));
   return getPullback().getTypeLowering(pattern, type);
+#endif
+  CanGenericSignature witnessCanGenSig;
+  if (auto witnessGenSig = getWitness()->getDerivativeGenericSignature())
+    witnessCanGenSig = witnessGenSig->getCanonicalSignature();
+  Lowering::AbstractionPattern pattern(
+      witnessCanGenSig, type->getCanonicalType(witnessCanGenSig));
+  return getPullback().getTypeLowering(pattern, type);
 }
 
 /// Remap any archetypes into the current function's context.
 SILType PullbackEmitter::remapType(SILType ty) {
+  llvm::errs() << "PullbackEmitter::remapType\n";
+  ty.dump();
+  if (auto *genEnv = getPullback().getGenericEnvironment()) {
+    llvm::errs() << "GEN ENV\n";
+    genEnv->dump();
+  }
+  return getTypeLowering(ty.getASTType()).getLoweredType();
+#if 0
   if (ty.hasArchetype())
     return getPullback().mapTypeIntoContext(ty.mapTypeOutOfContext());
   return getPullback().mapTypeIntoContext(ty);
+#endif
 }
 
 Optional<TangentSpace> PullbackEmitter::getTangentSpace(CanType type) {
@@ -172,9 +189,31 @@ Optional<TangentSpace> PullbackEmitter::getTangentSpace(CanType type) {
 }
 
 SILType PullbackEmitter::getRemappedTangentType(SILType type) {
+  if (type.hasArchetype())
+    type = type.mapTypeOutOfContext();
+  auto tanSpace = getTangentSpace(remapType(type).getASTType());
+  llvm::errs() << "PullbackEmitter::getRemappedTangentType TAN SPACE\n";
+  tanSpace->getType()->dump();
+  auto &tl = getTypeLowering(tanSpace->getType());
+  auto result = SILType::getPrimitiveType(tl.getLoweredType().getASTType(), type.getCategory());
+  result.getASTType()->dump();
+  CanGenericSignature witnessCanGenSig;
+  if (auto witnessGenSig = getWitness()->getDerivativeGenericSignature())
+    witnessCanGenSig = witnessGenSig->getCanonicalSignature();
+  if (witnessCanGenSig) {
+    result = SILType::getPrimitiveType(witnessCanGenSig->getGenericEnvironment()->mapTypeIntoContext(result.getASTType())->getCanonicalType(), result.getCategory());
+  }
+  llvm::errs() << "WITNESS GEN SIG\n";
+  witnessCanGenSig.dump();
+  return result;
+#if 0
+  CanGenericSignature witnessCanGenSig;
+  if (auto witnessGenSig = getWitness()->getDerivativeGenericSignature())
+    witnessCanGenSig = witnessGenSig->getCanonicalSignature();
   return SILType::getPrimitiveType(
-      getTangentSpace(remapType(type).getASTType())->getCanonicalType(),
+      getTangentSpace(remapType(type).getASTType())->getType()->getCanonicalType(witnessCanGenSig),
       type.getCategory());
+#endif
 }
 
 SubstitutionMap
@@ -203,6 +242,13 @@ void PullbackEmitter::setAdjointValue(SILBasicBlock *origBB,
   assert(adjointValue.getType().isObject());
   assert(originalValue->getFunction() == &getOriginal());
   // The adjoint value must be in the tangent space.
+  if (adjointValue.getType() !=
+      getRemappedTangentType(originalValue->getType())) {
+    auto result = getRemappedTangentType(originalValue->getType());
+    llvm::errs() << "MISMATCH PullbackEmitter::setAdjointValue\n";
+    adjointValue.getType().getASTType()->dump();
+    result.getASTType()->dump();
+  }
   assert(adjointValue.getType() ==
          getRemappedTangentType(originalValue->getType()));
   auto insertion = valueMap.try_emplace({origBB, originalValue}, adjointValue);
@@ -586,6 +632,7 @@ bool PullbackEmitter::run() {
       // $L            | $*A          | No (cannot create $A adjoint value)
       // $*A           | $*A          | Yes (no mismatch)
       if (!diagnosedActiveValueTangentValueCategoryIncompatible) {
+        getOriginal().dump();
         if (auto tanSpace = getTangentSpace(remapType(type).getASTType())) {
           auto tanASTType = tanSpace->getCanonicalType();
           auto &origTL = getTypeLowering(type.getASTType());
@@ -642,8 +689,16 @@ bool PullbackEmitter::run() {
   for (auto *origBB : postOrderPostDomOrder) {
     auto *pullbackBB = pullback.createBasicBlock();
     pullbackBBMap.insert({origBB, pullbackBB});
+#if 0
     auto pbStructLoweredType =
         remapType(getPullbackInfo().getLinearMapStructLoweredType(origBB));
+#endif
+    auto pbStructLoweredType =
+        remapType(getPullbackInfo().getLinearMapStructLoweredType(origBB));
+#if 0
+    auto pbStructLoweredType =
+    getTypeLowering(getPullbackInfo().getLinearMapStructLoweredType(origBB).getASTType()).getLoweredType();
+#endif
     // If the BB is the original exit, then the pullback block that we just
     // created must be the pullback function's entry. For the pullback entry,
     // create entry arguments and continue to the next block.
@@ -651,6 +706,12 @@ bool PullbackEmitter::run() {
       assert(pullbackBB->isEntry());
       createEntryArguments(&pullback);
       auto *mainPullbackStruct = pullbackBB->getArguments().back();
+      if (mainPullbackStruct->getType() != pbStructLoweredType) {
+        llvm::errs() << "MISMATCH: mainPullbackStruct->getType() != pbStructLoweredType\n";
+        mainPullbackStruct->getType().getASTType()->dump();
+        pbStructLoweredType.getASTType()->dump();
+        getWitness()->getDerivativeGenericSignature()->getGenericEnvironment()->dump();
+      }
       assert(mainPullbackStruct->getType() == pbStructLoweredType);
       pullbackStructArguments[origBB] = mainPullbackStruct;
       // Destructure the pullback struct to get the elements.

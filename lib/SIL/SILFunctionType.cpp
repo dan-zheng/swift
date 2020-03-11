@@ -3735,6 +3735,10 @@ SILFunctionType::substGenericArgs(SILModule &silModule,
                                   LookupConformanceFn conformances,
                                   TypeExpansionContext context) {
   if (!isPolymorphic()) return CanSILFunctionType(this);
+#if 0
+  llvm::errs() << "SILFunctionType::substGenericArgs, getSubstGenericSignature():\n";
+  getSubstGenericSignature()->dump();
+#endif
   SILTypeSubstituter substituter(silModule.Types, context, subs, conformances,
                                  getSubstGenericSignature(),
                                  /*shouldSubstituteOpaqueTypes*/ false);

@@ -60,6 +60,9 @@ private:
   /// The derivative function.
   SILFunction *const derivative;
 
+  /// The witness generic signature.
+  const GenericSignature witnessGenericSignature;
+
   /// Activity info of the original function.
   const DifferentiableActivityInfo &activityInfo;
 
@@ -149,6 +152,7 @@ public:
 
   explicit LinearMapInfo(ADContext &context, AutoDiffLinearMapKind kind,
                          SILFunction *original, SILFunction *derivative,
+                         GenericSignature witnessGenericSignature,
                          SILAutoDiffIndices indices,
                          const DifferentiableActivityInfo &activityInfo);
 
@@ -160,14 +164,34 @@ public:
   /// Returns the lowered SIL type of the linear map struct associated with the
   /// given original block.
   SILType getLinearMapStructLoweredType(SILBasicBlock *origBB) const {
+    // auto genSig = derivative->getLoweredFunctionType()->getSubstGenericSignature();
+    CanGenericSignature genSig;
+    if (witnessGenericSignature)
+      genSig = witnessGenericSignature->getCanonicalSignature();
+    llvm::errs() << "LINEAR MAP INFO getLinearMapStructLoweredType\n";
+    if (genSig) {
+      llvm::errs() << "GEN SIG\n";
+      genSig->getGenericEnvironment()->dump();
+    }
     auto *linMapStruct = getLinearMapStruct(origBB);
     auto linMapStructType =
-        linMapStruct->getDeclaredInterfaceType()->getCanonicalType();
-    Lowering::AbstractionPattern pattern(
-        derivative->getLoweredFunctionType()->getSubstGenericSignature(),
-        linMapStructType);
+        linMapStruct->getDeclaredInterfaceType()->getCanonicalType(genSig);
+    Lowering::AbstractionPattern pattern(genSig, linMapStructType);
+#if 0
     return typeConverter.getLoweredType(pattern, linMapStructType,
                                         TypeExpansionContext::minimal());
+#endif
+    auto result = typeConverter.getLoweredType(pattern, linMapStructType,
+                                        TypeExpansionContext::minimal());
+    llvm::errs() << "RESULT\n";
+    result.getASTType()->dump();
+    if (genSig && result.hasTypeParameter()) {
+      result = SILType::getPrimitiveType(genSig->getGenericEnvironment()->mapTypeIntoContext(result.getASTType())->getCanonicalType(), result.getCategory());
+      // result = SILType::getPrimitiveType(result.getASTType()->getCanonicalType(genSig), result.getCategory());
+    }
+    llvm::errs() << "RESULT AFTER\n";
+    result.getASTType()->dump();
+    return result;
   }
 
   /// Returns the branching trace enum associated with the given original block.
