@@ -536,6 +536,7 @@ getOrCreateSubsetParametersThunkForLinearMap(
     }
   }
   auto mapOriginalParameterIndex = [&](unsigned index) -> unsigned {
+    llvm::errs() << "actualParamIndicesMap SIZE: " << actualParamIndicesMap.size() << ", INDEX: " << index << "\n";
     auto mappedIndex = actualParamIndicesMap[index];
     assert(mappedIndex < actualIndices.parameters->getCapacity());
     return mappedIndex;
@@ -583,8 +584,18 @@ getOrCreateSubsetParametersThunkForLinearMap(
     };
     // Iterate over actual indices.
     for (unsigned i : actualIndices.parameters->getIndices()) {
-      auto resultInfo =
-          linearMapType->getResults()[mapOriginalParameterIndex(i)];
+      auto mappedIndex = mapOriginalParameterIndex(i);
+      SILResultInfo resultInfo;
+      if (mappedIndex < linearMapType->getNumResults()) {
+        resultInfo = linearMapType->getResults()[mappedIndex];
+      } else {
+        auto inoutParamIdx =
+            mappedIndex - linearMapType->getNumResults();
+        auto inoutParamInfo =
+            *std::next(linearMapType->getIndirectMutatingParameters().begin(),
+                       inoutParamIdx);
+        resultInfo = SILResultInfo(inoutParamInfo.getInterfaceType(), ResultConvention::Indirect);
+      }
       // Skip direct results. Only indirect results are relevant as arguments.
       if (resultInfo.isFormalDirect())
         continue;
@@ -626,6 +637,15 @@ getOrCreateSubsetParametersThunkForLinearMap(
   extractAllElements(ai, builder, pullbackDirectResults);
   SmallVector<SILValue, 8> allResults;
   collectAllActualResultsInTypeOrder(ai, pullbackDirectResults, allResults);
+  // Append `inout` arguments after original results.
+  for (auto paramIdx : applyInfo.indices.parameters->getIndices()) {
+    auto paramInfo = ai->getSubstCalleeConv().getParamInfoForSILArg(
+        ai->getNumIndirectResults() + paramIdx);
+    if (!paramInfo.isIndirectMutating())
+      continue;
+    origAllResults.push_back(
+        ai->getArgumentsWithoutIndirectResults()[paramIdx]);
+  }
 
   SmallVector<SILValue, 8> results;
   for (unsigned i : actualIndices.parameters->getIndices()) {
@@ -831,8 +851,10 @@ getOrCreateSubsetParametersThunkForDerivativeFunction(
         SILType::getPrimitiveObjectType(linearMapTargetType),
         /*withoutActuallyEscaping*/ false); // todo: correct boolean value?
   }
-  assert(origFnType->getResults().size() == 1);
-  if (origFnType->getResults().front().isFormalDirect()) {
+  assert(origFnType->getNumResults() +
+             origFnType->getNumIndirectMutatingParameters() == 1);
+  if (origFnType->getNumResults() > 0 &&
+      origFnType->getResults().front().isFormalDirect()) {
     auto result =
         joinElements({originalDirectResult, thunkedLinearMap}, builder, loc);
     builder.createReturn(loc, result);
