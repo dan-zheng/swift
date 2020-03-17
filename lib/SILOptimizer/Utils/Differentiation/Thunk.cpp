@@ -589,6 +589,7 @@ getOrCreateSubsetParametersThunkForLinearMap(
       if (mappedIndex < linearMapType->getNumResults()) {
         resultInfo = linearMapType->getResults()[mappedIndex];
       } else {
+        continue;
         auto inoutParamIdx =
             mappedIndex - linearMapType->getNumResults();
         auto inoutParamInfo =
@@ -622,6 +623,8 @@ getOrCreateSubsetParametersThunkForLinearMap(
   auto *ai = builder.createApply(loc, linearMap, SubstitutionMap(), arguments,
                                  /*isNonThrowing*/ false);
 
+  thunk->dump();
+
   // If differential thunk, deallocate local allocations and directly return
   // `apply` result.
   if (kind == AutoDiffDerivativeFunctionKind::JVP) {
@@ -637,18 +640,27 @@ getOrCreateSubsetParametersThunkForLinearMap(
   extractAllElements(ai, builder, pullbackDirectResults);
   SmallVector<SILValue, 8> allResults;
   collectAllActualResultsInTypeOrder(ai, pullbackDirectResults, allResults);
-  // Append `inout` arguments after original results.
-  for (auto paramIdx : applyInfo.indices.parameters->getIndices()) {
+#if 0
+  // Append pullback `inout` arguments after pullback results.
+  for (auto paramIdx : actualIndices.parameters->getIndices()) {
+    auto mappedIndex = mapOriginalParameterIndex(paramIdx);
+    if (mappedIndex < linearMapType->getNumResults())
+      continue;
+    auto inoutParamIdx =
+        mappedIndex - linearMapType->getNumResults();
     auto paramInfo = ai->getSubstCalleeConv().getParamInfoForSILArg(
-        ai->getNumIndirectResults() + paramIdx);
+        ai->getNumIndirectResults() + mappedIndex);
     if (!paramInfo.isIndirectMutating())
       continue;
-    origAllResults.push_back(
-        ai->getArgumentsWithoutIndirectResults()[paramIdx]);
+    allResults.push_back(
+        ai->getArgumentsWithoutIndirectResults()[mappedIndex]);
   }
+#endif
 
   SmallVector<SILValue, 8> results;
   for (unsigned i : actualIndices.parameters->getIndices()) {
+    llvm::errs() << "ALL RESULTS: " << allResults.size() << "\n";
+    llvm::errs() << "INDEX: " << i << ", MAPPED: " << mapOriginalParameterIndex(i) << "\n";
     // If result is desired:
     // - Do nothing if result is indirect.
     //   (It was already forwarded to the `apply` instruction).
