@@ -3,7 +3,9 @@
 func foo<T: Numeric>(_ x: T, _ y: T) -> T { x * y }
 
 @derivative(of: foo)
-func foo_vjp<T: Numeric & Differentiable>(_ x: T, _ y: T) -> (value: T, pullback: (T.TangentVector) -> (T.TangentVector, T.TangentVector)) {
+func foo_vjp<T: Numeric & Differentiable>(_ x: T, _ y: T) -> (
+  value: T, pullback: (T.TangentVector) -> (T.TangentVector, T.TangentVector)
+) {
   (foo(x, y), { _ in (.zero, .zero) })
 }
 
@@ -28,3 +30,5 @@ func differentiate_foo_wrt_0(_ x: Float) -> Float {
 // CHECK:   [[FOO_VJP_SUBSET_THUNK:%.*]] = thin_to_thick_function [[FOO_VJP_SUBSET_THUNK_THIN]] : $@convention(thin) (@in_guaranteed Float, @in_guaranteed Float) -> (@out Float, @owned @callee_guaranteed (@in_guaranteed Float) -> @out Float) to $@callee_guaranteed (@in_guaranteed Float, @in_guaranteed Float) -> (@out Float, @owned @callee_guaranteed (@in_guaranteed Float) -> @out Float)
 // CHECK:   [[FOO_DIFF:%.*]] = differentiable_function [parameters 0] [[FOO_FLOAT]] : $@callee_guaranteed (@in_guaranteed Float, @in_guaranteed Float) -> @out Float with_derivative {[[FOO_JVP_SUBSET_THUNK]] : $@callee_guaranteed (@in_guaranteed Float, @in_guaranteed Float) -> (@out Float, @owned @callee_guaranteed (@in_guaranteed Float) -> @out Float), [[FOO_VJP_SUBSET_THUNK]] : $@callee_guaranteed (@in_guaranteed Float, @in_guaranteed Float) -> (@out Float, @owned @callee_guaranteed (@in_guaranteed Float) -> @out Float)}
 // CHECK: }
+
+// MARK: `inout` differentiability parameters

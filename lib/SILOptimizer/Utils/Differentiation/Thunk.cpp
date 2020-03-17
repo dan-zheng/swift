@@ -426,6 +426,7 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
 std::pair<SILFunction *, SubstitutionMap>
 getOrCreateSubsetParametersThunkForLinearMap(
     SILOptFunctionBuilder &fb, SILFunction *parentThunk,
+    CanSILFunctionType origFnType,
     CanSILFunctionType linearMapType, CanSILFunctionType targetType,
     AutoDiffDerivativeFunctionKind kind, SILAutoDiffIndices desiredIndices,
     SILAutoDiffIndices actualIndices) {
@@ -576,13 +577,17 @@ getOrCreateSubsetParametersThunkForLinearMap(
     };
     // Iterate over actual indices.
     for (unsigned i : actualIndices.parameters->getIndices()) {
-      auto resultInfo =
-          linearMapType->getResults()[mapOriginalParameterIndex(i)];
-      // Skip direct results. Only indirect results are relevant as arguments.
-      if (resultInfo.isFormalDirect())
+      auto mappedIndex = mapOriginalParameterIndex(i);
+      auto origParamInfo = origFnType->getParameters()[i];
+      if (mappedIndex >= linearMapType->getNumResults())
         continue;
+      auto resultInfo = linearMapType->getResults()[mappedIndex];
+      // Skip direct results. Only indirect results are relevant as arguments.
+      if (resultInfo.isFormalDirect()) {
+        continue;
+      }
       // If index is desired, use next indirect result.
-      if (desiredIndices.isWrtParameter(i)) {
+      if (desiredIndices.isWrtParameter(i) && !origParamInfo.isIndirectMutating()) {
         useNextResult();
         continue;
       }
@@ -619,14 +624,28 @@ getOrCreateSubsetParametersThunkForLinearMap(
   extractAllElements(ai, builder, pullbackDirectResults);
   SmallVector<SILValue, 8> allResults;
   collectAllActualResultsInTypeOrder(ai, pullbackDirectResults, allResults);
+  // Collect pullback `inout` arguments in type order.
+  unsigned inoutArgIdx = 0;
+  SILFunctionConventions origConv(origFnType, thunk->getModule());
+  for (auto paramIdx : actualIndices.parameters->getIndices()) {
+    auto paramInfo = origConv.getParameters()[paramIdx];
+    if (!paramInfo.isIndirectMutating())
+      continue;
+    auto inoutArg = *std::next(ai->getInoutArguments().begin(), inoutArgIdx++);
+    allResults.insert(allResults.begin() + paramIdx, inoutArg);
+  }
+  assert(allResults.size() == actualIndices.parameters->getNumIndices() &&
+         "Number of pullback results should match number of differentiability "
+         "parameters");
 
   SmallVector<SILValue, 8> results;
   for (unsigned i : actualIndices.parameters->getIndices()) {
+    unsigned mappedIndex = mapOriginalParameterIndex(i);
     // If result is desired:
     // - Do nothing if result is indirect.
     //   (It was already forwarded to the `apply` instruction).
     // - Push it to `results` if result is direct.
-    auto result = allResults[mapOriginalParameterIndex(i)];
+    auto result = allResults[mappedIndex];
     if (desiredIndices.isWrtParameter(i)) {
       if (result->getType().isObject())
         results.push_back(result);
@@ -801,16 +820,17 @@ getOrCreateSubsetParametersThunkForDerivativeFunction(
   SubstitutionMap linearMapSubs;
   std::tie(linearMapThunk, linearMapSubs) =
       getOrCreateSubsetParametersThunkForLinearMap(
-          fb, thunk, linearMapType, linearMapTargetType, kind, desiredIndices,
-          actualIndices);
+          fb, thunk, origFnType, linearMapType, linearMapTargetType, kind,
+          desiredIndices, actualIndices);
 
   auto *linearMapThunkFRI = builder.createFunctionRef(loc, linearMapThunk);
   auto *thunkedLinearMap = builder.createPartialApply(
       loc, linearMapThunkFRI, linearMapSubs, {linearMap},
       ParameterConvention::Direct_Guaranteed);
-
-  assert(origFnType->getResults().size() == 1);
-  if (origFnType->getResults().front().isFormalDirect()) {
+  assert(origFnType->getNumResults() +
+             origFnType->getNumIndirectMutatingParameters() == 1);
+  if (origFnType->getNumResults() > 0 &&
+      origFnType->getResults().front().isFormalDirect()) {
     auto result =
         joinElements({originalDirectResult, thunkedLinearMap}, builder, loc);
     builder.createReturn(loc, result);
