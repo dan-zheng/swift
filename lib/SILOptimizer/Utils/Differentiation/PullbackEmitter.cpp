@@ -1685,6 +1685,10 @@ void PullbackEmitter::visitDestructureTupleInst(DestructureTupleInst *dti) {
   }
 }
 
+void PullbackEmitter::visitEnumInst(EnumInst *ei) {
+  auto *bb = ei->getParent();
+}
+
 void PullbackEmitter::visitLoadOperation(SingleValueInstruction *inst) {
   assert(isa<LoadInst>(inst) || isa<LoadBorrowInst>(inst));
   auto *bb = inst->getParent();

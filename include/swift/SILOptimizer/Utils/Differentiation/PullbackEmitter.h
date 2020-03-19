@@ -390,6 +390,13 @@ public:
   ///             adj[x].n += adj[yn]
   void visitDestructureTupleInst(DestructureTupleInst *dti);
 
+  /// Handle `enum` instruction.
+  ///   Original: y = enum $Enum, #Enum.case!enumelt.1, x0, x1
+  ///    Adjoint: adj[x0] += adj[y]
+  ///             adj[x1] += adj[yn]
+  ///             ...
+  void visitEnumInst(EnumInst *ei);
+
   /// Handle `load` or `load_borrow` instruction
   ///   Original: y = load/load_borrow x
   ///    Adjoint: adj[x] += adj[y]

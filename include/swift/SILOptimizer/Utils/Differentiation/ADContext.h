@@ -257,7 +257,8 @@ ADContext::emitNondifferentiabilityError(SILValue value,
                                          Diag<T...> diag, U &&... args) {
   LLVM_DEBUG({
     getADDebugStream() << "Diagnosing non-differentiability.\n";
-    getADDebugStream() << "For value:\n" << value;
+    auto &s = getADDebugStream() << "For value:\n";
+    value->printInContext(s);
     getADDebugStream() << "With invoker:\n" << invoker << '\n';
   });
   auto valueLoc = value.getLoc().getSourceLoc();
