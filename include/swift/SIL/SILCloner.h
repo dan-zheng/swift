@@ -47,7 +47,6 @@ protected:
   TypeSubstitutionMap OpenedExistentialSubs;
   SILOpenedArchetypesTracker OpenedArchetypesTracker;
 
-private:
   /// MARK: Private state hidden from CRTP extensions.
 
   // The old-to-new value map.
@@ -57,6 +56,7 @@ private:
   /// blocks.
   llvm::DenseMap<SILBasicBlock*, SILBasicBlock*> BBMap;
 
+private:
   // The original blocks in DFS preorder. All blocks in this list are mapped.
   // After cloning, this represents the entire cloned CFG.
   //

@@ -552,6 +552,10 @@ public:
   bool isLoweringOf(TypeExpansionContext context, SILModule &M,
                     CanType formalType);
 
+  /// Returns true if this SILType conforms to `Differentiable` in the given
+  /// module.
+  bool isDifferentiable(SILModule &M) const;
+
   /// Returns the hash code for the SILType.
   llvm::hash_code getHashCode() const {
     return llvm::hash_combine(*this);

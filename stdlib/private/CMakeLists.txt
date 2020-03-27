@@ -15,6 +15,7 @@ if(SWIFT_BUILD_SDK_OVERLAY)
   # SwiftPrivateThreadExtras to ensure that the dependency targets are setup in
   # the correct order for Windows.
   add_subdirectory(StdlibUnittest)
+  add_subdirectory(DifferentiationUnittest)
 
   add_subdirectory(OSLog)
 
