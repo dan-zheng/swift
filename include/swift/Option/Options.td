@@ -503,6 +503,12 @@ def enable_experimental_differentiable_programming :
   Flags<[FrontendOption]>,
   HelpText<"Enable experimental differentiable programming features">;
 
+// Note: this flag will be removed when JVP/differential generation is robust.
+def enable_experimental_forward_mode_differentiation :
+  Flag<["-"], "enable-experimental-forward-mode-differentiation">,
+  Flags<[FrontendOption]>,
+  HelpText<"Enable experimental forward mode differentiation">;
+
 def enable_experimental_additive_arithmetic_derivation :
   Flag<["-"], "enable-experimental-additive-arithmetic-derivation">,
   Flags<[FrontendOption]>,
