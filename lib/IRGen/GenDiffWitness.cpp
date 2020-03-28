@@ -55,10 +55,20 @@ void IRGenModule::emitSILDifferentiabilityWitness(
   */
   llvm::Constant *jvpValue = llvm::UndefValue::get(Int8PtrTy);
   llvm::Constant *vjpValue = llvm::UndefValue::get(Int8PtrTy);
-  if (auto *jvpFn = dw->getJVP())
-    jvpValue = getAddrOfSILFunction(dw->getJVP(), NotForDefinition);
-  if (auto *vjpFn = dw->getJVP())
-    vjpValue = getAddrOfSILFunction(dw->getVJP(), NotForDefinition);
+  if (auto *jvpFn = dw->getJVP()) {
+    jvpValue = getAddrOfSILFunction(jvpFn, NotForDefinition);
+/*
+    llvm::errs() << "JVP FUNCTION\n";
+    jvpFn->dump();
+*/
+  }
+  if (auto *vjpFn = dw->getJVP()) {
+    vjpValue = getAddrOfSILFunction(vjpFn, NotForDefinition);
+/*
+    llvm::errs() << "VJP FUNCTION\n";
+    vjpFn->dump();
+*/
+  }
   diffWitnessContents.addBitCast(jvpValue, Int8PtrTy);
   diffWitnessContents.addBitCast(vjpValue, Int8PtrTy);
 
