@@ -1302,12 +1302,6 @@ function(add_swift_target_library name)
       endif()
     endif()
 
-    # Collect differentiable-programming-related flags.
-    if(SWIFT_ENABLE_EXPERIMENTAL_DIFFERENTIABLE_PROGRAMMING)
-      list(APPEND swiftlib_swift_compile_flags_all
-           -Xfrontend -enable-experimental-differentiable-programming)
-    endif()
-
     # Collect architecture agnostic SDK linker flags
     set(swiftlib_link_flags_all ${SWIFTLIB_LINK_FLAGS})
     if(${sdk} STREQUAL IOS_SIMULATOR AND ${name} STREQUAL swiftMediaPlayer)

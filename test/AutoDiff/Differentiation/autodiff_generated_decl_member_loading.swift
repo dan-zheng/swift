@@ -14,6 +14,8 @@
 //     SIL verification failed: switch_enum dispatches on same enum element
 //     more than once: unswitchedElts.count(elt)
 
+import _Differentiation
+
 public struct Tensor<Scalar> {}
 
 extension Tensor: Differentiable where Scalar: Differentiable{

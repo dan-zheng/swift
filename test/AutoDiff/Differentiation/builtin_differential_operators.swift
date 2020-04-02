@@ -5,6 +5,7 @@
 // REQUIRES: executable_test
 
 import Swift
+import _Differentiation
 import StdlibUnittest
 
 var BuiltinDifferentialOperatorTests = TestSuite("BuiltinDifferentialOperators")

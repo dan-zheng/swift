@@ -3,6 +3,7 @@
 // RUN: not --crash %target-swift-frontend -enable-experimental-forward-mode-differentiation -emit-sil %s
 // REQUIRES: executable_test
 
+import _Differentiation
 import StdlibUnittest
 import DifferentiationUnittest
 

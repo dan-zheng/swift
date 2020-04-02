@@ -1,5 +1,6 @@
 // RUN: %target-run-simple-swift
 
+import _Differentiation
 import StdlibUnittest
 import DifferentiationUnittest
 

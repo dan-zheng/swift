@@ -1,5 +1,7 @@
 // RUN: %target-swift-emit-sil -verify %s
 
+import _Differentiation
+
 //===----------------------------------------------------------------------===//
 // Non-differentiable arguments and results
 //===----------------------------------------------------------------------===//
