@@ -24,6 +24,7 @@
 #include "swift/Runtime/Unreachable.h"
 #include "swift/Strings.h"
 #include <vector>
+#include "llvm/Support/raw_ostream.h"
 
 namespace swift {
 namespace Demangle {

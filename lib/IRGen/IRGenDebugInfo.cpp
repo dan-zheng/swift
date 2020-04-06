@@ -818,6 +818,10 @@ private:
         Reconstructed->dump(llvm::errs());
         abort();
       }
+      else {
+        llvm::errs() << "RECONSTRUCTED!\n";
+        Reconstructed->dump(llvm::errs());
+      }
 #endif
     }
 

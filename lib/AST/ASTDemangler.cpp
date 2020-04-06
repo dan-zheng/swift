@@ -973,6 +973,10 @@ ASTBuilder::findDeclContext(NodePointer node) {
       return nullptr;
     }
 
+    llvm::errs() << "ASTBuilder::findDeclContext\n";
+    node->dump();
+    dc->dumpContext();
+    llvm::errs() << "\n";
     return findTypeDecl(dc, Ctx.getIdentifier(name),
                         privateDiscriminator, node->getKind());
   }
@@ -1034,6 +1038,13 @@ ASTBuilder::findTypeDecl(DeclContext *dc,
 
   SmallVector<ValueDecl *, 4> lookupResults;
   module->lookupMember(lookupResults, dc, name, privateDiscriminator);
+
+  llvm::errs() << "LOOK UP RESULTS: " << name << ", (" << lookupResults.size() << ")\n";
+  dc->dumpContext();
+  for (auto *result : lookupResults) {
+    result->dumpRef();
+    llvm::errs() << "\n";
+  }
 
   GenericTypeDecl *result = nullptr;
   for (auto decl : lookupResults) {
