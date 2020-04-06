@@ -425,10 +425,10 @@ std::string ASTMangler::mangleAutoDiffLinearMapHelper(
 }
 
 std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
-    AutoDiffGeneratedDeclarationKind declKind, StringRef origFnName, unsigned bbId,
-    AutoDiffLinearMapKind linearMapKind, AutoDiffConfig config) {
+    AutoDiffGeneratedDeclarationKind declKind, StringRef origFnName,
+    unsigned bbId, AutoDiffLinearMapKind linearMapKind, AutoDiffConfig config,
+    ModuleDecl *moduleDecl) {
   beginManglingWithoutPrefix();
-  // beginMangling();
 
   Demangler D;
   auto topLevel = D.createNode(Node::Kind::Global);
@@ -442,6 +442,10 @@ std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
     break;
   }
   topLevel->addChild(generatedDecl, D);
+
+  // Add module.
+  auto module = D.createNode(Node::Kind::Module, moduleDecl->getNameStr());
+  generatedDecl->addChild(module, D);
 
   // Add basic block id.
   auto bbIndex = D.createNode(Node::Kind::Number, bbId);
@@ -477,6 +481,7 @@ std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
     parameterIndices->addChild(paramIdx, D);
   }
   linearMap->addChild(parameterIndices, D);
+
   // Add result indices.
   auto resultIndices = D.createNode(Node::Kind::AutoDiffResultIndices);
   for (unsigned i : config.parameterIndices->getIndices()) {
@@ -484,7 +489,9 @@ std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
     resultIndices->addChild(resultIdx, D);
   }
   linearMap->addChild(resultIndices, D);
+
   auto mangled = Demangle::mangleNode(topLevel);
+  llvm::errs() << "ASTMangler::mangleAutoDiffGeneratedDeclaration: '" << mangled << "'\n";
   verify(mangled);
   return mangled;
 }
@@ -896,7 +903,9 @@ void ASTMangler::appendType(Type type, const ValueDecl *forDecl) {
   assert((DWARFMangling || type->isCanonical()) &&
          "expecting canonical types when not mangling for the debugger");
   TypeBase *tybase = type.getPointer();
-  llvm::errs() << "ASTMangler::appendType: " << type << " (" << (unsigned) type->getKind() << ")\n";
+#if 0
+  llvm::errs() << "ASTMangler::appendType: " << type << " (" << (unsigned) type->getKind() << ", " << (unsigned) TypeKind::Struct << ")\n";
+#endif
   switch (type->getKind()) {
     case TypeKind::TypeVariable:
       llvm_unreachable("mangling type variable");
@@ -1110,7 +1119,13 @@ void ASTMangler::appendType(Type type, const ValueDecl *forDecl) {
         addTypeSubstitution(type);
         return;
       }
+#if 0
+      llvm::errs() << "STRUCT/ENUM! '" << Buffer.str() << "'\n";
+#endif
       appendAnyGenericType(type->getAnyGeneric());
+#if 0
+      llvm::errs() << "STRUCT/ENUM AFTER! '" << Buffer.str() << "'\n";
+#endif
       return;
     }
 
@@ -2062,6 +2077,31 @@ void ASTMangler::appendAnyGenericType(const GenericTypeDecl *decl) {
     addTypeSubstitution(nominal->getDeclaredType());
     return;
   }
+
+  // Try to mangle AutoDiff generated declarations: linear map structs and
+  // branching predecessor enums.
+  auto tryAppendAutoDiffGeneratedDeclaration = [this, decl]() -> bool {
+    if (!decl->isImplicit())
+      return false;
+    llvm::errs() << "IMPLICIT DECL!\n";
+    Demangle::Context dem;
+    auto *node = dem.demangleSymbolAsNode(decl->getNameStr());
+    if (!node)
+      return false;
+    llvm::errs() << "FOUND NODE!\n";
+    if (node->getKind() != Node::Kind::Global && node->getNumChildren() != 1)
+      return false;
+    auto *child = node->getFirstChild();
+    if (child->getKind() != Node::Kind::AutoDiffLinearMapStruct &&
+        child->getKind() != Node::Kind::AutoDiffBranchingTraceEnum)
+      return false;
+    llvm::errs() << "FOUND AUTODIFF GENERATED DECL!\n";
+    Buffer << decl->getNameStr().drop_front(2);
+    return true;
+  };
+
+  if (tryAppendAutoDiffGeneratedDeclaration())
+    return;
 
   appendContextOf(decl);
 

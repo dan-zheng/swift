@@ -24,6 +24,7 @@
 #include "swift/Runtime/Unreachable.h"
 #include "swift/Strings.h"
 #include <vector>
+#include <iostream>
 
 namespace swift {
 namespace Demangle {
@@ -318,12 +319,19 @@ class TypeDecoder {
     case NodeKind::Structure:
     case NodeKind::TypeAlias:
     case NodeKind::TypeSymbolicReference:
+    case NodeKind::AutoDiffLinearMapStruct:
+    case NodeKind::AutoDiffBranchingTraceEnum:
     {
+      if (Node->getKind() == NodeKind::AutoDiffLinearMapStruct || Node->getKind() == NodeKind::AutoDiffBranchingTraceEnum)
+        std::cerr << "GENERATED DECL!\n";
       BuiltTypeDecl typeDecl = BuiltTypeDecl();
       BuiltType parent = BuiltType();
       bool typeAlias = false;
-      if (!decodeMangledTypeDecl(Node, typeDecl, parent, typeAlias))
+      if (!decodeMangledTypeDecl(Node, typeDecl, parent, typeAlias)) {
+        if (Node->getKind() == NodeKind::AutoDiffLinearMapStruct || Node->getKind() == NodeKind::AutoDiffBranchingTraceEnum)
+          std::cerr << "COULD NOT DECODE MANGLED TYPE DECL!\n";
         return BuiltType();
+      }
 
       if (typeAlias)
         return Builder.createTypeAliasType(typeDecl, parent);
@@ -866,30 +874,58 @@ class TypeDecoder {
       
       return Builder.resolveOpaqueType(descriptor, genericArgs, ordinal);
     }
+#if 0 // reuse struct
     case NodeKind::AutoDiffLinearMapStruct: {
+      BuiltTypeDecl typeDecl = BuiltTypeDecl();
+      BuiltType parent = BuiltType();
+      bool typeAlias = false;
+      if (!decodeMangledTypeDecl(Node, typeDecl, parent, typeAlias))
+        return BuiltType();
+
+      if (typeAlias)
+        return Builder.createTypeAliasType(typeDecl, parent);
+
+      return Builder.createNominalType(typeDecl, parent);
+#if 0
+      std::cerr << "HI NodeKind::AutoDiffLinearMapStruct\n";
       BuiltTypeDecl typeDecl = BuiltTypeDecl();
       BuiltType parent = BuiltType();
       bool typeAlias = false;
       typeDecl = Builder.createTypeDecl(Node, typeAlias);
       // typeDecl = Builder.createTypeDecl(Node);
       if (!typeDecl) {
-        llvm::errs() << "NOOOOO STRUCT\n";
+        std::cerr << "NOOOOO STRUCT\n";
       }
-      llvm::errs() << "HI NodeKind::AutoDiffLinearMapStruct\n";
+      Node->dump();
       return Builder.createNominalType(typeDecl, parent);
+#endif
     }
     case NodeKind::AutoDiffBranchingTraceEnum: {
       BuiltTypeDecl typeDecl = BuiltTypeDecl();
       BuiltType parent = BuiltType();
       bool typeAlias = false;
+      if (!decodeMangledTypeDecl(Node, typeDecl, parent, typeAlias))
+        return BuiltType();
+
+      if (typeAlias)
+        return Builder.createTypeAliasType(typeDecl, parent);
+
+      return Builder.createNominalType(typeDecl, parent);
+#if 0
+      std::cerr << "HI NodeKind::AutoDiffBranchingTraceEnum\n";
+      BuiltTypeDecl typeDecl = BuiltTypeDecl();
+      BuiltType parent = BuiltType();
+      bool typeAlias = false;
       typeDecl = Builder.createTypeDecl(Node, typeAlias);
       // typeDecl = Builder.createTypeDecl(Node);
       if (!typeDecl) {
-        llvm::errs() << "NOOOOO ENUM\n";
+        std::cerr << "NOOOOO ENUM\n";
       }
-      llvm::errs() << "HI NodeKind::AutoDiffBranchingTraceEnum\n";
+      Node->dump();
       return Builder.createNominalType(typeDecl, parent);
+#endif
     }
+#endif
     // TODO: Handle OpaqueReturnType, when we're in the middle of reconstructing
     // the defining decl
     default:
@@ -928,14 +964,18 @@ private:
     if (node->getKind() == NodeKind::Type)
       return decodeMangledTypeDecl(node->getChild(0), typeDecl,
                                    parent, typeAlias);
+    std::cerr << "decodeMangledTypeDecl\n";
 
     Demangle::NodePointer declNode;
     if (node->getKind() == NodeKind::TypeSymbolicReference) {
       // A symbolic reference can be directly resolved to a nominal type.
       declNode = node;
     } else {
-      if (node->getNumChildren() < 2)
+      if (node->getNumChildren() < 2) {
+        std::cerr << "FAIL 1\n";
+        node->dump();
         return false;
+      }
 
       auto parentContext = node->getChild(0);
 
@@ -950,8 +990,11 @@ private:
         break;
       case Node::Kind::Extension:
         // Decode the type being extended.
-        if (parentContext->getNumChildren() < 2)
+        if (parentContext->getNumChildren() < 2) {
+          std::cerr << "FAIL 2\n";
+          node->dump();
           return false;
+        }
         parentContext = parentContext->getChild(1);
         LLVM_FALLTHROUGH;
       default:
@@ -963,7 +1006,11 @@ private:
       }
     }
     typeDecl = Builder.createTypeDecl(declNode, typeAlias);
-    if (!typeDecl) return false;
+    if (!typeDecl) {
+      std::cerr << "FAIL 3\n";
+      node->dump();
+      return false;
+    }
 
     return true;
   }

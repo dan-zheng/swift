@@ -923,6 +923,35 @@ ASTBuilder::findDeclContext(NodePointer node) {
   case Demangle::Node::Kind::Module:
     return findModule(node);
 
+  case Demangle::Node::Kind::AutoDiffLinearMapStruct:
+  case Demangle::Node::Kind::AutoDiffBranchingTraceEnum: {
+    llvm::errs() << "ASTBuilder::findDeclContext!\n";
+    node->dump();
+    auto *dc = findModule(node->getFirstChild());
+    dc->dumpContext();
+    if (!dc)
+      return nullptr;
+    auto name = "$s" + mangleNode(node);
+    llvm::errs() << "ASTBuilder::findDeclContext name: '" << name << "'!\n";
+#if 0
+    return dc;
+#endif
+    Demangle::Node::Kind declKind;
+    if (node->getKind() == Demangle::Node::Kind::AutoDiffLinearMapStruct) {
+      declKind = Demangle::Node::Kind::Structure;
+    } else if (node->getKind() == Demangle::Node::Kind::AutoDiffBranchingTraceEnum) {
+      declKind = Demangle::Node::Kind::Enum;
+    } else {
+      llvm_unreachable("Unknown AutoDiff generated declaration kind");
+    }
+    auto *result = findTypeDecl(dc, Ctx.getIdentifier(name),
+                        /*privateDiscriminator*/ Identifier(), declKind);
+    llvm::errs() << "RESULT: " << result << "\n";
+    result->dump();
+    return result;
+    // return findModule(node->getFirstChild());
+  }
+
   case Demangle::Node::Kind::Class:
   case Demangle::Node::Kind::Enum:
   case Demangle::Node::Kind::Protocol:
@@ -1044,6 +1073,13 @@ ASTBuilder::findTypeDecl(DeclContext *dc,
 
   SmallVector<ValueDecl *, 4> lookupResults;
   module->lookupMember(lookupResults, dc, name, privateDiscriminator);
+
+  llvm::errs() << "LOOK UP RESULTS: " << name << ", (" << lookupResults.size() << ")\n";
+  dc->dumpContext();
+  for (auto *result : lookupResults) {
+    result->dumpRef();
+    llvm::errs() << "\n" << result << "\n";
+  }
 
   GenericTypeDecl *result = nullptr;
   for (auto decl : lookupResults) {

@@ -1194,24 +1194,17 @@ NodePointer Demangler::demangleBuiltinType() {
       if (linearMap->getKind() != Node::Kind::AutoDiffDifferential &&
           linearMap->getKind() != Node::Kind::AutoDiffPullback)
         return nullptr;
-      // nextIf('y');
+      auto module = demangleIdentifier();
+      module = changeKind(module, Node::Kind::Module);
+      llvm::errs() << "NODES: " << NodeStack.size() << "\n";
       auto bbId = demangleIndexAsNode();
+      llvm::errs() << "BB ID\n";
+      bbId->dump();
+      addChild(Ty, module);
       addChild(Ty, bbId);
       addChild(Ty, linearMap);
-#if 0
-      if (!parseAndPushNodes())
-        return nullptr;
-#endif
-#if 0
-      llvm::errs() << "HELLO STRUCT! " << NodeStack.size() << "\n";
-      // auto node = popNode();
-      auto node = demangleOperator();
-      node->dump();
-#endif
-#if 0
       llvm::errs() << "FINAL TYPE:\n";
       Ty->dump();
-#endif
       break;
     }
     default:

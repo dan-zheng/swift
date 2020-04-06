@@ -39,6 +39,7 @@
 #include <functional>
 #include <vector>
 #include <list>
+#include <iostream>
 
 using namespace swift;
 using namespace Demangle;
@@ -728,6 +729,9 @@ _findContextDescriptor(Demangle::NodePointer node,
   
   if (foundContext)
     T.NominalCache.getOrInsert(mangledName, foundContext);
+
+  std::cerr << "CONTEXT DESCRIPTOR: " << foundContext << "\n";
+  foundContext->dump();
 
   return foundContext;
 }

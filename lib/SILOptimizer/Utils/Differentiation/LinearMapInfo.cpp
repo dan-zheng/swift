@@ -85,10 +85,12 @@ VarDecl *LinearMapInfo::addVarDecl(NominalTypeDecl *nominal, StringRef name,
 }
 
 SourceFile &LinearMapInfo::getDeclarationFileUnit() {
+#if 0
   if (original->hasLocation())
     if (auto *declContext = original->getLocation().getAsDeclContext())
       if (auto *parentSourceFile = declContext->getParentSourceFile())
         return *parentSourceFile;
+#endif
   for (auto *file : original->getModule().getSwiftModule()->getFiles())
     if (auto *src = dyn_cast<SourceFile>(file))
       return *src;
@@ -139,7 +141,8 @@ EnumDecl *LinearMapInfo::createBranchingTraceDecl(
                         /*derivativeGenericSignature*/ GenericSignature());
   auto enumName = mangler.mangleAutoDiffGeneratedDeclaration(
       AutoDiffGeneratedDeclarationKind::BranchingTraceEnum,
-      original->getName().str(), originalBB->getDebugID(), kind, config);
+      original->getName().str(), originalBB->getDebugID(), kind, config,
+      moduleDecl);
   auto enumId = astCtx.getIdentifier(enumName);
   auto loc = original->getLocation().getSourceLoc();
   GenericParamList *genericParams = nullptr;
@@ -157,6 +160,8 @@ EnumDecl *LinearMapInfo::createBranchingTraceDecl(
   branchingTraceDecl->getInterfaceType();
   assert(branchingTraceDecl->hasInterfaceType());
   file.addVisibleDecl(branchingTraceDecl);
+  file.addTopLevelDecl(branchingTraceDecl);
+  moduleDecl->clearLookupCache();
   // Add basic block enum cases.
   for (auto *predBB : originalBB->getPredecessorBlocks()) {
     auto bbId = "bb" + std::to_string(predBB->getDebugID());
@@ -200,6 +205,7 @@ LinearMapInfo::createLinearMapStruct(SILBasicBlock *originalBB,
                                      CanGenericSignature genericSig) {
   assert(originalBB->getParent() == original);
   auto *original = originalBB->getParent();
+  auto *moduleDecl = original->getModule().getSwiftModule();
   auto &astCtx = original->getASTContext();
   auto &file = getDeclarationFileUnit();
   // Create a linear map struct.
@@ -212,7 +218,8 @@ LinearMapInfo::createLinearMapStruct(SILBasicBlock *originalBB,
                         /*derivativeGenericSignature*/ GenericSignature());
   auto structName = mangler.mangleAutoDiffGeneratedDeclaration(
       AutoDiffGeneratedDeclarationKind::LinearMapStruct,
-      original->getName().str(), originalBB->getDebugID(), kind, config);
+      original->getName().str(), originalBB->getDebugID(), kind, config,
+      moduleDecl);
   auto structId = astCtx.getIdentifier(structName);
   GenericParamList *genericParams = nullptr;
   if (genericSig)
@@ -229,6 +236,28 @@ LinearMapInfo::createLinearMapStruct(SILBasicBlock *originalBB,
   linearMapStruct->getInterfaceType();
   assert(linearMapStruct->hasInterfaceType());
   file.addVisibleDecl(linearMapStruct);
+  file.addTopLevelDecl(linearMapStruct);
+  // file.getLook
+  // moduleDecl->getSourceLookupCache().TopLevelValues
+  moduleDecl->clearLookupCache();
+
+  llvm::errs() << "FILE UNIT:\n";
+  file.dump();
+  assert(llvm::find(moduleDecl->getFiles(), &file));
+  SmallVector<ValueDecl *, 4> results;
+  llvm::errs() << "STRUCT ID: '" << structId << "'\n";
+  llvm::errs() << "VISIBLE DECLS: " << file.getCachedVisibleDecls().size() << "\n";
+  for (auto decl : file.getCachedVisibleDecls()) {
+    decl->dumpRef();
+    llvm::errs() << ", SAME NAME? " << (decl->getBaseIdentifier() == structId) << "\n";
+  }
+  moduleDecl->lookupMember(results, moduleDecl, DeclName(structId), /*privateDiscriminator*/ Identifier());
+  // moduleDecl->lookupMember(results, &file, DeclName(structId), /*privateDiscriminator*/ Identifier());
+  llvm::errs() << "RESULTS: " << results.size() << "\n";
+  for (auto *result : results)
+    result->dumpRef();
+  assert(!results.empty());
+
   return linearMapStruct;
 }
 

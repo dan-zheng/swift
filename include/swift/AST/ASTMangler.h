@@ -183,7 +183,8 @@ public:
   mangleAutoDiffGeneratedDeclaration(AutoDiffGeneratedDeclarationKind declKind,
                                      StringRef origFnName, unsigned bbId,
                                      AutoDiffLinearMapKind linearMapKind,
-                                     AutoDiffConfig config);
+                                     AutoDiffConfig config,
+                                     ModuleDecl *moduleDecl);
 
   /// Mangle a SIL differentiability witness key:
   /// - Mangled original function name.

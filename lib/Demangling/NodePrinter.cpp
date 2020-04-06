@@ -679,7 +679,7 @@ private:
       assert(false && "Unknown autodiff associated function kind");
     print(Node->getChild(1)); // parameter indices
     print(Node->getChild(2)); // result indices
-    Printer << "for ";
+    Printer << "for original function ";
     print(Node->getChild(0)); // original function
   }
 
@@ -1692,10 +1692,16 @@ NodePointer NodePrinter::print(NodePointer Node, bool asPrefixContext) {
     return nullptr;
   }
   case Node::Kind::AutoDiffLinearMapStruct:
-    Printer << "linear map struct";
+    Printer << "linear map struct for original basic block ";
+    print(Node->getChild(0));
+    Printer << " and ";
+    print(Node->getChild(1));
     return nullptr;
   case Node::Kind::AutoDiffBranchingTraceEnum:
-    Printer << "branching trace enum";
+    Printer << "branching trace enum for ";
+    print(Node->getChild(1));
+    Printer << " basic block ";
+    print(Node->getChild(0));
     return nullptr;
   case Node::Kind::MergedFunction:
     if (!Options.ShortenThunk) {

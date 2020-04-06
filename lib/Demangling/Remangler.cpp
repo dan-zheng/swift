@@ -482,6 +482,8 @@ void Remangler::mangleAnyNominalType(Node *node) {
     case Node::Kind::Class: return mangleAnyGenericType(node, "C");
     case Node::Kind::OtherNominalType: return mangleAnyGenericType(node, "XY");
     case Node::Kind::TypeAlias: return mangleAnyGenericType(node, "a");
+    case Node::Kind::AutoDiffLinearMapStruct: return mangleAnyGenericType(node, "V");
+    case Node::Kind::AutoDiffBranchingTraceEnum: return mangleAnyGenericType(node, "O");
     default:
       unreachable("bad nominal type kind");
   }
@@ -2065,17 +2067,18 @@ void Remangler::mangleAutoDiffPullback(Node *node) {
 }
 
 void Remangler::mangleAutoDiffGeneratedDeclaration(Node *node, StringRef op) {
-#if 0
+// #if 0
   llvm::errs() << "Remangler::mangleAutoDiffGeneratedDeclaration\n";
   node->dump();
-#endif
+// #endif
 #if 0
   llvm::errs() << "Remangler::mangleAutoDiffGeneratedDeclaration: '" << Buffer.strRef() << "'\n";
 #endif
-  assert(node->getNumChildren() == 2);
-  mangleChildNode(node, 1); // linear map
+  assert(node->getNumChildren() == 3);
+  mangleChildNode(node, 2); // linear map
   Buffer << op;
-  mangleChildNode(node, 0); // basic block index
+  mangleChildNode(node, 0); // module
+  mangleChildNode(node, 1); // basic block index
 }
 
 void Remangler::mangleAutoDiffLinearMapStruct(Node *node) {
@@ -2688,7 +2691,9 @@ NodePointer Demangle::getUnspecialized(Node *node, NodeFactory &Factory) {
     case Node::Kind::Enum:
     case Node::Kind::Class:
     case Node::Kind::TypeAlias:
-    case Node::Kind::OtherNominalType: {
+    case Node::Kind::OtherNominalType:
+    case Node::Kind::AutoDiffLinearMapStruct:
+    case Node::Kind::AutoDiffBranchingTraceEnum: {
       NodePointer result = Factory.createNode(node->getKind());
       NodePointer parentOrModule = node->getChild(0);
       if (isSpecialized(parentOrModule))

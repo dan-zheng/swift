@@ -156,7 +156,9 @@ class swift::SourceLookupCache {
     }
   };
 
+public:
   ValueDeclMap TopLevelValues;
+private:
   ValueDeclMap ClassMembers;
   bool MemberCachePopulated = false;
 
