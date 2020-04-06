@@ -567,6 +567,8 @@ protected:
   NodePointer demangleSymbolicReference(unsigned char rawKind,
                                         const void *at);
 
+  NodePointer demangleAutoDiffDerivativeFunction();
+
   bool demangleBoundGenerics(Vector<NodePointer> &TypeListList,
                              NodePointer &RetroactiveConformances);
   

@@ -38,13 +38,23 @@ using namespace swift;
 
 Type swift::Demangle::getTypeForMangling(ASTContext &ctx,
                                          StringRef mangling) {
+  llvm::errs() << "Demangle::getTypeForMangling: '" << mangling << "'\n";
   Demangle::Context Dem;
   auto node = Dem.demangleSymbolAsNode(mangling);
-  if (!node)
+  if (!node) {
+    llvm::errs() << "NO NODE!\n";
     return Type();
+  }
 
   ASTBuilder builder(ctx);
-  return swift::Demangle::decodeMangledType(builder, node);
+  auto result = swift::Demangle::decodeMangledType(builder, node);
+  if (!result) {
+    llvm::errs() << "NO TYPE!\n";
+  } else {
+    result->dump();
+  }
+  return result;
+  // return swift::Demangle::decodeMangledType(builder, node);
 }
 
 TypeDecl *swift::Demangle::getTypeDeclForMangling(ASTContext &ctx,

@@ -329,6 +329,12 @@ private:
     case Node::Kind::AssociatedTypeMetadataAccessor:
     case Node::Kind::AssociatedTypeWitnessTableAccessor:
     case Node::Kind::AutoClosureType:
+    case Node::Kind::AutoDiffDifferential:
+    case Node::Kind::AutoDiffPullback:
+    case Node::Kind::AutoDiffParameterIndices:
+    case Node::Kind::AutoDiffResultIndices:
+    case Node::Kind::AutoDiffLinearMapStruct:
+    case Node::Kind::AutoDiffBranchingTraceEnum:
     case Node::Kind::BaseConformanceDescriptor:
     case Node::Kind::BaseWitnessTableAccessor:
     case Node::Kind::ClassMetadataBaseOffset:
@@ -662,6 +668,19 @@ private:
         break;
       }
     }
+  }
+
+  void printAutoDiffDerivativeFunction(NodePointer Node) {
+    if (Node->getKind() == Node::Kind::AutoDiffDifferential)
+      Printer << "differential ";
+    else if (Node->getKind() == Node::Kind::AutoDiffPullback)
+      Printer << "pullback ";
+    else
+      assert(false && "Unknown autodiff associated function kind");
+    print(Node->getChild(1)); // parameter indices
+    print(Node->getChild(2)); // result indices
+    Printer << "for ";
+    print(Node->getChild(0)); // original function
   }
 
   NodePointer getChildIf(NodePointer Node, Node::Kind Kind) {
@@ -1651,6 +1670,33 @@ NodePointer NodePrinter::print(NodePointer Node, bool asPrefixContext) {
     print(Node->getChild(idx));
     return nullptr;
   }
+  case Node::Kind::AutoDiffParameterIndices:
+  case Node::Kind::AutoDiffResultIndices: {
+    if (kind == Node::Kind::AutoDiffParameterIndices) {
+      Printer << "parameters ";
+    } else if (kind == Node::Kind::AutoDiffResultIndices) {
+      Printer << "results ";
+    } else {
+      assert(false && "Expected AutoDiff parameter/result indices");
+    }
+    interleave(
+        Node->begin(), Node->end(),
+        [&](NodePointer child) { Printer << child->getIndex(); },
+        [&]() { Printer << ", "; });
+    Printer << ' ';
+    return nullptr;
+  }
+  case Node::Kind::AutoDiffDifferential:
+  case Node::Kind::AutoDiffPullback: {
+    printAutoDiffDerivativeFunction(Node);
+    return nullptr;
+  }
+  case Node::Kind::AutoDiffLinearMapStruct:
+    Printer << "linear map struct";
+    return nullptr;
+  case Node::Kind::AutoDiffBranchingTraceEnum:
+    Printer << "branching trace enum";
+    return nullptr;
   case Node::Kind::MergedFunction:
     if (!Options.ShortenThunk) {
       Printer << "merged ";

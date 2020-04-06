@@ -730,6 +730,30 @@ void Remangler::mangleReabstractionThunk(Node *node) {
   Buffer << "<reabstraction-thunk>";
 }
 
+void Remangler::mangleAutoDiffParameterIndices(Node *node) {
+  Buffer << "<autodiff-parameter-indices>";
+}
+
+void Remangler::mangleAutoDiffResultIndices(Node *node) {
+  Buffer << "<autodiff-result-indices>";
+}
+
+void Remangler::mangleAutoDiffDifferential(Node *node) {
+  Buffer << "<autodiff-differential-function>";
+}
+
+void Remangler::mangleAutoDiffPullback(Node *node) {
+  Buffer << "<autodiff-pullback-function>";
+}
+
+void Remangler::mangleAutoDiffLinearMapStruct(Node *node) {
+  Buffer << "<autodiff-linear-map-struct>";
+}
+
+void Remangler::mangleAutoDiffBranchingTraceEnum(Node *node) {
+  Buffer << "<autodiff-branching-trace-enum>";
+}
+
 void Remangler::mangleProtocolSelfConformanceWitness(Node *node) {
   Buffer << "TS";
   mangleSingleChildNode(node); // entity

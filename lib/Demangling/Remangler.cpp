@@ -310,6 +310,9 @@ class Remangler : public RemanglerBase {
 
   void mangleKeyPathThunkHelper(Node *node, StringRef op);
 
+  void mangleAutoDiffDerivativeFunctionHelper(Node *node, StringRef op);
+  void mangleAutoDiffGeneratedDeclaration(Node *node, StringRef op);
+
 #define NODE(ID)                                                        \
   void mangle##ID(Node *node);
 #define CONTEXT_NODE(ID)                                                \
@@ -2018,6 +2021,69 @@ void Remangler::mangleReabstractionThunkHelper(Node *node) {
 void Remangler::mangleReabstractionThunkHelperWithSelf(Node *node) {
   mangleChildNodesReversed(node);
   Buffer << "Ty";
+}
+
+void Remangler::mangleAutoDiffParameterIndices(Node *node) {
+  Buffer << 'p';
+  for (unsigned i = 0, n = node->getNumChildren(); i != n; ++i) {
+    auto child = node->getChild(i);
+    Buffer << child->getIndex();
+    if (i != n - 1)
+      Buffer << '_';
+  }
+}
+
+void Remangler::mangleAutoDiffResultIndices(Node *node) {
+  Buffer << 'r';
+  for (unsigned i = 0, n = node->getNumChildren(); i != n; ++i) {
+    auto child = node->getChild(i);
+    Buffer << child->getIndex();
+    if (i != n - 1)
+      Buffer << '_';
+  }
+}
+
+void Remangler::mangleAutoDiffDerivativeFunctionHelper(Node *node,
+                                                       StringRef op) {
+#if 0
+  llvm::errs() << "Remangler::mangleAutoDiffDerivativeFunctionHelper\n";
+  node->dump();
+#endif
+  assert(node->getNumChildren() == 3);
+  mangleChildNode(node, 0); // original function
+  Buffer << op;
+  mangleChildNode(node, 1); // parameter indices
+  mangleChildNode(node, 2); // parameter indices
+}
+
+void Remangler::mangleAutoDiffDifferential(Node *node) {
+  mangleAutoDiffDerivativeFunctionHelper(node, "Tu");
+}
+
+void Remangler::mangleAutoDiffPullback(Node *node) {
+  mangleAutoDiffDerivativeFunctionHelper(node, "TU");
+}
+
+void Remangler::mangleAutoDiffGeneratedDeclaration(Node *node, StringRef op) {
+#if 0
+  llvm::errs() << "Remangler::mangleAutoDiffGeneratedDeclaration\n";
+  node->dump();
+#endif
+#if 0
+  llvm::errs() << "Remangler::mangleAutoDiffGeneratedDeclaration: '" << Buffer.strRef() << "'\n";
+#endif
+  assert(node->getNumChildren() == 2);
+  mangleChildNode(node, 1); // linear map
+  Buffer << op;
+  mangleChildNode(node, 0); // basic block index
+}
+
+void Remangler::mangleAutoDiffLinearMapStruct(Node *node) {
+  mangleAutoDiffGeneratedDeclaration(node, "By");
+}
+
+void Remangler::mangleAutoDiffBranchingTraceEnum(Node *node) {
+  mangleAutoDiffGeneratedDeclaration(node, "Bz");
 }
 
 void Remangler::mangleReadAccessor(Node *node) {

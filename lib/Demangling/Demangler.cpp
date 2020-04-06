@@ -15,10 +15,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "swift/Demangling/Demangler.h"
-#include "swift/Demangling/ManglingUtils.h"
 #include "swift/Demangling/ManglingMacros.h"
+#include "swift/Demangling/ManglingUtils.h"
 #include "swift/Demangling/Punycode.h"
 #include "swift/Strings.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace swift;
 using namespace Mangle;
@@ -1112,7 +1113,7 @@ NodePointer Demangler::popTypeAndGetAnyGeneric() {
 NodePointer Demangler::demangleBuiltinType() {
   NodePointer Ty = nullptr;
   const int maxTypeSize = 4096; // a very conservative upper bound
-  switch (nextChar()) {
+  switch (char c = nextChar()) {
     case 'b':
       Ty = createNode(Node::Kind::BuiltinTypeName,
                                BUILTIN_TYPE_NAME_BRIDGEOBJECT);
@@ -1181,10 +1182,80 @@ NodePointer Demangler::demangleBuiltinType() {
       Ty = createNode(Node::Kind::BuiltinTypeName,
                                BUILTIN_TYPE_NAME_WORD);
       break;
+    case 'y':
+    case 'z': {
+      if (c == 'y')
+        Ty = createNode(Node::Kind::AutoDiffLinearMapStruct);
+      else if (c == 'z')
+        Ty = createNode(Node::Kind::AutoDiffBranchingTraceEnum);
+      else
+        assert(false && "Unknown AutoDiff generated declaration kind");
+      auto linearMap = popNode();
+      if (linearMap->getKind() != Node::Kind::AutoDiffDifferential &&
+          linearMap->getKind() != Node::Kind::AutoDiffPullback)
+        return nullptr;
+      // nextIf('y');
+      auto bbId = demangleIndexAsNode();
+      addChild(Ty, bbId);
+      addChild(Ty, linearMap);
+#if 0
+      if (!parseAndPushNodes())
+        return nullptr;
+#endif
+#if 0
+      llvm::errs() << "HELLO STRUCT! " << NodeStack.size() << "\n";
+      // auto node = popNode();
+      auto node = demangleOperator();
+      node->dump();
+#endif
+#if 0
+      llvm::errs() << "FINAL TYPE:\n";
+      Ty->dump();
+#endif
+      break;
+    }
     default:
       return nullptr;
   }
   return createType(Ty);
+}
+
+NodePointer Demangler::demangleAutoDiffDerivativeFunction() {
+  Node::Kind derivativeFnKind;
+  auto c = nextChar();
+  if (c == 'u')
+    derivativeFnKind = Node::Kind::AutoDiffDifferential;
+  else if (c == 'U')
+    derivativeFnKind = Node::Kind::AutoDiffPullback;
+  else
+    return nullptr;
+
+  NodePointer derivativeFn = createNode(derivativeFnKind);
+  addChild(derivativeFn, popNode());
+
+  auto parameterIndices = createNode(Node::Kind::AutoDiffParameterIndices);
+  nextIf('p');
+  while (true) {
+    auto index = demangleNatural();
+    if (index < 0)
+      break;
+    parameterIndices->addChild(createNode(Node::Kind::Index, index), *this);
+    nextIf('_');
+  }
+  addChild(derivativeFn, parameterIndices);
+
+  auto resultIndices = createNode(Node::Kind::AutoDiffParameterIndices);
+  nextIf('r');
+  while (true) {
+    auto index = demangleNatural();
+    if (index < 0)
+      break;
+    resultIndices->addChild(createNode(Node::Kind::Index, index), *this);
+    nextIf('_');
+  }
+  addChild(derivativeFn, resultIndices);
+  nextIf('e');
+  return derivativeFn;
 }
 
 NodePointer Demangler::demangleAnyGenericType(Node::Kind kind) {
@@ -2219,6 +2290,46 @@ NodePointer Demangler::demangleThunkOrSpecialization() {
       addChild(Thunk, popNode(Node::Kind::Type));
       addChild(Thunk, popNode(Node::Kind::Type));
       return Thunk;
+    }
+    case 'u':
+    case 'U': {
+      Node::Kind derivativeFnKind;
+      if (c == 'u')
+        derivativeFnKind = Node::Kind::AutoDiffDifferential;
+      else if (c == 'U')
+        derivativeFnKind = Node::Kind::AutoDiffPullback;
+      else
+        return nullptr;
+      // Linear map kind.
+      NodePointer derivativeFn = createNode(derivativeFnKind);
+      addChild(derivativeFn, popNode());
+      // Parameter indices.
+      auto parameterIndices = createNode(Node::Kind::AutoDiffParameterIndices);
+      nextIf('p');
+      while (true) {
+        auto index = demangleNatural();
+        if (index < 0)
+          break;
+        parameterIndices->addChild(createNode(Node::Kind::Index, index), *this);
+        nextIf('_');
+      }
+      addChild(derivativeFn, parameterIndices);
+      // Result indices.
+      auto resultIndices = createNode(Node::Kind::AutoDiffResultIndices);
+      nextIf('r');
+      while (true) {
+        auto index = demangleNatural();
+        if (index < 0)
+          break;
+        resultIndices->addChild(createNode(Node::Kind::Index, index), *this);
+        nextIf('_');
+      }
+      addChild(derivativeFn, resultIndices);
+#if 0
+      llvm::errs() << "FOUND LINEAR MAP!!!\n";
+      derivativeFn->dump();
+#endif
+      return derivativeFn;
     }
     case 'g':
       return demangleGenericSpecialization(Node::Kind::GenericSpecialization);

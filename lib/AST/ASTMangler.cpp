@@ -424,6 +424,71 @@ std::string ASTMangler::mangleAutoDiffLinearMapHelper(
   return result;
 }
 
+std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
+    AutoDiffGeneratedDeclarationKind declKind, StringRef origFnName, unsigned bbId,
+    AutoDiffLinearMapKind linearMapKind, AutoDiffConfig config) {
+  beginManglingWithoutPrefix();
+  // beginMangling();
+
+  Demangler D;
+  auto topLevel = D.createNode(Node::Kind::Global);
+  NodePointer generatedDecl;
+  switch (declKind) {
+  case AutoDiffGeneratedDeclarationKind::LinearMapStruct:
+    generatedDecl = D.createNode(Node::Kind::AutoDiffLinearMapStruct);
+    break;
+  case AutoDiffGeneratedDeclarationKind::BranchingTraceEnum:
+    generatedDecl = D.createNode(Node::Kind::AutoDiffBranchingTraceEnum);
+    break;
+  }
+  topLevel->addChild(generatedDecl, D);
+
+  // Add basic block id.
+  auto bbIndex = D.createNode(Node::Kind::Number, bbId);
+  generatedDecl->addChild(bbIndex, D);
+
+  // Add linear map.
+  NodePointer linearMap;
+  switch (linearMapKind) {
+  case AutoDiffLinearMapKind::Differential:
+    linearMap = D.createNode(Node::Kind::AutoDiffDifferential);
+    break;
+  case AutoDiffLinearMapKind::Pullback:
+    linearMap = D.createNode(Node::Kind::AutoDiffPullback);
+    break;
+  }
+  generatedDecl->addChild(linearMap, D);
+
+  // Add original function name.
+  // This logic is copied from `SpecializationMangler::finalize`.
+  auto funcTopLevel = D.demangleSymbol(origFnName);
+  if (!funcTopLevel) {
+    funcTopLevel = D.createNode(Node::Kind::Global);
+    funcTopLevel->addChild(D.createNode(Node::Kind::Identifier, origFnName), D);
+  }
+  assert(funcTopLevel);
+  for (auto funcChild : *funcTopLevel)
+    linearMap->addChild(funcChild, D);
+
+  // Add parameter indices.
+  auto parameterIndices = D.createNode(Node::Kind::AutoDiffParameterIndices);
+  for (unsigned i : config.parameterIndices->getIndices()) {
+    auto paramIdx = D.createNode(Node::Kind::Index, i);
+    parameterIndices->addChild(paramIdx, D);
+  }
+  linearMap->addChild(parameterIndices, D);
+  // Add result indices.
+  auto resultIndices = D.createNode(Node::Kind::AutoDiffResultIndices);
+  for (unsigned i : config.parameterIndices->getIndices()) {
+    auto resultIdx = D.createNode(Node::Kind::Index, i);
+    resultIndices->addChild(resultIdx, D);
+  }
+  linearMap->addChild(resultIndices, D);
+  auto mangled = Demangle::mangleNode(topLevel);
+  verify(mangled);
+  return mangled;
+}
+
 std::string ASTMangler::mangleSILDifferentiabilityWitnessKey(
     SILDifferentiabilityWitnessKey key) {
   // TODO(TF-20): Make the mangling scheme robust. Support demangling.
@@ -831,6 +896,7 @@ void ASTMangler::appendType(Type type, const ValueDecl *forDecl) {
   assert((DWARFMangling || type->isCanonical()) &&
          "expecting canonical types when not mangling for the debugger");
   TypeBase *tybase = type.getPointer();
+  llvm::errs() << "ASTMangler::appendType: " << type << " (" << (unsigned) type->getKind() << ")\n";
   switch (type->getKind()) {
     case TypeKind::TypeVariable:
       llvm_unreachable("mangling type variable");

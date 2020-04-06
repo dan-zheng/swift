@@ -866,6 +866,30 @@ class TypeDecoder {
       
       return Builder.resolveOpaqueType(descriptor, genericArgs, ordinal);
     }
+    case NodeKind::AutoDiffLinearMapStruct: {
+      BuiltTypeDecl typeDecl = BuiltTypeDecl();
+      BuiltType parent = BuiltType();
+      bool typeAlias = false;
+      typeDecl = Builder.createTypeDecl(Node, typeAlias);
+      // typeDecl = Builder.createTypeDecl(Node);
+      if (!typeDecl) {
+        llvm::errs() << "NOOOOO STRUCT\n";
+      }
+      llvm::errs() << "HI NodeKind::AutoDiffLinearMapStruct\n";
+      return Builder.createNominalType(typeDecl, parent);
+    }
+    case NodeKind::AutoDiffBranchingTraceEnum: {
+      BuiltTypeDecl typeDecl = BuiltTypeDecl();
+      BuiltType parent = BuiltType();
+      bool typeAlias = false;
+      typeDecl = Builder.createTypeDecl(Node, typeAlias);
+      // typeDecl = Builder.createTypeDecl(Node);
+      if (!typeDecl) {
+        llvm::errs() << "NOOOOO ENUM\n";
+      }
+      llvm::errs() << "HI NodeKind::AutoDiffBranchingTraceEnum\n";
+      return Builder.createNominalType(typeDecl, parent);
+    }
     // TODO: Handle OpaqueReturnType, when we're in the middle of reconstructing
     // the defining decl
     default:
