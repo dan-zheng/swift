@@ -314,8 +314,10 @@ static bool isProfitable(SILFunction *Callee) {
   for (auto *Arg : EntryBB->getArguments()) {
     for (auto *Operand : Arg->getUses()) {
       if (FullApplySite FAS = FullApplySite::isa(Operand->getUser())) {
-        if (FAS.getCallee() == Operand->get())
+        if (FAS.getCallee() == Operand->get()) {
+          llvm::errs() << "IS PROFITABLE: " << Callee->getName() << "\n";
           return true;
+        }
       }
     }
   }
@@ -462,13 +464,19 @@ bool CapturePropagation::optimizePartialApply(PartialApplyInst *PAI) {
   SILOptFunctionBuilder FuncBuilder(*this);
   if (auto *NewFunc = getSpecializedWithDeadParams(FuncBuilder,
           PAI, SubstF, PAI->getNumArguments(), GenericSpecialized)) {
-    rewritePartialApply(PAI, NewFunc);
-    if (GenericSpecialized.first) {
-      // Notify the pass manager about the new function.
-      addFunctionToPassManagerWorklist(GenericSpecialized.first,
-                                       GenericSpecialized.second);
+    // Add a previously unexercised check to prevent AutoDiff crash. Rewrite
+    // `partial_apply` only if the specialized function is `@convention(thin)`.
+    // Revert check when `VJPEmitter::visitApplyInst` no longer produces
+    // argumentless `partial_apply` instructions.
+    if (NewFunc->getRepresentation() == SILFunctionTypeRepresentation::Thin) {
+      rewritePartialApply(PAI, NewFunc);
+      if (GenericSpecialized.first) {
+        // Notify the pass manager about the new function.
+        addFunctionToPassManagerWorklist(GenericSpecialized.first,
+                                         GenericSpecialized.second);
+      }
+      return true;
     }
-    return true;
   }
 
   // Second possibility: Are all partially applied arguments constant?

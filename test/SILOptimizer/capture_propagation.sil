@@ -507,3 +507,27 @@ sil @test_capture_propagation2_caller_on_stack : $@convention(thin) () -> () {
   %9999 = tuple()
   return %9999 : $()
 }
+
+// Test `partial_apply` with a `@convention(method)` callee.
+
+/*
+sil @method_func : $@convention(method) <T> (@in_guaranteed T) -> ()
+
+sil @test_capture_propagation_method_callee : $@convention(thin) () -> @owned @callee_owned (@in_guaranteed Int32) -> () {
+  %1 = function_ref @method_func : $@convention(method) <T> (@in_guaranteed T) -> ()
+  %2 = partial_apply %1<Int32>() : $@convention(method) <T> (@in_guaranteed T) -> ()
+  return %2 : $@callee_owned (@in_guaranteed Int32) -> ()
+}
+*/
+
+sil @method_func : $@convention(method) (Int32) -> () {
+bb0(%0 : $Int32):
+  %void = tuple()
+  return %void : $()
+}
+
+sil @test_capture_propagation_method_callee : $@convention(thin) () -> @owned @callee_owned (Int32) -> () {
+  %1 = function_ref @method_func : $@convention(method) (Int32) -> ()
+  %2 = partial_apply %1() : $@convention(method) (Int32) -> ()
+  return %2 : $@callee_owned (Int32) -> ()
+}
