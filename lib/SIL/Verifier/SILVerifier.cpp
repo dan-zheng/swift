@@ -3668,8 +3668,12 @@ public:
     requireSameFunctionComponents(opFTy, resFTy,
                                   "thin_to_thick_function operand and result");
 
-    require(opFTy->getRepresentation() == SILFunctionType::Representation::Thin,
-            "operand of thin_to_thick_function must be thin");
+    require(opFTy->getRepresentation() ==
+                    SILFunctionType::Representation::Thin ||
+                opFTy->getRepresentation() ==
+                    SILFunctionType::Representation::Method,
+            "operand of thin_to_thick_function must have thin or method "
+            "representation");
     require(resFTy->getRepresentation() == SILFunctionType::Representation::Thick,
             "result of thin_to_thick_function must be thick");
 
