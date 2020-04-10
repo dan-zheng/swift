@@ -50,7 +50,7 @@ SWIFT_REQUEST(TypeChecker, DifferentiableAttributeTypeCheckRequest,
               IndexSubset *(DifferentiableAttr *),
               SeparatelyCached, NoLocationInfo)
 SWIFT_REQUEST(TypeChecker, DerivativeAttrOriginalDeclRequest,
-              AbstractFunctionDecl *(DerivativeAttr *),
+              AbstractFunctionDecl *(DerivativeAttr *, AbstractFunctionDecl*),
               Cached, NoLocationInfo)
 SWIFT_REQUEST(TypeChecker, TypeEraserHasViableInitRequest,
               bool(TypeEraserAttr *, ProtocolDecl *),

@@ -2003,6 +2003,17 @@ ResultTypeRequest::evaluate(Evaluator &evaluator, ValueDecl *decl) const {
     }
   }
 
+  // Constructors have `Self` as the result type.
+  if (auto *ctor = dyn_cast<ConstructorDecl>(decl)) {
+    auto *dc = ctor->getDeclContext();
+    auto resultType =
+        dc->isTypeContext() ? dc->getSelfInterfaceType() : ErrorType::get(ctx);
+    // Adjust result type for failable constructors.
+    if (ctor->isFailable())
+      return OptionalType::get(resultType);
+    return resultType;
+  }
+
   auto *resultTyRepr = getResultTypeLoc().getTypeRepr();
 
   // Nothing to do if there's no result type.
