@@ -2133,7 +2133,8 @@ public:
 /// Resolves the referenced original declaration for a `@derivative` attribute.
 class DerivativeAttrOriginalDeclRequest
     : public SimpleRequest<DerivativeAttrOriginalDeclRequest,
-                           AbstractFunctionDecl *(DerivativeAttr *),
+                           AbstractFunctionDecl *(DerivativeAttr *,
+                                                  AbstractFunctionDecl *),
                            RequestFlags::Cached> {
 public:
   using SimpleRequest::SimpleRequest;
@@ -2142,13 +2143,37 @@ private:
   friend SimpleRequest;
 
   // Evaluation.
-  AbstractFunctionDecl *evaluate(Evaluator &evaluator,
-                                 DerivativeAttr *attr) const;
+  AbstractFunctionDecl *evaluate(Evaluator &evaluator, DerivativeAttr *attr,
+                                 AbstractFunctionDecl *derivative) const;
 
 public:
   // Caching.
   bool isCached() const { return true; }
 };
+
+/// Resolves the referenced original declaration for a `@derivative` attribute.
+class DerivativeAttrDerivativeKindRequest
+    : public SimpleRequest<DerivativeAttrDerivativeKindRequest,
+                           Optional<AutoDiffDerivativeFunctionKind>(
+                               DerivativeAttr *, AbstractFunctionDecl *),
+                           RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  Optional<AutoDiffDerivativeFunctionKind>
+  evaluate(Evaluator &evaluator, DerivativeAttr *attr,
+           AbstractFunctionDecl *derivative) const;
+
+public:
+  // Caching.
+  bool isCached() const { return true; }
+};
+
+void simple_display(llvm::raw_ostream &out, const AutoDiffDerivativeFunctionKind kind);
 
 /// Checks whether a type eraser has a viable initializer.
 class TypeEraserHasViableInitRequest

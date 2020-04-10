@@ -21,6 +21,7 @@
 #include "swift/Basic/TypeID.h"
 namespace swift {
 
+struct AutoDiffDerivativeFunctionKind;
 class AbstractFunctionDecl;
 class BraceStmt;
 class ClosureExpr;

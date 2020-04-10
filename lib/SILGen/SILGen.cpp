@@ -783,7 +783,9 @@ void SILGenModule::emitDifferentiabilityWitnessesForFunction(
     for (auto *derivAttr : Attrs.getAttributes<DerivativeAttr>()) {
       SILFunction *jvp = nullptr;
       SILFunction *vjp = nullptr;
-      switch (derivAttr->getDerivativeKind()) {
+      auto derivativeKind = derivAttr->getDerivativeKind(AFD);
+      assert(derivativeKind.hasValue() && "Derivative kind must be resolved");
+      switch (*derivativeKind) {
       case AutoDiffDerivativeFunctionKind::JVP:
         jvp = F;
         break;
@@ -791,7 +793,7 @@ void SILGenModule::emitDifferentiabilityWitnessesForFunction(
         vjp = F;
         break;
       }
-      auto *origAFD = derivAttr->getOriginalFunction(getASTContext());
+      auto *origAFD = derivAttr->getOriginalFunction(AFD);
       auto origDeclRef =
           SILDeclRef(origAFD).asForeign(requiresForeignEntryPoint(origAFD));
       auto *origFn = getFunction(origDeclRef, NotForDefinition);

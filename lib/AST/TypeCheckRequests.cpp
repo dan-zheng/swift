@@ -9,7 +9,9 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/AutoDiff.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/DiagnosticsCommon.h"
 #include "swift/AST/DiagnosticsSema.h"
@@ -1286,6 +1288,37 @@ void DifferentiableAttributeTypeCheckRequest::cacheResult(
   auto *attr = std::get<0>(getStorage());
   attr->ParameterIndicesAndBit.setPointerAndInt(parameterIndices, true);
 }
+
+//----------------------------------------------------------------------------//
+// DerivativeAttrDerivativeKindRequest.
+//----------------------------------------------------------------------------//
+
+void swift::simple_display(llvm::raw_ostream &out, const AutoDiffDerivativeFunctionKind kind) {
+  switch (kind) {
+  case AutoDiffDerivativeFunctionKind::JVP:
+    out << "JVP";
+    return;
+  case AutoDiffDerivativeFunctionKind::VJP:
+    out << "VJP";
+    return;
+  }
+}
+#if 0
+void swift::simple_display(llvm::raw_ostream &out, const Optional<AutoDiffDerivativeKind> kind) {
+  if (!kind) {
+    out << "none";
+    return;
+  }
+  switch (*kind) {
+  case AutoDiffDerivativeKind::JVP:
+    out << "JVP";
+    return;
+  case AutoDiffDerivativeKind::VJP:
+    out << "VJP";
+    return;
+  }
+}
+#endif
 
 //----------------------------------------------------------------------------//
 // CheckRedeclarationRequest computation.
