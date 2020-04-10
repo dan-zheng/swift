@@ -132,6 +132,9 @@ public:
   bool isSerialized() const { return IsSerialized; }
   const DeclAttribute *getAttribute() const { return Attribute; }
 
+  /// Returns the SIL location corresponding to this differentiability witness.
+  SILLocation getLocation() const;
+
   /// Returns the `SILAutoDiffIndices` corresponding to this config's indices.
   // TODO(TF-893): This is a temporary shim for incremental removal of
   // `SILAutoDiffIndices`. Eventually remove this.

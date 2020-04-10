@@ -831,7 +831,7 @@ static SILFunction *createEmptyJVP(ADContext &context, SILFunction *original,
   SILOptFunctionBuilder fb(context.getTransform());
   auto *jvp = fb.createFunction(
       witness->getLinkage(), jvpName, jvpType, jvpGenericEnv,
-      original->getLocation(), original->isBare(), IsNotTransparent,
+      witness->getLocation(), original->isBare(), IsNotTransparent,
       isSerialized, original->isDynamicallyReplaceable());
   jvp->setDebugScope(new (module) SILDebugScope(original->getLocation(), jvp));
 
