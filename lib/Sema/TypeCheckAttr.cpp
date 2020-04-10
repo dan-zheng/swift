@@ -3161,11 +3161,22 @@ DynamicallyReplacedDeclRequest::evaluate(Evaluator &evaluator,
 /// the `ProtocolConformanceRef`. Otherwise, returns an invalid
 /// `ProtocolConformanceRef`.
 ///
+/// If `derivativeGenEnv` is specified, first map the type using it.
+///
 /// This helper verifies that the `TangentVector` type witness is valid, in case
 /// the conformance has not been fully checked and the type witness cannot be
 /// resolved.
 static ProtocolConformanceRef getDifferentiableConformance(Type type,
-                                                           DeclContext *DC) {
+                                                           DeclContext *DC,
+                                     GenericEnvironment *derivativeGenEnv = nullptr) {
+  if (type->hasArchetype()) {
+    llvm::errs() << "BAD!\n";
+    type->dump();
+  }
+  assert(!type->hasArchetype() && "Expected interface type");
+  if (derivativeGenEnv) {
+    type = derivativeGenEnv->mapTypeIntoContext(type);
+  }
   auto &ctx = type->getASTContext();
   auto *differentiableProto =
       ctx.getProtocol(KnownProtocolKind::Differentiable);
@@ -3181,12 +3192,17 @@ static ProtocolConformanceRef getDifferentiableConformance(Type type,
   return conf;
 };
 
-/// Returns true if the given type conforms to `Differentiable` in the given
-/// contxt. If `tangentVectorEqualsSelf` is true, also check whether the given
+/// Returns true if the given interface type conforms to `Differentiable` in the
+/// given context.
+///
+/// If `derivativeGenEnv` is specified, first map the type using it.
+///
+/// If `tangentVectorEqualsSelf` is true, also check whether the given
 /// type satisfies `TangentVector == Self`.
 static bool conformsToDifferentiable(Type type, DeclContext *DC,
+                                     GenericEnvironment *derivativeGenEnv = nullptr,
                                      bool tangentVectorEqualsSelf = false) {
-  auto conf = getDifferentiableConformance(type, DC);
+  auto conf = getDifferentiableConformance(type, DC, derivativeGenEnv);
   if (conf.isInvalid())
     return false;
   if (!tangentVectorEqualsSelf)
@@ -3217,11 +3233,12 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
       paramType = derivativeGenEnv->mapTypeIntoContext(paramType);
     else
       paramType = AFD->mapTypeIntoContext(paramType);
+    // derivativeGenEnv
     // Return false for existential types.
     if (paramType->isExistentialType())
       return false;
     // Return true if the type conforms to `Differentiable`.
-    return conformsToDifferentiable(paramType, AFD);
+    return conformsToDifferentiable(paramType, AFD, derivativeGenEnv);
   };
 
   // Get all parameter types.
@@ -3277,11 +3294,13 @@ static IndexSubset *computeDifferentiabilityParameters(
     // conform to `Differentiable`.
     else {
       auto selfType = function->getImplicitSelfDecl()->getInterfaceType();
+#if 0
       if (derivativeGenEnv)
         selfType = derivativeGenEnv->mapTypeIntoContext(selfType);
       else
         selfType = function->mapTypeIntoContext(selfType);
-      if (!conformsToDifferentiable(selfType, function)) {
+#endif
+      if (!conformsToDifferentiable(selfType, function, derivativeGenEnv)) {
         diags
             .diagnose(attrLoc, diag::diff_function_no_parameters,
                       function->getFullName())
@@ -3403,7 +3422,7 @@ static bool checkDifferentiabilityParameters(
     else
       diffParamType = AFD->mapTypeIntoContext(diffParamType);
     // Parameter must conform to `Differentiable`.
-    if (!conformsToDifferentiable(diffParamType, AFD)) {
+    if (!conformsToDifferentiable(diffParamType, AFD, derivativeGenEnv)) {
       diags.diagnose(loc, diag::diff_params_clause_param_not_differentiable,
                      diffParamType);
       return true;
@@ -4064,7 +4083,7 @@ IndexSubset *DifferentiableAttributeTypeCheckRequest::evaluate(
   auto originalResult = originalResults.front();
   auto originalResultTy = originalResult.type;
   // Check that the original semantic result conforms to `Differentiable`.
-  if (!conformsToDifferentiable(originalResultTy, original)) {
+  if (!conformsToDifferentiable(originalResultTy, original, derivativeGenEnv)) {
     diags.diagnose(attr->getLocation(),
                    diag::differentiable_attr_result_not_differentiable,
                    originalResultTy);
@@ -4388,7 +4407,8 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   auto originalResultType = originalResult.type;
   // Check that the original semantic result conforms to `Differentiable`.
   auto valueResultConf = getDifferentiableConformance(
-      originalResultType, derivative->getDeclContext());
+      originalResultType->mapTypeOutOfContext(), derivative->getDeclContext(),
+      derivative->getGenericEnvironment());
   if (!valueResultConf) {
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_result_value_not_differentiable,
@@ -4608,6 +4628,7 @@ static bool checkLinearityParameters(
     // Parameter must conform to `Differentiable` and satisfy
     // `Self == Self.TangentVector`.
     if (!conformsToDifferentiable(linearParamType, originalAFD,
+                                  derivativeGenEnv,
                                   /*tangentVectorEqualsSelf*/ true)) {
       diags.diagnose(loc,
                      diag::transpose_attr_invalid_linearity_parameter_or_result,
@@ -4717,10 +4738,13 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   if (isCurried)
     expectedOriginalResultType =
         expectedOriginalResultType->castTo<AnyFunctionType>()->getResult();
+#if 0
   if (expectedOriginalResultType->hasTypeParameter())
     expectedOriginalResultType = transpose->mapTypeIntoContext(
         expectedOriginalResultType);
+#endif
   if (!conformsToDifferentiable(expectedOriginalResultType, transpose,
+                                transpose->getGenericEnvironmentOfContext(),
                                 /*tangentVectorEqualsSelf*/ true)) {
     diagnoseAndRemoveAttr(
         attr, diag::transpose_attr_invalid_linearity_parameter_or_result,
