@@ -4360,46 +4360,255 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   auto *derivative = cast<FuncDecl>(D);
   auto lookupConformance =
       LookUpConformanceInModule(D->getDeclContext()->getParentModule());
-  auto originalName = attr->getOriginalFunctionName();
+
+  // Resolve the referenced original function declaration.
+  auto *originalAFD = evaluateOrDefault(
+      Ctx.evaluator, DerivativeAttrOriginalDeclRequest{attr, derivative},
+      nullptr);
+  if (!originalAFD)
+    return true;
 
   auto *derivativeInterfaceType =
       derivative->getInterfaceType()->castTo<AnyFunctionType>();
-
-  // Perform preliminary `@derivative` declaration checks.
-  // The result type should be a two-element tuple.
-  // Either a value and pullback:
-  //     (value: R, pullback: (R.TangentVector) -> (T.TangentVector...)
-  // Or a value and differential:
-  //     (value: R, differential: (T.TangentVector...) -> (R.TangentVector)
-  auto derivativeResultType = derivative->getResultInterfaceType();
+  auto *originalFnType =
+      originalAFD->getInterfaceType()->castTo<AnyFunctionType>();
+  auto derivativeResultType =
+      evaluateOrDefault(Ctx.evaluator, ResultTypeRequest{derivative}, Type());
   auto derivativeResultTupleType = derivativeResultType->getAs<TupleType>();
-  if (!derivativeResultTupleType ||
-      derivativeResultTupleType->getNumElements() != 2) {
-    diags.diagnose(attr->getLocation(),
-                   diag::derivative_attr_expected_result_tuple);
-    return true;
-  }
+  assert(derivativeResultTupleType->getNumElements() == 2);
   auto valueResultElt = derivativeResultTupleType->getElement(0);
   auto funcResultElt = derivativeResultTupleType->getElement(1);
-  // Get derivative kind and derivative function identifier.
-  AutoDiffDerivativeFunctionKind kind;
+
+  // Resolve the derivative function kind;
+  AutoDiffDerivativeFunctionKind derivativeKind;
   if (valueResultElt.getName().str() != "value") {
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_invalid_result_tuple_value_label);
     return true;
   }
   if (funcResultElt.getName().str() == "differential") {
-    kind = AutoDiffDerivativeFunctionKind::JVP;
+    derivativeKind = AutoDiffDerivativeFunctionKind::JVP;
   } else if (funcResultElt.getName().str() == "pullback") {
-    kind = AutoDiffDerivativeFunctionKind::VJP;
+    derivativeKind = AutoDiffDerivativeFunctionKind::VJP;
   } else {
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_invalid_result_tuple_func_label);
     return true;
   }
-  attr->setDerivativeKind(kind);
+  attr->setDerivativeKind(derivativeKind);
 
-  // Compute expected original function type and look up original function.
+  // Returns true if:
+  // - Original function and derivative function have the same access level.
+  // - Original function is public and derivative function is internal
+  //   `@usableFromInline`. This is the only special case.
+  auto compatibleAccessLevels = [&]() {
+    if (originalAFD->getFormalAccess() == derivative->getFormalAccess())
+      return true;
+    return originalAFD->getFormalAccess() == AccessLevel::Public &&
+           derivative->getEffectiveAccess() == AccessLevel::Public;
+  };
+
+  // Check access level compatibility for original and derivative functions.
+  if (!compatibleAccessLevels()) {
+    auto originalAccess = originalAFD->getFormalAccess();
+    auto derivativeAccess =
+        derivative->getFormalAccessScope().accessLevelForDiagnostics();
+    diags.diagnose(originalName.Loc,
+                   diag::derivative_attr_access_level_mismatch,
+                   originalAFD->getName(), originalAccess,
+                   derivative->getName(), derivativeAccess);
+    auto fixItDiag =
+        derivative->diagnose(diag::derivative_attr_fix_access, originalAccess);
+    // If original access is public, suggest adding `@usableFromInline` to
+    // derivative.
+    if (originalAccess == AccessLevel::Public) {
+      fixItDiag.fixItInsert(
+          derivative->getAttributeInsertionLoc(/*forModifier*/ false),
+          "@usableFromInline ");
+    }
+    // Otherwise, suggest changing derivative access level.
+    else {
+      fixItAccess(fixItDiag, derivative, originalAccess);
+    }
+    return true;
+  }
+
+  // Get the resolved differentiability parameter indices.
+  auto *resolvedDiffParamIndices = attr->getParameterIndices();
+
+  // Get the parsed differentiability parameter indices, which have not yet been
+  // resolved. Parsed differentiability parameter indices are defined only for
+  // parsed attributes.
+  auto parsedDiffParams = attr->getParsedParameters();
+
+  // If differentiability parameter indices are not resolved, compute them.
+  if (!resolvedDiffParamIndices)
+    resolvedDiffParamIndices = computeDifferentiabilityParameters(
+        parsedDiffParams, derivative, derivative->getGenericEnvironment(),
+        attr->getAttrName(), attr->getLocation());
+  if (!resolvedDiffParamIndices)
+    return true;
+
+  // Check if the differentiability parameter indices are valid.
+  if (checkDifferentiabilityParameters(
+          originalAFD, resolvedDiffParamIndices, originalFnType,
+          derivative->getGenericEnvironment(), derivative->getModuleContext(),
+          parsedDiffParams, attr->getLocation()))
+    return true;
+
+  // Set the resolved differentiability parameter indices in the attribute.
+  attr->setParameterIndices(resolvedDiffParamIndices);
+
+  // Get the original semantic result.
+  llvm::SmallVector<AutoDiffSemanticFunctionResultType, 1> originalResults;
+  autodiff::getFunctionSemanticResultTypes(
+      originalFnType, originalResults,
+      derivative->getGenericEnvironmentOfContext());
+  // Check that original function has at least one semantic result, i.e.
+  // that the original semantic result type is not `Void`.
+  if (originalResults.empty()) {
+    diags
+        .diagnose(attr->getLocation(), diag::autodiff_attr_original_void_result,
+                  derivative->getFullName())
+        .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
+    attr->setInvalid();
+    return true;
+  }
+  // Check that original function does not have multiple semantic results.
+  if (originalResults.size() > 1) {
+    diags
+        .diagnose(attr->getLocation(),
+                  diag::autodiff_attr_original_multiple_semantic_results)
+        .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
+    attr->setInvalid();
+    return true;
+  }
+  auto originalResult = originalResults.front();
+  auto originalResultType = originalResult.type;
+  // Check that the original semantic result conforms to `Differentiable`.
+  auto valueResultConf = getDifferentiableConformance(
+      originalResultType, derivative->getDeclContext());
+  if (!valueResultConf) {
+    diags.diagnose(attr->getLocation(),
+                   diag::derivative_attr_result_value_not_differentiable,
+                   valueResultElt.getType());
+    return true;
+  }
+
+  // Compute the actual differential/pullback type that we use for comparison
+  // with the expected type. We must canonicalize the derivative interface type
+  // before extracting the differential/pullback type from it, so that the
+  // derivative interface type generic signature is available for simplifying
+  // types.
+  CanType canActualResultType = derivativeInterfaceType->getCanonicalType();
+  while (isa<AnyFunctionType>(canActualResultType)) {
+    canActualResultType =
+        cast<AnyFunctionType>(canActualResultType).getResult();
+  }
+  CanType actualFuncEltType =
+      cast<TupleType>(canActualResultType).getElementType(1);
+
+  // Compute expected differential/pullback type.
+  Type expectedFuncEltType =
+      originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
+          resolvedDiffParamIndices, derivativeKind.getLinearMapKind(),
+          lookupConformance,
+          /*makeSelfParamFirst*/ true);
+  if (expectedFuncEltType->hasTypeParameter())
+    expectedFuncEltType = derivative->mapTypeIntoContext(expectedFuncEltType);
+  if (expectedFuncEltType->hasArchetype())
+    expectedFuncEltType = expectedFuncEltType->mapTypeOutOfContext();
+
+  // Check if differential/pullback type matches expected type.
+  if (!actualFuncEltType->isEqual(expectedFuncEltType)) {
+    // Emit differential/pullback type mismatch error on attribute.
+    diags.diagnose(attr->getLocation(),
+                   diag::derivative_attr_result_func_type_mismatch,
+                   funcResultElt.getName(), originalAFD->getFullName());
+    // Emit note with expected differential/pullback type on actual type
+    // location.
+    auto *tupleReturnTypeRepr =
+        cast<TupleTypeRepr>(derivative->getBodyResultTypeLoc().getTypeRepr());
+    auto *funcEltTypeRepr = tupleReturnTypeRepr->getElementType(1);
+    diags
+        .diagnose(funcEltTypeRepr->getStartLoc(),
+                  diag::derivative_attr_result_func_type_mismatch_note,
+                  funcResultElt.getName(), expectedFuncEltType)
+        .highlight(funcEltTypeRepr->getSourceRange());
+    // Emit note showing original function location, if possible.
+    if (originalAFD->getLoc().isValid())
+      diags.diagnose(originalAFD->getLoc(),
+                     diag::derivative_attr_result_func_original_note,
+                     originalAFD->getFullName());
+    return true;
+  }
+
+  // Reject duplicate `@derivative` attributes.
+  auto &derivativeAttrs = Ctx.DerivativeAttrs[std::make_tuple(
+      originalAFD, resolvedDiffParamIndices, derivativeKind)];
+  derivativeAttrs.insert(attr);
+  if (derivativeAttrs.size() > 1) {
+    diags.diagnose(attr->getLocation(),
+                   diag::derivative_attr_original_already_has_derivative,
+                   originalAFD->getFullName());
+    for (auto *duplicateAttr : derivativeAttrs) {
+      if (duplicateAttr == attr)
+        continue;
+      diags.diagnose(duplicateAttr->getLocation(),
+                     diag::derivative_attr_duplicate_note);
+    }
+    return true;
+  }
+
+  // Register derivative function configuration.
+  auto *resultIndices = IndexSubset::get(Ctx, 1, {0});
+  originalAFD->addDerivativeFunctionConfiguration(
+      {resolvedDiffParamIndices, resultIndices,
+       derivative->getGenericSignature()});
+
+  return false;
+}
+
+void AttributeChecker::visitDerivativeAttr(DerivativeAttr *attr) {
+  if (typeCheckDerivativeAttr(Ctx, D, attr))
+    attr->setInvalid();
+}
+
+AbstractFunctionDecl *DerivativeAttrOriginalDeclRequest::evaluate(
+    Evaluator &evaluator, DerivativeAttr *attr,
+    AbstractFunctionDecl *derivative) const {
+  // If the referenced function can be lazily resolved, do so now.
+  if (auto *Resolver = attr->Resolver)
+    return Resolver->loadReferencedFunctionDecl(attr,
+                                                attr->ResolverContextData);
+
+  // Otherwise, resolve the referenced function via name lookup.
+  auto &ctx = derivative->getASTContext();
+  auto &diags = ctx.Diags;
+  LookUpConformanceInModule lookupConformance(
+      derivative->getDeclContext()->getParentModule());
+  auto originalName = attr->getOriginalFunctionName();
+
+  auto *derivativeInterfaceType =
+      derivative->getInterfaceType()->castTo<AnyFunctionType>();
+
+  // Perform preliminary derivative declaration checks.
+  // The result type should be a two-element tuple.
+  // Either a value and pullback:
+  //     (value: R, pullback: (R.TangentVector) -> (T.TangentVector...)
+  // Or a value and differential:
+  //     (value: R, differential: (T.TangentVector...) -> (R.TangentVector)
+  auto derivativeResultType =
+      evaluateOrDefault(ctx.evaluator, ResultTypeRequest{derivative}, Type());
+  auto derivativeResultTupleType = derivativeResultType->getAs<TupleType>();
+  if (!derivativeResultTupleType ||
+      derivativeResultTupleType->getNumElements() != 2) {
+    diags.diagnose(attr->getLocation(),
+                   diag::derivative_attr_expected_result_tuple);
+    return nullptr;
+  }
+
+  // Compute expected original function type from derivative function type.
   auto *originalFnType =
       getDerivativeOriginalFunctionType(derivativeInterfaceType);
 
@@ -4476,7 +4685,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
     baseType = resolution.resolveType(baseTypeRepr);
   }
   if (baseType && baseType->hasError())
-    return true;
+    return nullptr;
   auto lookupOptions = attr->getBaseTypeRepr()
                            ? defaultMemberLookupOptions
                            : defaultUnqualifiedLookupOptions;
@@ -4492,7 +4701,8 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
       ambiguousDiagnostic, notFunctionDiagnostic, lookupOptions,
       hasValidTypeContext, invalidTypeContextDiagnostic);
   if (!originalAFD)
-    return true;
+    return nullptr;
+
   // Diagnose original stored properties. Stored properties cannot have custom
   // registered derivatives.
   if (auto *accessorDecl = dyn_cast<AccessorDecl>(originalAFD)) {
@@ -4503,9 +4713,10 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
                      originalName.Name);
       diags.diagnose(originalAFD->getLoc(), diag::decl_declared_here,
                      asd->getName());
-      return true;
+      return nullptr;
     }
   }
+
   // Diagnose if original function is an invalid class member.
   bool isOriginalClassMember =
       originalAFD->getDeclContext() &&
@@ -4525,7 +4736,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
           diags.diagnose(attr->getLocation(),
                          diag::derivative_attr_nonfinal_class_init_unsupported,
                          classDecl->getDeclaredInterfaceType());
-          return true;
+          return nullptr;
         }
       }
       // Diagnose all other declarations returning dynamic `Self`.
@@ -4534,201 +4745,12 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
             attr->getLocation(),
             diag::derivative_attr_class_member_dynamic_self_result_unsupported,
             DeclNameRef(originalAFD->getName()));
-        return true;
+        return nullptr;
       }
     }
   }
-  attr->setOriginalFunction(originalAFD);
 
-  // Returns true if:
-  // - Original function and derivative function have the same access level.
-  // - Original function is public and derivative function is internal
-  //   `@usableFromInline`. This is the only special case.
-  auto compatibleAccessLevels = [&]() {
-    if (originalAFD->getFormalAccess() == derivative->getFormalAccess())
-      return true;
-    return originalAFD->getFormalAccess() == AccessLevel::Public &&
-           derivative->getEffectiveAccess() == AccessLevel::Public;
-  };
-
-  // Check access level compatibility for original and derivative functions.
-  if (!compatibleAccessLevels()) {
-    auto originalAccess = originalAFD->getFormalAccess();
-    auto derivativeAccess =
-        derivative->getFormalAccessScope().accessLevelForDiagnostics();
-    diags.diagnose(originalName.Loc,
-                   diag::derivative_attr_access_level_mismatch,
-                   originalAFD->getName(), originalAccess,
-                   derivative->getName(), derivativeAccess);
-    auto fixItDiag =
-        derivative->diagnose(diag::derivative_attr_fix_access, originalAccess);
-    // If original access is public, suggest adding `@usableFromInline` to
-    // derivative.
-    if (originalAccess == AccessLevel::Public) {
-      fixItDiag.fixItInsert(
-          derivative->getAttributeInsertionLoc(/*forModifier*/ false),
-          "@usableFromInline ");
-    }
-    // Otherwise, suggest changing derivative access level.
-    else {
-      fixItAccess(fixItDiag, derivative, originalAccess);
-    }
-    return true;
-  }
-
-  // Get the resolved differentiability parameter indices.
-  auto *resolvedDiffParamIndices = attr->getParameterIndices();
-
-  // Get the parsed differentiability parameter indices, which have not yet been
-  // resolved. Parsed differentiability parameter indices are defined only for
-  // parsed attributes.
-  auto parsedDiffParams = attr->getParsedParameters();
-
-  // If differentiability parameter indices are not resolved, compute them.
-  if (!resolvedDiffParamIndices)
-    resolvedDiffParamIndices = computeDifferentiabilityParameters(
-        parsedDiffParams, derivative, derivative->getGenericEnvironment(),
-        attr->getAttrName(), attr->getLocation());
-  if (!resolvedDiffParamIndices)
-    return true;
-
-  // Check if the differentiability parameter indices are valid.
-  if (checkDifferentiabilityParameters(
-          originalAFD, resolvedDiffParamIndices, originalFnType,
-          derivative->getGenericEnvironment(), derivative->getModuleContext(),
-          parsedDiffParams, attr->getLocation()))
-    return true;
-
-  // Set the resolved differentiability parameter indices in the attribute.
-  attr->setParameterIndices(resolvedDiffParamIndices);
-
-  // Get the original semantic result.
-  llvm::SmallVector<AutoDiffSemanticFunctionResultType, 1> originalResults;
-  autodiff::getFunctionSemanticResultTypes(
-      originalFnType, originalResults,
-      derivative->getGenericEnvironmentOfContext());
-  // Check that original function has at least one semantic result, i.e.
-  // that the original semantic result type is not `Void`.
-  if (originalResults.empty()) {
-    diags
-        .diagnose(attr->getLocation(), diag::autodiff_attr_original_void_result,
-                  derivative->getName())
-        .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
-    attr->setInvalid();
-    return true;
-  }
-  // Check that original function does not have multiple semantic results.
-  if (originalResults.size() > 1) {
-    diags
-        .diagnose(attr->getLocation(),
-                  diag::autodiff_attr_original_multiple_semantic_results)
-        .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
-    attr->setInvalid();
-    return true;
-  }
-  auto originalResult = originalResults.front();
-  auto originalResultType = originalResult.type;
-  // Check that the original semantic result conforms to `Differentiable`.
-  auto valueResultConf = getDifferentiableConformance(
-      originalResultType, derivative->getDeclContext());
-  if (!valueResultConf) {
-    diags.diagnose(attr->getLocation(),
-                   diag::derivative_attr_result_value_not_differentiable,
-                   valueResultElt.getType());
-    return true;
-  }
-
-  // Compute the actual differential/pullback type that we use for comparison
-  // with the expected type. We must canonicalize the derivative interface type
-  // before extracting the differential/pullback type from it, so that the
-  // derivative interface type generic signature is available for simplifying
-  // types.
-  CanType canActualResultType = derivativeInterfaceType->getCanonicalType();
-  while (isa<AnyFunctionType>(canActualResultType)) {
-    canActualResultType =
-        cast<AnyFunctionType>(canActualResultType).getResult();
-  }
-  CanType actualFuncEltType =
-      cast<TupleType>(canActualResultType).getElementType(1);
-
-  // Compute expected differential/pullback type.
-  Type expectedFuncEltType =
-      originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
-          resolvedDiffParamIndices, kind.getLinearMapKind(), lookupConformance,
-          /*makeSelfParamFirst*/ true);
-  if (expectedFuncEltType->hasTypeParameter())
-    expectedFuncEltType = derivative->mapTypeIntoContext(expectedFuncEltType);
-  if (expectedFuncEltType->hasArchetype())
-    expectedFuncEltType = expectedFuncEltType->mapTypeOutOfContext();
-
-  // Check if differential/pullback type matches expected type.
-  if (!actualFuncEltType->isEqual(expectedFuncEltType)) {
-    // Emit differential/pullback type mismatch error on attribute.
-    diags.diagnose(attr->getLocation(),
-                   diag::derivative_attr_result_func_type_mismatch,
-                   funcResultElt.getName(), originalAFD->getName());
-    // Emit note with expected differential/pullback type on actual type
-    // location.
-    auto *tupleReturnTypeRepr =
-        cast<TupleTypeRepr>(derivative->getBodyResultTypeLoc().getTypeRepr());
-    auto *funcEltTypeRepr = tupleReturnTypeRepr->getElementType(1);
-    diags
-        .diagnose(funcEltTypeRepr->getStartLoc(),
-                  diag::derivative_attr_result_func_type_mismatch_note,
-                  funcResultElt.getName(), expectedFuncEltType)
-        .highlight(funcEltTypeRepr->getSourceRange());
-    // Emit note showing original function location, if possible.
-    if (originalAFD->getLoc().isValid())
-      diags.diagnose(originalAFD->getLoc(),
-                     diag::derivative_attr_result_func_original_note,
-                     originalAFD->getName());
-    return true;
-  }
-
-  // Reject duplicate `@derivative` attributes.
-  auto &derivativeAttrs = Ctx.DerivativeAttrs[std::make_tuple(
-      originalAFD, resolvedDiffParamIndices, kind)];
-  derivativeAttrs.insert(attr);
-  if (derivativeAttrs.size() > 1) {
-    diags.diagnose(attr->getLocation(),
-                   diag::derivative_attr_original_already_has_derivative,
-                   originalAFD->getName());
-    for (auto *duplicateAttr : derivativeAttrs) {
-      if (duplicateAttr == attr)
-        continue;
-      diags.diagnose(duplicateAttr->getLocation(),
-                     diag::derivative_attr_duplicate_note);
-    }
-    return true;
-  }
-
-  // Register derivative function configuration.
-  auto *resultIndices = IndexSubset::get(Ctx, 1, {0});
-  originalAFD->addDerivativeFunctionConfiguration(
-      {resolvedDiffParamIndices, resultIndices,
-       derivative->getGenericSignature()});
-
-  return false;
-}
-
-void AttributeChecker::visitDerivativeAttr(DerivativeAttr *attr) {
-  if (typeCheckDerivativeAttr(Ctx, D, attr))
-    attr->setInvalid();
-}
-
-AbstractFunctionDecl *
-DerivativeAttrOriginalDeclRequest::evaluate(Evaluator &evaluator,
-                                            DerivativeAttr *attr) const {
-  // If the typechecker has resolved the original function, return it.
-  if (auto *FD = attr->OriginalFunction.dyn_cast<AbstractFunctionDecl *>())
-    return FD;
-
-  // If the function can be lazily resolved, do so now.
-  if (auto *Resolver = attr->OriginalFunction.dyn_cast<LazyMemberLoader *>())
-    return Resolver->loadReferencedFunctionDecl(attr,
-                                                attr->ResolverContextData);
-
-  return nullptr;
+  return originalAFD;
 }
 
 // Computes the linearity parameter indices from the given parsed linearity

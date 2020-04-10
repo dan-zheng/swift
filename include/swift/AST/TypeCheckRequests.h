@@ -2160,7 +2160,8 @@ public:
 /// Resolves the referenced original declaration for a `@derivative` attribute.
 class DerivativeAttrOriginalDeclRequest
     : public SimpleRequest<DerivativeAttrOriginalDeclRequest,
-                           AbstractFunctionDecl *(DerivativeAttr *),
+                           AbstractFunctionDecl *(DerivativeAttr *,
+                                                  AbstractFunctionDecl *),
                            RequestFlags::Cached> {
 public:
   using SimpleRequest::SimpleRequest;
@@ -2169,8 +2170,8 @@ private:
   friend SimpleRequest;
 
   // Evaluation.
-  AbstractFunctionDecl *evaluate(Evaluator &evaluator,
-                                 DerivativeAttr *attr) const;
+  AbstractFunctionDecl *evaluate(Evaluator &evaluator, DerivativeAttr *attr,
+                                 AbstractFunctionDecl *derivative) const;
 
 public:
   // Caching.
