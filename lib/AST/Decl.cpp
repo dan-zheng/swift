@@ -7354,9 +7354,9 @@ StaticSpellingKind FuncDecl::getCorrectStaticSpelling() const {
   return getCorrectStaticSpellingForDecl(this);
 }
 
-Type FuncDecl::getResultInterfaceType() const {
+Type AbstractFunctionDecl::getResultInterfaceType() const {
   auto &ctx = getASTContext();
-  auto mutableThis = const_cast<FuncDecl *>(this);
+  auto mutableThis = const_cast<AbstractFunctionDecl *>(this);
   if (auto type = evaluateOrDefault(ctx.evaluator,
                            ResultTypeRequest{mutableThis},
                            Type()))
@@ -7584,22 +7584,6 @@ SourceRange ConstructorDecl::getSourceRange() const {
     End = getSignatureSourceRange().End;
 
   return { getConstructorLoc(), End };
-}
-
-Type ConstructorDecl::getResultInterfaceType() const {
-  Type resultTy;
-
-  auto *dc = getDeclContext();
-  if (!dc->isTypeContext())
-    resultTy = ErrorType::get(getASTContext());
-  else
-    resultTy = dc->getSelfInterfaceType();
-
-  // Adjust result type for failability.
-  if (isFailable())
-    return OptionalType::get(resultTy);
-
-  return resultTy;
 }
 
 Type ConstructorDecl::getInitializerInterfaceType() {

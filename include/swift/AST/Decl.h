@@ -6160,6 +6160,9 @@ public:
   /// Asserts if not in type context.
   Type getMethodInterfaceType() const;
 
+  /// Get the result interface type of this declaration.
+  Type getResultInterfaceType() const;
+
   /// Tests if this is a function returning a DynamicSelfType, or a
   /// constructor.
   bool hasDynamicSelfResult() const;
@@ -6302,9 +6305,6 @@ public:
 
   TypeLoc &getBodyResultTypeLoc() { return FnRetType; }
   const TypeLoc &getBodyResultTypeLoc() const { return FnRetType; }
-
-  /// Retrieve the result interface type of this function.
-  Type getResultInterfaceType() const;
 
   /// isUnaryOperator - Determine whether this is a unary operator
   /// implementation.  This check is a syntactic rather than type-based check,
@@ -6753,9 +6753,6 @@ public:
   SourceLoc getConstructorLoc() const { return getNameLoc(); }
   SourceLoc getStartLoc() const { return getConstructorLoc(); }
   SourceRange getSourceRange() const;
-
-  /// Get the interface type of the constructed object.
-  Type getResultInterfaceType() const;
 
   /// Get the interface type of the initializing constructor.
   Type getInitializerInterfaceType();
