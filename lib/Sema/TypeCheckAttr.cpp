@@ -3932,6 +3932,21 @@ bool checkIfDifferentiableProgrammingEnabled(ASTContext &ctx,
   return true;
 }
 
+AbstractFunctionDecl *DifferentiableAttributeOriginalDeclRequest::evaluate(
+    Evaluator &evaluator, DifferentiableAttr *attr, AbstractFunctionDecl *original) const {
+  return nullptr;
+}
+
+GenericSignature DifferentiableAttributeGenericSignatureRequest::evaluate(
+Evaluator &evaluator, DifferentiableAttr *attr, AbstractFunctionDecl *original) const {
+  auto &ctx = original->getASTContext();
+  auto &diags = ctx.Diags;
+  // `@differentiable` attribute requires experimental differentiable
+  // programming to be enabled.
+  if (checkIfDifferentiableProgrammingEnabled(ctx, attr, original->getDeclContext()))
+    return nullptr;
+}
+
 IndexSubset *DifferentiableAttributeTypeCheckRequest::evaluate(
     Evaluator &evaluator, DifferentiableAttr *attr) const {
   // Skip type-checking for implicit `@differentiable` attributes. We currently

@@ -2100,14 +2100,11 @@ public:
   bool isCached() const { return true; }
 };
 
-
 /// Type-checks a `@differentiable` attribute and returns the resolved parameter
 /// indices on success. On failure, emits diagnostics and returns `nullptr`.
 ///
 /// Currently, this request resolves other `@differentiable` attribute
 /// components but mutates them in place:
-/// - `JVPFunction`
-/// - `VJPFunction`
 /// - `DerivativeGenericSignature`
 class DifferentiableAttributeTypeCheckRequest
     : public SimpleRequest<DifferentiableAttributeTypeCheckRequest,
@@ -2120,8 +2117,51 @@ private:
   friend SimpleRequest;
 
   // Evaluation.
-  IndexSubset * evaluate(Evaluator &evaluator,
-                         DifferentiableAttr *attr) const;
+  IndexSubset *evaluate(Evaluator &evaluator, DifferentiableAttr *attr) const;
+
+public:
+  // Separate caching.
+  bool isCached() const { return true; }
+  Optional<IndexSubset *> getCachedResult() const;
+  void cacheResult(IndexSubset *value) const;
+};
+
+/// Type-checks a `@differentiable` attribute and returns the resolved parameter
+/// indices on success. On failure, emits diagnostics and returns `nullptr`.
+class DifferentiableAttributeOriginalDeclRequest
+    : public SimpleRequest<DifferentiableAttributeOriginalDeclRequest,
+                           AbstractFunctionDecl *(DifferentiableAttr *, AbstractFunctionDecl *),
+                           RequestFlags::SeparatelyCached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  AbstractFunctionDecl *evaluate(Evaluator &evaluator, DifferentiableAttr *attr, AbstractFunctionDecl *AFD) const;
+
+public:
+  // Separate caching.
+  bool isCached() const { return true; }
+  Optional<IndexSubset *> getCachedResult() const;
+  void cacheResult(IndexSubset *value) const;
+};
+
+/// Type-checks a `@differentiable` attribute and returns the resolved parameter
+/// indices on success. On failure, emits diagnostics and returns `nullptr`.
+class DifferentiableAttributeGenericSignatureRequest
+    : public SimpleRequest<DifferentiableAttributeGenericSignatureRequest,
+                           GenericSignature(DifferentiableAttr *, AbstractFunctionDecl *),
+                           RequestFlags::SeparatelyCached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  GenericSignature evaluate(Evaluator &evaluator, DifferentiableAttr *attr, AbstractFunctionDecl *AFD) const;
 
 public:
   // Separate caching.

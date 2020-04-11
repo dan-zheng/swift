@@ -48,7 +48,13 @@ SWIFT_REQUEST(TypeChecker, DefaultTypeRequest,
               NoLocationInfo)
 SWIFT_REQUEST(TypeChecker, DifferentiableAttributeTypeCheckRequest,
               IndexSubset *(DifferentiableAttr *),
-              SeparatelyCached, NoLocationInfo)
+              Cached, NoLocationInfo)
+SWIFT_REQUEST(TypeChecker, DifferentiableAttributeOriginalDeclRequest,
+              AbstractFunctionDecl *(DifferentiableAttr *, AbstractFunctionDecl *),
+              Cached, NoLocationInfo)
+SWIFT_REQUEST(TypeChecker, DifferentiableAttributeGenericSignatureRequest,
+              GenericSignature(DifferentiableAttr *, AbstractFunctionDecl *),
+              Cached, NoLocationInfo)
 SWIFT_REQUEST(TypeChecker, DerivativeAttrOriginalDeclRequest,
               AbstractFunctionDecl *(DerivativeAttr *),
               Cached, NoLocationInfo)
