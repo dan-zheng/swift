@@ -1865,7 +1865,7 @@ class DerivativeAttr final
     : public DeclAttribute,
       private llvm::TrailingObjects<DerivativeAttr, ParsedAutoDiffParameter> {
   friend TrailingObjects;
-  friend class DerivativeAttrOriginalDeclRequest;
+  friend class DerivativeAttrReferencedDeclRequest;
 
   /// The base type for the referenced original declaration. This field is
   /// non-null only for parsed attributes that reference a qualified original
@@ -1913,11 +1913,6 @@ public:
   DeclNameRefWithLoc getOriginalFunctionName() const {
     return OriginalFunctionName;
   }
-
-  /// Retrieves the referenced original function declaration. Returns \c nullptr
-  /// and emits diagnostics on error.
-  AbstractFunctionDecl *
-  getOriginalFunction(const AbstractFunctionDecl *derivative) const;
 
   /// Returns the derivative function kind.
   AutoDiffDerivativeFunctionKind getDerivativeKind() const {

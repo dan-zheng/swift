@@ -4363,7 +4363,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
 
   // Resolve the referenced original function declaration.
   auto *originalAFD = evaluateOrDefault(
-      Ctx.evaluator, DerivativeAttrOriginalDeclRequest{attr, derivative},
+      Ctx.evaluator, DerivativeAttrReferencedDeclRequest{attr, derivative},
       nullptr);
   if (!originalAFD)
     return true;
@@ -4372,8 +4372,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
       derivative->getInterfaceType()->castTo<AnyFunctionType>();
   auto *originalFnType =
       originalAFD->getInterfaceType()->castTo<AnyFunctionType>();
-  auto derivativeResultType =
-      evaluateOrDefault(Ctx.evaluator, ResultTypeRequest{derivative}, Type());
+  auto derivativeResultType = derivative->getResultInterfaceType();
   auto derivativeResultTupleType = derivativeResultType->getAs<TupleType>();
   assert(derivativeResultTupleType->getNumElements() == 2);
   auto valueResultElt = derivativeResultTupleType->getElement(0);
@@ -4469,7 +4468,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   if (originalResults.empty()) {
     diags
         .diagnose(attr->getLocation(), diag::autodiff_attr_original_void_result,
-                  derivative->getFullName())
+                  derivative->getName())
         .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
     attr->setInvalid();
     return true;
@@ -4524,7 +4523,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
     // Emit differential/pullback type mismatch error on attribute.
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_result_func_type_mismatch,
-                   funcResultElt.getName(), originalAFD->getFullName());
+                   funcResultElt.getName(), originalAFD->getName());
     // Emit note with expected differential/pullback type on actual type
     // location.
     auto *tupleReturnTypeRepr =
@@ -4539,7 +4538,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
     if (originalAFD->getLoc().isValid())
       diags.diagnose(originalAFD->getLoc(),
                      diag::derivative_attr_result_func_original_note,
-                     originalAFD->getFullName());
+                     originalAFD->getName());
     return true;
   }
 
@@ -4550,7 +4549,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   if (derivativeAttrs.size() > 1) {
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_original_already_has_derivative,
-                   originalAFD->getFullName());
+                   originalAFD->getName());
     for (auto *duplicateAttr : derivativeAttrs) {
       if (duplicateAttr == attr)
         continue;
@@ -4574,9 +4573,9 @@ void AttributeChecker::visitDerivativeAttr(DerivativeAttr *attr) {
     attr->setInvalid();
 }
 
-AbstractFunctionDecl *DerivativeAttrOriginalDeclRequest::evaluate(
+AbstractFunctionDecl *DerivativeAttrReferencedDeclRequest::evaluate(
     Evaluator &evaluator, DerivativeAttr *attr,
-    AbstractFunctionDecl *derivative) const {
+    FuncDecl *derivative) const {
   // If the referenced function can be lazily resolved, do so now.
   if (auto *Resolver = attr->Resolver)
     return Resolver->loadReferencedFunctionDecl(attr,
@@ -4598,8 +4597,11 @@ AbstractFunctionDecl *DerivativeAttrOriginalDeclRequest::evaluate(
   //     (value: R, pullback: (R.TangentVector) -> (T.TangentVector...)
   // Or a value and differential:
   //     (value: R, differential: (T.TangentVector...) -> (R.TangentVector)
+#if 0
   auto derivativeResultType =
       evaluateOrDefault(ctx.evaluator, ResultTypeRequest{derivative}, Type());
+#endif
+  auto derivativeResultType = derivative->getResultInterfaceType();
   auto derivativeResultTupleType = derivativeResultType->getAs<TupleType>();
   if (!derivativeResultTupleType ||
       derivativeResultTupleType->getNumElements() != 2) {
@@ -4751,6 +4753,15 @@ AbstractFunctionDecl *DerivativeAttrOriginalDeclRequest::evaluate(
   }
 
   return originalAFD;
+}
+
+AbstractFunctionDecl *FuncDecl::getReferencedDecl(
+    const DerivativeAttr *attr) const {
+  return evaluateOrDefault(getASTContext().evaluator,
+                           DerivativeAttrReferencedDeclRequest{
+                               const_cast<DerivativeAttr *>(attr),
+                               const_cast<FuncDecl *>(this)},
+                           nullptr);
 }
 
 // Computes the linearity parameter indices from the given parsed linearity

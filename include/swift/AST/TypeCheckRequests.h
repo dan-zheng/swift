@@ -2157,11 +2157,10 @@ public:
   void cacheResult(IndexSubset *value) const;
 };
 
-/// Resolves the referenced original declaration for a `@derivative` attribute.
-class DerivativeAttrOriginalDeclRequest
-    : public SimpleRequest<DerivativeAttrOriginalDeclRequest,
-                           AbstractFunctionDecl *(DerivativeAttr *,
-                                                  AbstractFunctionDecl *),
+/// Resolves the referenced declaration for a `@derivative` attribute.
+class DerivativeAttrReferencedDeclRequest
+    : public SimpleRequest<DerivativeAttrReferencedDeclRequest,
+                           AbstractFunctionDecl *(DerivativeAttr *, FuncDecl *),
                            RequestFlags::Cached> {
 public:
   using SimpleRequest::SimpleRequest;
@@ -2171,7 +2170,7 @@ private:
 
   // Evaluation.
   AbstractFunctionDecl *evaluate(Evaluator &evaluator, DerivativeAttr *attr,
-                                 AbstractFunctionDecl *derivative) const;
+                                 FuncDecl *derivative) const;
 
 public:
   // Caching.

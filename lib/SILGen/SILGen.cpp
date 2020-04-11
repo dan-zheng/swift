@@ -793,7 +793,8 @@ void SILGenModule::emitDifferentiabilityWitnessesForFunction(
         vjp = F;
         break;
       }
-      auto *origAFD = derivAttr->getOriginalFunction(AFD);
+      // `@derivative` attribute may only be declared on `FuncDecl`.
+      auto *origAFD = cast<FuncDecl>(AFD)->getReferencedDecl(derivAttr);
       auto origDeclRef =
           SILDeclRef(origAFD).asForeign(requiresForeignEntryPoint(origAFD));
       auto *origFn = getFunction(origDeclRef, NotForDefinition);

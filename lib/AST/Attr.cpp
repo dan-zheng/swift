@@ -1757,16 +1757,6 @@ DerivativeAttr *DerivativeAttr::create(ASTContext &context, bool implicit,
                                   resolver, resolverContextData);
 }
 
-AbstractFunctionDecl *DerivativeAttr::getOriginalFunction(
-    const AbstractFunctionDecl *derivative) const {
-  auto &ctx = derivative->getASTContext();
-  return evaluateOrDefault(ctx.evaluator,
-                           DerivativeAttrOriginalDeclRequest{
-                               const_cast<DerivativeAttr *>(this),
-                               const_cast<AbstractFunctionDecl *>(derivative)},
-                           nullptr);
-}
-
 TransposeAttr::TransposeAttr(bool implicit, SourceLoc atLoc,
                              SourceRange baseRange, TypeRepr *baseTypeRepr,
                              DeclNameRefWithLoc originalName,

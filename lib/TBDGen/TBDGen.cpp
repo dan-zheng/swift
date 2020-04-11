@@ -664,13 +664,6 @@ void TBDGenVisitor::visitAbstractFunctionDecl(AbstractFunctionDecl *AFD) {
         AutoDiffConfig(differentiableAttr->getParameterIndices(),
                        IndexSubset::get(AFD->getASTContext(), 1, {0}),
                        differentiableAttr->getDerivativeGenericSignature()));
-  for (const auto *derivativeAttr :
-       AFD->getAttrs().getAttributes<DerivativeAttr>())
-    addDerivativeConfiguration(
-        derivativeAttr->getOriginalFunction(AFD),
-        AutoDiffConfig(derivativeAttr->getParameterIndices(),
-                       IndexSubset::get(AFD->getASTContext(), 1, {0}),
-                       AFD->getGenericSignature()));
 
   visitDefaultArguments(AFD, AFD->getParameters());
 }
@@ -691,6 +684,15 @@ void TBDGenVisitor::visitFuncDecl(FuncDecl *FD) {
       addSymbol(LinkEntity::forOpaqueTypeDescriptorAccessorVar(opaqueResult));
     }
   }
+
+  // Add derivative function symbols.
+  for (const auto *derivativeAttr :
+       FD->getAttrs().getAttributes<DerivativeAttr>())
+    addDerivativeConfiguration(
+        FD->getReferencedDecl(derivativeAttr),
+        AutoDiffConfig(derivativeAttr->getParameterIndices(),
+                       IndexSubset::get(FD->getASTContext(), 1, {0}),
+                       FD->getGenericSignature()));
   visitAbstractFunctionDecl(FD);
 }
 
