@@ -6350,6 +6350,12 @@ public:
     Bits.FuncDecl.ForcedStaticDispatch = flag;
   }
 
+  /// Given a `@derivative(of:)` attribute on this declaration, retrieves the
+  /// referenced function declaration. Returns \c nullptr and emits diagnostics
+  /// on error.
+  AbstractFunctionDecl *
+  getReferencedDecl(const DerivativeAttr *attr) const;
+
   static bool classof(const Decl *D) {
     return D->getKind() == DeclKind::Func ||
            D->getKind() == DeclKind::Accessor;

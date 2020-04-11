@@ -4855,18 +4855,23 @@ static void recordDerivativeFunctionConfig(
     Serializer::UniquedDerivativeFunctionConfigTable &derivativeConfigs) {
   auto &ctx = AFD->getASTContext();
   Mangle::ASTMangler Mangler;
+  // Record `@differentiable` attributes.
   for (auto *attr : AFD->getAttrs().getAttributes<DifferentiableAttr>()) {
     auto mangledName = ctx.getIdentifier(Mangler.mangleDeclAsUSR(AFD, ""));
     derivativeConfigs[mangledName].insert(
         {ctx.getIdentifier(attr->getParameterIndices()->getString()),
          attr->getDerivativeGenericSignature()});
   }
-  for (auto *attr : AFD->getAttrs().getAttributes<DerivativeAttr>()) {
-    auto *origAFD = attr->getOriginalFunction(AFD);
-    auto mangledName = ctx.getIdentifier(Mangler.mangleDeclAsUSR(origAFD, ""));
-    derivativeConfigs[mangledName].insert(
-        {ctx.getIdentifier(attr->getParameterIndices()->getString()),
-         AFD->getGenericSignature()});
+  // Record `@derivative` attributes.
+  // `@derivative` attributes may only be declared on `FuncDecl`.
+  if (auto *FD = dyn_cast<FuncDecl>(AFD)) {
+    for (auto *attr : FD->getAttrs().getAttributes<DerivativeAttr>()) {
+      auto *origAFD = FD->getReferencedDecl(attr);
+      auto mangledName = ctx.getIdentifier(Mangler.mangleDeclAsUSR(origAFD, ""));
+      derivativeConfigs[mangledName].insert(
+          {ctx.getIdentifier(attr->getParameterIndices()->getString()),
+           FD->getGenericSignature()});
+    }
   }
 };
 
