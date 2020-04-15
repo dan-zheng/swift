@@ -66,6 +66,7 @@ void SILFunctionBuilder::addFunctionAttributes(
   if (Attrs.hasAttribute<SILGenNameAttr>() || Attrs.hasAttribute<CDeclAttr>())
     F->setHasCReferences(true);
 
+#if 0
   // Validate `@differentiable` attributes by calling `getParameterIndices`.
   // This is important for:
   // - Skipping invalid `@differentiable` attributes in non-primary files.
@@ -75,6 +76,7 @@ void SILFunctionBuilder::addFunctionAttributes(
   //   `AccessorDecl` of the `AbstractStorageDecl`.
   for (auto *A : Attrs.getAttributes<DifferentiableAttr>())
     (void)A->getParameterIndices();
+#endif
 
   // Propagate `@noDerivative` as `[_semantics "autodiff.nonvarying"]`.
   //

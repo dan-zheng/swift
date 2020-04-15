@@ -1270,21 +1270,11 @@ void CallerSideDefaultArgExprRequest::cacheResult(Expr *expr) const {
 }
 
 //----------------------------------------------------------------------------//
-// DifferentiableAttributeTypeCheckRequest computation.
+// DifferentiableAttrTypeCheckRequest computation.
 //----------------------------------------------------------------------------//
 
-Optional<IndexSubset *>
-DifferentiableAttributeTypeCheckRequest::getCachedResult() const {
-  auto *attr = std::get<0>(getStorage());
-  if (attr->hasBeenTypeChecked())
-    return attr->ParameterIndicesAndBit.getPointer();
-  return None;
-}
-
-void DifferentiableAttributeTypeCheckRequest::cacheResult(
-    IndexSubset *parameterIndices) const {
-  auto *attr = std::get<0>(getStorage());
-  attr->ParameterIndicesAndBit.setPointerAndInt(parameterIndices, true);
+void swift::simple_display(llvm::raw_ostream &out, IndexSubset *indices) {
+  out << indices;
 }
 
 //----------------------------------------------------------------------------//

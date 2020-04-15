@@ -33,6 +33,7 @@ enum class FunctionBuilderBodyPreCheck : uint8_t;
 class GenericParamList;
 class GenericSignature;
 class GenericTypeParamType;
+class IndexSubset;
 class InfixOperatorDecl;
 class IterableDeclContext;
 class ModuleDecl;

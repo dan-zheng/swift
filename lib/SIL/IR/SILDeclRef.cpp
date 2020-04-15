@@ -780,20 +780,22 @@ static bool derivativeFunctionRequiresNewVTableEntry(SILDeclRef declRef) {
   if (!overridden)
     return false;
   // Get the derived `@differentiable` attribute.
+  auto *derivedAFD = dyn_cast<AbstractFunctionDecl>(declRef.getDecl());
   auto *derivedDiffAttr = *llvm::find_if(
       declRef.getDecl()->getAttrs().getAttributes<DifferentiableAttr>(),
       [&](const DifferentiableAttr *derivedDiffAttr) {
-        return derivedDiffAttr->getParameterIndices() ==
+        return derivedDiffAttr->getParameterIndices(derivedAFD) ==
                declRef.derivativeFunctionIdentifier->getParameterIndices();
       });
   assert(derivedDiffAttr && "Expected `@differentiable` attribute");
   // Otherwise, if the base `@differentiable` attribute specifies a derivative
   // function, then the derivative is inherited and no new vtable entry is
   // needed. Return false.
+  auto *overriddenAFD = dyn_cast<AbstractFunctionDecl>(overridden.getDecl());
   auto baseDiffAttrs =
       overridden.getDecl()->getAttrs().getAttributes<DifferentiableAttr>();
   for (auto *baseDiffAttr : baseDiffAttrs) {
-    if (baseDiffAttr->getParameterIndices() ==
+    if (baseDiffAttr->getParameterIndices(overriddenAFD) ==
         declRef.derivativeFunctionIdentifier->getParameterIndices())
       return false;
   }
@@ -883,7 +885,9 @@ SILDeclRef SILDeclRef::getNextOverriddenVTableEntry() const {
       auto overriddenAttrs =
           overridden.getDecl()->getAttrs().getAttributes<DifferentiableAttr>();
       for (const auto *attr : overriddenAttrs) {
-        if (attr->getParameterIndices() !=
+        auto *overriddenAFD =
+            dyn_cast<AbstractFunctionDecl>(overridden.getDecl());
+        if (attr->getParameterIndices(overriddenAFD) !=
             derivativeFunctionIdentifier->getParameterIndices())
           continue;
         auto *overriddenDerivativeId = overridden.derivativeFunctionIdentifier;

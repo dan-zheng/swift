@@ -330,6 +330,9 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
   // with the exact parameter indices from the requirement `@differentiable`
   // attribute.
   ASTContext &ctx = witness->getASTContext();
+  auto *reqAFD = dyn_cast<AbstractFunctionDecl>(req);
+  if (auto *reqASD = dyn_cast<AbstractStorageDecl>(req))
+    reqAFD = reqASD->getAccessor(AccessorKind::Get);
   auto *witnessAFD = dyn_cast<AbstractFunctionDecl>(witness);
   if (auto *witnessASD = dyn_cast<AbstractStorageDecl>(witness))
     witnessAFD = witnessASD->getAccessor(AccessorKind::Get);
@@ -339,10 +342,10 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
   // attributes and to resolve derivative configurations, used below.
   for (auto *witnessDiffAttr :
        witnessAttrs.getAttributes<DifferentiableAttr>()) {
-    (void)witnessDiffAttr->getParameterIndices();
+    (void)witnessDiffAttr->getParameterIndices(witnessAFD);
   }
   for (auto *reqDiffAttr : reqAttrs.getAttributes<DifferentiableAttr>()) {
-    (void)reqDiffAttr->getParameterIndices();
+    (void)reqDiffAttr->getParameterIndices(reqAFD);
   }
   for (auto *reqDiffAttr : reqAttrs.getAttributes<DifferentiableAttr>()) {
     bool foundExactConfig = false;
@@ -375,12 +378,12 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
       }
 
       if (witnessConfig.parameterIndices ==
-          reqDiffAttr->getParameterIndices()) {
+          reqDiffAttr->getParameterIndices(reqAFD)) {
         foundExactConfig = true;
         break;
       }
       if (witnessConfig.parameterIndices->isSupersetOf(
-              reqDiffAttr->getParameterIndices()))
+              reqDiffAttr->getParameterIndices(reqAFD)))
         supersetConfig = witnessConfig;
     }
     if (!foundExactConfig) {
@@ -420,7 +423,7 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
         // of the implicit `@differentiable` attribute.
         auto *newAttr = DifferentiableAttr::create(
             witnessAFD, /*implicit*/ true, witness->getLoc(), witness->getLoc(),
-            reqDiffAttr->isLinear(), reqDiffAttr->getParameterIndices(),
+            reqDiffAttr->isLinear(), reqDiffAttr->getParameterIndices(reqAFD),
             derivativeGenSig);
         // If the implicit attribute is inherited from a protocol requirement's
         // attribute, store the protocol requirement attribute's location for
@@ -430,7 +433,7 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
               reqDiffAttr->getLocation());
         }
         auto insertion = ctx.DifferentiableAttrs.try_emplace(
-            {witnessAFD, newAttr->getParameterIndices()}, newAttr);
+            {witnessAFD, newAttr->getParameterIndices(witnessAFD)}, newAttr);
         // Valid `@differentiable` attributes are uniqued by original function
         // and parameter indices. Reject duplicate attributes.
         if (!insertion.second) {
@@ -441,7 +444,7 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
           // Register derivative function configuration.
           auto *resultIndices = IndexSubset::get(ctx, 1, {0});
           witnessAFD->addDerivativeFunctionConfiguration(
-              {newAttr->getParameterIndices(), resultIndices,
+              {newAttr->getParameterIndices(witnessAFD), resultIndices,
                newAttr->getDerivativeGenericSignature()});
         }
       }
@@ -2389,6 +2392,7 @@ diagnoseMatch(ModuleDecl *module, NormalProtocolConformance *conformance,
     break;
   case MatchKind::MissingDifferentiableAttr: {
     auto *witness = match.Witness;
+    auto *reqAFD = cast<AbstractFunctionDecl>(req);
     // Emit a note and fix-it showing the missing requirement `@differentiable`
     // attribute.
     auto *reqAttr = cast<DifferentiableAttr>(match.UnmetAttribute);
@@ -2400,8 +2404,9 @@ diagnoseMatch(ModuleDecl *module, NormalProtocolConformance *conformance,
         reqAttr->getDerivativeGenericEnvironment(original);
     auto *inferredParameters = TypeChecker::inferDifferentiabilityParameters(
         original, whereClauseGenEnv);
-    bool omitWrtClause = reqAttr->getParameterIndices()->getNumIndices() ==
-                         inferredParameters->getNumIndices();
+    bool omitWrtClause =
+        reqAttr->getParameterIndices(reqAFD)->getNumIndices() ==
+        inferredParameters->getNumIndices();
     std::string reqDiffAttrString;
     llvm::raw_string_ostream os(reqDiffAttrString);
     reqAttr->print(os, req, omitWrtClause);

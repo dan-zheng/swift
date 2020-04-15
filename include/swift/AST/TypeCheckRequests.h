@@ -2100,19 +2100,12 @@ public:
   bool isCached() const { return true; }
 };
 
-
-/// Type-checks a `@differentiable` attribute and returns the resolved parameter
-/// indices on success. On failure, emits diagnostics and returns `nullptr`.
-///
-/// Currently, this request resolves other `@differentiable` attribute
-/// components but mutates them in place:
-/// - `JVPFunction`
-/// - `VJPFunction`
-/// - `DerivativeGenericSignature`
-class DifferentiableAttributeTypeCheckRequest
-    : public SimpleRequest<DifferentiableAttributeTypeCheckRequest,
-                           IndexSubset *(DifferentiableAttr *),
-                           RequestFlags::SeparatelyCached> {
+/// Resolve the `@differentiable` attribute and returns the resolved
+/// `AbstractFunctionDecl`.
+class DifferentiableAttrOriginalDeclRequest
+    : public SimpleRequest<DifferentiableAttrOriginalDeclRequest,
+                           AbstractFunctionDecl *(DifferentiableAttr *, Decl *),
+                           RequestFlags::Cached> {
 public:
   using SimpleRequest::SimpleRequest;
 
@@ -2120,15 +2113,39 @@ private:
   friend SimpleRequest;
 
   // Evaluation.
-  IndexSubset * evaluate(Evaluator &evaluator,
-                         DifferentiableAttr *attr) const;
+  AbstractFunctionDecl *evaluate(Evaluator &evaluator, DifferentiableAttr *attr,
+                                 Decl *D) const;
 
 public:
-  // Separate caching.
   bool isCached() const { return true; }
-  Optional<IndexSubset *> getCachedResult() const;
-  void cacheResult(IndexSubset *value) const;
 };
+
+/// Type-checks a `@differentiable` attribute and returns the resolved parameter
+/// indices on success. On failure, emits diagnostics and returns `nullptr`.
+///
+/// Currently, this request resolves other `@differentiable` attribute
+/// components but mutates them in place:
+/// - `DerivativeGenericSignature`
+class DifferentiableAttrTypeCheckRequest
+    : public SimpleRequest<DifferentiableAttrTypeCheckRequest,
+                           IndexSubset *(DifferentiableAttr *,
+                                         AbstractFunctionDecl *),
+                           RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  IndexSubset *evaluate(Evaluator &evaluator, DifferentiableAttr *attr,
+                        AbstractFunctionDecl *original) const;
+
+public:
+  bool isCached() const { return true; }
+};
+
+void simple_display(llvm::raw_ostream &out, IndexSubset *);
 
 /// Resolves the referenced original declaration for a `@derivative` attribute.
 class DerivativeAttrOriginalDeclRequest

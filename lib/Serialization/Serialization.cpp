@@ -2398,12 +2398,10 @@ class Serializer::DeclSerializer : public DeclVisitor<DeclSerializer> {
     }
 
     case DAK_Differentiable: {
+      auto *original = cast<AbstractFunctionDecl>(D);
       auto abbrCode = S.DeclTypeAbbrCodes[DifferentiableDeclAttrLayout::Code];
       auto *attr = cast<DifferentiableAttr>(DA);
-      assert(attr->getOriginalDeclaration() &&
-             "`@differentiable` attribute should have original declaration set "
-             "during construction or parsing");
-      auto *paramIndices = attr->getParameterIndices();
+      auto *paramIndices = attr->getParameterIndices(original);
       assert(paramIndices && "Parameter indices must be resolved");
       SmallVector<bool, 4> paramIndicesVector;
       for (unsigned i : range(paramIndices->getCapacity()))
@@ -4862,7 +4860,7 @@ static void recordDerivativeFunctionConfig(
   for (auto *attr : AFD->getAttrs().getAttributes<DifferentiableAttr>()) {
     auto mangledName = ctx.getIdentifier(Mangler.mangleDeclAsUSR(AFD, ""));
     derivativeConfigs[mangledName].insert(
-        {ctx.getIdentifier(attr->getParameterIndices()->getString()),
+        {ctx.getIdentifier(attr->getParameterIndices(AFD)->getString()),
          attr->getDerivativeGenericSignature()});
   }
   for (auto *attr : AFD->getAttrs().getAttributes<DerivativeAttr>()) {

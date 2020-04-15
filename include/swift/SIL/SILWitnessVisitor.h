@@ -182,13 +182,13 @@ private:
       asDerived().addMethod(declRef.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(AFD),
               diffAttr->getDerivativeGenericSignature(),
               AFD->getASTContext())));
       asDerived().addMethod(declRef.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::VJP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(AFD),
               diffAttr->getDerivativeGenericSignature(),
               AFD->getASTContext())));
     }

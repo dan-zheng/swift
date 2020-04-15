@@ -561,7 +561,8 @@ static void printDifferentiableAttrArguments(
   // Print differentiation parameters clause, unless it is to be omitted.
   if (!omitWrtClause) {
     auto diffParamsString = getDifferentiationParametersClauseString(
-        original, attr->getParameterIndices(), attr->getParsedParameters(),
+        original, attr->getParameterIndices(original),
+        attr->getParsedParameters(),
         DifferentiationParameterKind::Differentiability);
     // Check whether differentiation parameter clause is empty.
     // Handles edge case where resolved parameter indices are unset and
@@ -1636,8 +1637,9 @@ DifferentiableAttr::DifferentiableAttr(Decl *original, bool implicit,
                                        IndexSubset *parameterIndices,
                                        GenericSignature derivativeGenSig)
     : DeclAttribute(DAK_Differentiable, atLoc, baseRange, implicit),
-      OriginalDeclaration(original), Linear(linear) {
-  setParameterIndices(parameterIndices);
+      Linear(linear) {
+  auto *originalAFD = dyn_cast<AbstractFunctionDecl>(original);
+  setParameterIndices(parameterIndices, originalAFD);
   setDerivativeGenericSignature(derivativeGenSig);
 }
 
@@ -1665,34 +1667,23 @@ DifferentiableAttr::create(AbstractFunctionDecl *original, bool implicit,
                                       linear, parameterIndices, derivativeGenSig);
 }
 
-void DifferentiableAttr::setOriginalDeclaration(Decl *originalDeclaration) {
-  assert(originalDeclaration && "Original declaration must be non-null");
-  assert(!OriginalDeclaration &&
-         "Original declaration cannot have already been set");
-  OriginalDeclaration = originalDeclaration;
-}
-
-bool DifferentiableAttr::hasBeenTypeChecked() const {
-  return ParameterIndicesAndBit.getInt();
-}
-
-IndexSubset *DifferentiableAttr::getParameterIndices() const {
-  assert(getOriginalDeclaration() &&
-         "Original declaration must have been resolved");
-  auto &ctx = getOriginalDeclaration()->getASTContext();
+IndexSubset *DifferentiableAttr::getParameterIndices(
+    const AbstractFunctionDecl *original) const {
+  auto &ctx = original->getASTContext();
   return evaluateOrDefault(ctx.evaluator,
-                           DifferentiableAttributeTypeCheckRequest{
-                               const_cast<DifferentiableAttr *>(this)},
+                           DifferentiableAttrTypeCheckRequest{
+                               const_cast<DifferentiableAttr *>(this),
+                               const_cast<AbstractFunctionDecl *>(original)},
                            nullptr);
 }
 
-void DifferentiableAttr::setParameterIndices(IndexSubset *paramIndices) {
-  assert(getOriginalDeclaration() &&
-         "Original declaration must have been resolved");
-  auto &ctx = getOriginalDeclaration()->getASTContext();
+void DifferentiableAttr::setParameterIndices(
+    IndexSubset *paramIndices, const AbstractFunctionDecl *original) {
+  auto &ctx = original->getASTContext();
   ctx.evaluator.cacheOutput(
-      DifferentiableAttributeTypeCheckRequest{
-          const_cast<DifferentiableAttr *>(this)},
+      DifferentiableAttrTypeCheckRequest{
+          const_cast<DifferentiableAttr *>(this),
+          const_cast<AbstractFunctionDecl *>(original)},
       std::move(paramIndices));
 }
 

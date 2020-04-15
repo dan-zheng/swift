@@ -1727,23 +1727,11 @@ class DifferentiableAttr final
       private llvm::TrailingObjects<DifferentiableAttr,
                                     ParsedAutoDiffParameter> {
   friend TrailingObjects;
-  friend class DifferentiableAttributeTypeCheckRequest;
 
-  /// The declaration on which the `@differentiable` attribute is declared.
-  /// May not be a valid declaration for `@differentiable` attributes.
-  /// Resolved during parsing and deserialization.
-  Decl *OriginalDeclaration = nullptr;
   /// Whether this function is linear (optional).
   bool Linear;
   /// The number of parsed differentiability parameters specified in 'wrt:'.
   unsigned NumParsedParameters = 0;
-  /// The differentiability parameter indices, resolved by the type checker.
-  /// The bit stores whether the parameter indices have been computed.
-  ///
-  /// Note: it is necessary to use a bit instead of `nullptr` parameter indices
-  /// to represent "parameter indices not yet type-checked" because invalid
-  /// attributes have `nullptr` parameter indices but have been type-checked.
-  llvm::PointerIntPair<IndexSubset *, 1, bool> ParameterIndicesAndBit;
   /// The trailing where clause (optional).
   TrailingWhereClause *WhereClause = nullptr;
   /// The generic signature for autodiff associated functions. Resolved by the
@@ -1782,20 +1770,12 @@ public:
                                     IndexSubset *parameterIndices,
                                     GenericSignature derivativeGenSig);
 
-  Decl *getOriginalDeclaration() const { return OriginalDeclaration; }
+  ///
+  AbstractFunctionDecl *getOriginalDeclaration(const Decl *D) const;
 
-  /// Sets the original declaration on which this attribute is declared.
-  /// Should only be used by parsing and deserialization.
-  void setOriginalDeclaration(Decl *originalDeclaration);
-
-private:
-  /// Returns true if the given `@differentiable` attribute has been
-  /// type-checked.
-  bool hasBeenTypeChecked() const;
-
-public:
-  IndexSubset *getParameterIndices() const;
-  void setParameterIndices(IndexSubset *parameterIndices);
+  IndexSubset *getParameterIndices(const AbstractFunctionDecl *original) const;
+  void setParameterIndices(IndexSubset *parameterIndices,
+                           const AbstractFunctionDecl *original);
 
   /// The parsed differentiability parameters, i.e. the list of parameters
   /// specified in 'wrt:'.

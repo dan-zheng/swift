@@ -2313,12 +2313,15 @@ static void setOriginalDeclarationAndParameterIndicesInDifferentiableAttributes(
     Decl *decl, DeclAttribute *attrs,
     llvm::DenseMap<DifferentiableAttr *, IndexSubset *>
         &diffAttrParamIndicesMap) {
+  if (!isa<AbstractFunctionDecl>(decl)) {
+    llvm::errs() << "BAD DECL!\n";
+  }
+  auto *original = cast<AbstractFunctionDecl>(decl);
   DeclAttributes tempAttrs;
   tempAttrs.setRawAttributeChain(attrs);
   for (auto *attr : tempAttrs.getAttributes<DifferentiableAttr>()) {
     auto *diffAttr = const_cast<DifferentiableAttr *>(attr);
-    diffAttr->setOriginalDeclaration(decl);
-    diffAttr->setParameterIndices(diffAttrParamIndicesMap[diffAttr]);
+    diffAttr->setParameterIndices(diffAttrParamIndicesMap[diffAttr], original);
   }
 }
 

@@ -93,14 +93,14 @@ template <class T> class SILVTableVisitor {
       auto jvpConstant = constant.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(fd),
               diffAttr->getDerivativeGenericSignature(), fd->getASTContext()));
       maybeAddEntry(jvpConstant);
 
       auto vjpConstant = constant.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::VJP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(fd),
               diffAttr->getDerivativeGenericSignature(), fd->getASTContext()));
       maybeAddEntry(vjpConstant);
     }
@@ -120,14 +120,14 @@ template <class T> class SILVTableVisitor {
       auto jvpConstant = constant.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(cd),
               diffAttr->getDerivativeGenericSignature(), cd->getASTContext()));
       maybeAddEntry(jvpConstant);
 
       auto vjpConstant = constant.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::VJP,
-              diffAttr->getParameterIndices(),
+              diffAttr->getParameterIndices(cd),
               diffAttr->getDerivativeGenericSignature(), cd->getASTContext()));
       maybeAddEntry(vjpConstant);
     }

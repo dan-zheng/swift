@@ -775,7 +775,7 @@ void SILGenModule::emitDifferentiabilityWitnessesForFunction(
               diffAttr->getDerivativeGenericSignature()) &&
              "Type-checking should resolve derivative generic signatures for "
              "all original SIL functions with generic signatures");
-      AutoDiffConfig config(diffAttr->getParameterIndices(), resultIndices,
+      AutoDiffConfig config(diffAttr->getParameterIndices(AFD), resultIndices,
                             diffAttr->getDerivativeGenericSignature());
       emitDifferentiabilityWitness(AFD, F, config, /*jvp*/ nullptr,
                                    /*vjp*/ nullptr, diffAttr);

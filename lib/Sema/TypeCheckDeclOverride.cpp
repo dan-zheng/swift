@@ -620,10 +620,10 @@ static bool hasOverridingDifferentiableAttribute(ValueDecl *derivedDecl,
   // also declared on `derivedDecl`.
   bool diagnosed = false;
   for (auto *baseDA : baseDAs) {
-    auto baseParameters = baseDA->getParameterIndices();
+    auto baseParameters = baseDA->getParameterIndices(baseAFD);
     auto defined = false;
     for (auto derivedDA : derivedDAs) {
-      auto derivedParameters = derivedDA->getParameterIndices();
+      auto derivedParameters = derivedDA->getParameterIndices(derivedAFD);
       // If base and derived parameter indices are both defined, check whether
       // base parameter indices are a subset of derived parameter indices.
       if (derivedParameters && baseParameters &&
@@ -679,10 +679,10 @@ static bool hasOverridingDifferentiableAttribute(ValueDecl *derivedDecl,
   // check if they subsume any of the `@differentiable` attributes in
   // `baseDecl`.
   for (auto derivedDA : derivedDAs) {
-    auto derivedParameters = derivedDA->getParameterIndices();
+    auto derivedParameters = derivedDA->getParameterIndices(derivedAFD);
     auto overrides = true;
     for (auto baseDA : baseDAs) {
-      auto baseParameters = baseDA->getParameterIndices();
+      auto baseParameters = baseDA->getParameterIndices(baseAFD);
       // If the parameter indices of `derivedDA` are a subset of those of
       // `baseDA`, then `baseDA` subsumes `derivedDA` and the function is
       // marked as overridden.

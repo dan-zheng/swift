@@ -660,7 +660,7 @@ void TBDGenVisitor::visitAbstractFunctionDecl(AbstractFunctionDecl *AFD) {
        AFD->getAttrs().getAttributes<DifferentiableAttr>())
     addDerivativeConfiguration(
         AFD,
-        AutoDiffConfig(differentiableAttr->getParameterIndices(),
+        AutoDiffConfig(differentiableAttr->getParameterIndices(AFD),
                        IndexSubset::get(AFD->getASTContext(), 1, {0}),
                        differentiableAttr->getDerivativeGenericSignature()));
   for (const auto *derivativeAttr :
@@ -726,12 +726,14 @@ void TBDGenVisitor::visitAbstractStorageDecl(AbstractStorageDecl *ASD) {
 
   // Add derivative function symbols.
   for (const auto *differentiableAttr :
-       ASD->getAttrs().getAttributes<DifferentiableAttr>())
+       ASD->getAttrs().getAttributes<DifferentiableAttr>()) {
+    auto *getter = ASD->getAccessor(AccessorKind::Get);
     addDerivativeConfiguration(
-        ASD->getAccessor(AccessorKind::Get),
-        AutoDiffConfig(differentiableAttr->getParameterIndices(),
+        getter,
+        AutoDiffConfig(differentiableAttr->getParameterIndices(getter),
                        IndexSubset::get(ASD->getASTContext(), 1, {0}),
                        differentiableAttr->getDerivativeGenericSignature()));
+  }
 }
 
 void TBDGenVisitor::visitVarDecl(VarDecl *VD) {

@@ -46,9 +46,12 @@ SWIFT_REQUEST(TypeChecker, DefaultDefinitionTypeRequest,
 SWIFT_REQUEST(TypeChecker, DefaultTypeRequest,
               Type(KnownProtocolKind, const DeclContext *), SeparatelyCached,
               NoLocationInfo)
-SWIFT_REQUEST(TypeChecker, DifferentiableAttributeTypeCheckRequest,
-              IndexSubset *(DifferentiableAttr *),
-              SeparatelyCached, NoLocationInfo)
+SWIFT_REQUEST(TypeChecker, DifferentiableAttrOriginalDeclRequest,
+              AbstractFunctionDecl *(DifferentiableAttr *, Decl *),
+              Cached, NoLocationInfo)
+SWIFT_REQUEST(TypeChecker, DifferentiableAttrTypeCheckRequest,
+              IndexSubset *(DifferentiableAttr *, AbstractFunctionDecl *),
+              Cached, NoLocationInfo)
 SWIFT_REQUEST(TypeChecker, DerivativeAttrOriginalDeclRequest,
               AbstractFunctionDecl *(DerivativeAttr *),
               Cached, NoLocationInfo)
