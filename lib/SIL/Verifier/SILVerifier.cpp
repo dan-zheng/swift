@@ -1208,6 +1208,11 @@ public:
       auto A = dyn_cast<ArchetypeType>(t);
       if (!A)
         return;
+      if (!isArchetypeValidInFunction(A, F)) {
+        llvm::errs() << "BAD ARCHETYPE: " << A << "\n";
+        A->dump();
+        A->getGenericEnvironment()->dump();
+      }
       require(isArchetypeValidInFunction(A, F),
               "Operand is of an ArchetypeType that does not exist in the "
               "Caller's generic param list.");

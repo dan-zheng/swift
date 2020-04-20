@@ -255,6 +255,10 @@ void emitZeroIntoBuffer(SILBuilder &builder, CanType type,
   auto *additiveArithmeticProto =
       astCtx.getProtocol(KnownProtocolKind::AdditiveArithmetic);
   auto confRef = swiftMod->lookupConformance(type, additiveArithmeticProto);
+  if (confRef.isInvalid()) {
+    llvm::errs() << "BAD TYPE\n";
+    type->dump();
+  }
   assert(!confRef.isInvalid() && "Missing conformance to `AdditiveArithmetic`");
   // Look up `AdditiveArithmetic.zero.getter`.
   auto zeroDeclLookup = additiveArithmeticProto->lookupDirect(astCtx.Id_zero);

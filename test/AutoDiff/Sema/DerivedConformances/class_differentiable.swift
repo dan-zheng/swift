@@ -518,7 +518,7 @@ struct Wrapper<Value> {
 }
 struct TF_1190<T> {}
 class TF_1190_Outer: Differentiable {
-  // expected-warning @+1 {{stored property '_x' has no derivative because 'Wrapper<TF_1190<Float>>' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}}
+  // expected-warning @+1 {{stored property 'x' has no derivative because 'Wrapper<TF_1190<Float>>' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}}
   @Wrapper var x: TF_1190<Float>
   @noDerivative @Wrapper var y: TF_1190<Float>
 

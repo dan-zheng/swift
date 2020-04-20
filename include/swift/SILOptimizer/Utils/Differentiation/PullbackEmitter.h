@@ -315,6 +315,10 @@ public:
   /// if any error occurs.
   bool run();
 
+  /// Performs pullback generation on the empty pullback function. Returns true
+  /// if any error occurs.
+  bool runForAccessor();
+
   /// If original result is non-varied, it will always have a zero derivative.
   /// Skip full pullback generation and simply emit zero derivatives for wrt
   /// parameters.

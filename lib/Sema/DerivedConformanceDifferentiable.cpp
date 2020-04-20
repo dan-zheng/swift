@@ -25,6 +25,7 @@
 #include "swift/AST/ParameterList.h"
 #include "swift/AST/Pattern.h"
 #include "swift/AST/ProtocolConformance.h"
+#include "swift/AST/PropertyWrappers.h"
 #include "swift/AST/Stmt.h"
 #include "swift/AST/Types.h"
 #include "DerivedConformances.h"
@@ -39,14 +40,25 @@ getStoredPropertiesForDifferentiation(NominalTypeDecl *nominal, DeclContext *DC,
   auto &C = nominal->getASTContext();
   auto *diffableProto = C.getProtocol(KnownProtocolKind::Differentiable);
   for (auto *vd : nominal->getStoredProperties()) {
+    // For property wrapper backing storage properties, use the original wrapped
+    // property instead.
+    if (auto *originalProperty = vd->getOriginalWrappedProperty()) {
+      if (originalProperty->getAttrs().hasAttribute<NoDerivativeAttr>())
+        continue;
+      vd = originalProperty;
+#if 0
+      auto wrapperInfo = originalProperty->getPropertyWrapperBackingPropertyInfo();
+      llvm::errs() << "NOMINAL: " << nominal->getName() << ", VAR: " << originalProperty->getName() << ", ";
+      if (wrapperInfo.initializeFromOriginal) {
+        llvm::errs() << "HAS `init(wrappedValue:)`\n";
+      } else {
+        llvm::errs() << "NO `init(wrappedValue:)`\n";
+      }
+#endif
+    }
     // Skip stored properties with `@noDerivative` attribute.
     if (vd->getAttrs().hasAttribute<NoDerivativeAttr>())
       continue;
-    // For property wrapper backing storage properties, skip if original
-    // property has `@noDerivative` attribute.
-    if (auto *originalProperty = vd->getOriginalWrappedProperty())
-      if (originalProperty->getAttrs().hasAttribute<NoDerivativeAttr>())
-        continue;
     // Skip `let` stored properties. `mutating func move(along:)` cannot be
     // synthesized to update these properties.
     if (vd->isLet())
@@ -54,6 +66,9 @@ getStoredPropertiesForDifferentiation(NominalTypeDecl *nominal, DeclContext *DC,
     if (vd->getInterfaceType()->hasError())
       continue;
     auto varType = DC->mapTypeIntoContext(vd->getValueInterfaceType());
+#if 0
+    llvm::errs() << "VAR TYPE FOR MEMBER: " << varType << "\n";
+#endif
     if (!TypeChecker::conformsToProtocol(varType, diffableProto, nominal, None))
       continue;
     result.push_back(vd);
@@ -225,15 +240,18 @@ deriveBodyDifferentiable_method(AbstractFunctionDecl *funcDecl,
     if (confRef.isConcrete())
       memberMethodDecl = confRef.getConcrete()->getWitnessDecl(methodReq);
     assert(memberMethodDecl && "Member method declaration must exist");
-    auto memberMethodDRE =
+    auto *memberMethodDRE =
         new (C) DeclRefExpr(memberMethodDecl, DeclNameLoc(), /*Implicit*/ true);
     memberMethodDRE->setFunctionRefKind(FunctionRefKind::SingleApply);
 
     // Create reference to member method: `x.move(along:)`.
-    auto memberExpr =
+    Expr *memberExpr =
         new (C) MemberRefExpr(selfDRE, SourceLoc(), member, DeclNameLoc(),
                               /*Implicit*/ true);
-    auto memberMethodExpr =
+#if 0
+    memberExpr = new (C) InOutExpr(SourceLoc(), memberExpr, memberType, /*Implicit*/ true);
+#endif
+    auto *memberMethodExpr =
         new (C) DotSyntaxCallExpr(memberMethodDRE, SourceLoc(), memberExpr);
 
     // Create reference to parameter member: `direction.x`.
@@ -488,6 +506,12 @@ static void checkAndDiagnoseImplicitNoDerivative(ASTContext &Context,
   bool nominalCanDeriveAdditiveArithmetic =
       DerivedConformance::canDeriveAdditiveArithmetic(nominal, DC);
   for (auto *vd : nominal->getStoredProperties()) {
+    // Peer through property wrappers: use original wrapper properties.
+    if (auto *originalProperty = vd->getOriginalWrappedProperty()) {
+      if (originalProperty->getAttrs().hasAttribute<NoDerivativeAttr>())
+        continue;
+      vd = originalProperty;
+    }
     if (vd->getInterfaceType()->hasError())
       continue;
     // Skip stored properties with `@noDerivative` attribute.
