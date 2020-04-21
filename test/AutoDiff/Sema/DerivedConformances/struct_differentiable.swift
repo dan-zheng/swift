@@ -342,7 +342,7 @@ struct Generic<T> {}
 extension Generic: Differentiable where T: Differentiable {}
 
 struct WrappedProperties: Differentiable {
-  // expected-warning @+1 {{synthesis of the 'Differentiable.move(along:)' requirement for 'WrappedProperties' requires all stored properties not marked with `@noDerivative` to be mutable; add 'ImmutableWrapper.wrappedValue.set', or add an explicit '@noDerivative' attribute}}
+  // expected-warning @+1 {{synthesis of the 'Differentiable.move(along:)' requirement for 'WrappedProperties' requires all stored properties not marked with `@noDerivative` to be mutable; add an explicit '@noDerivative' attribute}}
   @ImmutableWrapper var immutableInt: Generic<Int>
 
   // expected-warning @+1 {{stored property 'mutableInt' has no derivative because 'Generic<Int>' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}}

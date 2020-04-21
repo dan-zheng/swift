@@ -2728,8 +2728,7 @@ WARNING(differentiable_nondiff_type_implicit_noderivative_fixit,none,
 WARNING(differentiable_immutable_wrapper_implicit_noderivative_fixit,none,
       "synthesis of the 'Differentiable.move(along:)' requirement for %1 "
       "requires all stored properties not marked with `@noDerivative` to be "
-      "mutable; add '%0.wrappedValue.set', or add an explicit '@noDerivative' "
-      "attribute"
+      "mutable; add an explicit '@noDerivative' attribute"
       "%select{|, or conform %1 to 'AdditiveArithmetic'}2",
       (/*wrapperType*/ StringRef, /*nominalName*/ Identifier,
        /*nominalCanDeriveAdditiveArithmetic*/ bool))
