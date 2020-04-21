@@ -532,12 +532,22 @@ static bool isSemanticMemberAccessor(SILFunction *original) {
   if (accessor->getAccessorKind() != AccessorKind::Get &&
       accessor->getAccessorKind() != AccessorKind::Set)
     return false;
-  // Currently, only implicit accessors are supported.
+  // Accessor must come from a `var` declaration.
+  auto *varDecl = dyn_cast<VarDecl>(accessor->getStorage());
+  if (!varDecl)
+    return false;
+  // Return true for stored property accessors.
+  if (varDecl->hasStorage())
+    return true;
+  // Return true for properties that have attached property wrappers.
+  if (varDecl->hasAttachedPropertyWrapper())
+    return true;
+  // Otherwise, return false.
   // User-defined accessors can never be supported because they may use custom
   // logic that does not semantically perform a member access.
   // TODO(SR-12636): Support `@differentiable(useInTangentVector)` computed
   // properties.
-  return accessor->isImplicit();
+  return false;
 }
 
 bool PullbackEmitter::runForSemanticMemberAccessor() {

@@ -193,7 +193,7 @@ extension DifferentiableWrapper: Differentiable where Value: Differentiable {}
 
 struct Struct: Differentiable {
   // expected-error @+2 {{expression is not differentiable}}
-  // expected-note @+1 {{property cannot be differentiated because 'Struct.TangentVector' does not have a member named '$x'}}
+  // expected-note @+1 {{property cannot be differentiated because 'Struct.TangentVector' does not have a member named '_x'}}
   @DifferentiableWrapper @DifferentiableWrapper var x: Float = 10
 
   @Wrapper var y: Float = 20
