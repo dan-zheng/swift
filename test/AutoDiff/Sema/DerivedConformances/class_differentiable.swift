@@ -38,7 +38,7 @@ class ImmutableStoredProperties: Differentiable {
   // expected-warning @+1 {{stored property 'nondiff' has no derivative because 'Int' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}} {{3-3=@noDerivative }}
   let nondiff: Int
 
-  // expected-warning @+1 {{synthesis of the 'Differentiable.move(along:)' requirement for 'ImmutableStoredProperties' requires all stored properties to be mutable; use 'var' instead, or add an explicit '@noDerivative' attribute}} {{3-3=@noDerivative }}
+  // expected-warning @+1 {{synthesis of the 'Differentiable.move(along:)' requirement for 'ImmutableStoredProperties' requires all stored properties not marked with `@noDerivative` to be mutable; use 'var' instead, or add an explicit '@noDerivative' attribute}} {{3-3=@noDerivative }}
   let diff: Float
 
   init() {
@@ -56,7 +56,8 @@ class MutableStoredPropertiesWithInitialValue: Differentiable {
 }
 // Test class with both an empty constructor and memberwise initializer.
 class AllMixedStoredPropertiesHaveInitialValue: Differentiable {
-  let x = Float(1)  // expected-warning {{synthesis of the 'Differentiable.move(along:)' requirement for 'AllMixedStoredPropertiesHaveInitialValue' requires all stored properties to be mutable; use 'var' instead, or add an explicit '@noDerivative' attribute}} {{3-3=@noDerivative }}
+  // expected-warning @+1 {{synthesis of the 'Differentiable.move(along:)' requirement for 'AllMixedStoredPropertiesHaveInitialValue' requires all stored properties not marked with `@noDerivative` to be mutable; use 'var' instead, or add an explicit '@noDerivative' attribute}} {{3-3=@noDerivative }}
+  let x = Float(1)
   var y = Float(1)
   // Memberwise initializer should be `init(y:)` since `x` is immutable.
   static func testMemberwiseInitializer() {
@@ -517,14 +518,17 @@ struct Wrapper<Value> {
   }
 }
 struct TF_1190<T> {}
+extension TF_1190: Differentiable where T: Differentiable {}
 class TF_1190_Outer: Differentiable {
-  // expected-warning @+1 {{stored property '_x' has no derivative because 'Wrapper<TF_1190<Float>>' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}}
-  @Wrapper var x: TF_1190<Float>
-  @noDerivative @Wrapper var y: TF_1190<Float>
+  // expected-warning @+1 {{stored property 'x' has no derivative because 'TF_1190<Int>' does not conform to 'Differentiable'; add an explicit '@noDerivative' attribute}}
+  @Wrapper var x: TF_1190<Int>
+  @noDerivative @Wrapper var y: TF_1190<Int>
+  @Wrapper var z: TF_1190<Float>
 
-  init(x: TF_1190<Float>, y: TF_1190<Float>) {
+  init(x: TF_1190<Int>, y: TF_1190<Int>, z: TF_1190<Float>) {
     self.x = x
     self.y = y
+    self.z = z
   }
 }
 

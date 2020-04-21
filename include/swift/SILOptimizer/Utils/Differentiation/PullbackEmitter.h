@@ -99,7 +99,7 @@ private:
   SILBuilder localAllocBuilder;
 
   /// Stack buffers allocated for storing local adjoint values.
-  SmallVector<SILValue, 64> functionLocalAllocations;
+  SmallVector<AllocStackInst *, 64> functionLocalAllocations;
 
   /// A set used to remember local allocations that were destroyed.
   llvm::SmallDenseSet<SILValue> destroyedLocalAllocations;
@@ -314,6 +314,14 @@ public:
   /// Performs pullback generation on the empty pullback function. Returns true
   /// if any error occurs.
   bool run();
+
+  /// Performs pullback generation on the empty pullback function, given that
+  /// the original function is an accessor with special generation logic.
+  ///
+  /// Returns true if any error occurs.
+  bool runForSpecialAccessor();
+  bool runForSpecialGetter();
+  bool runForSpecialSetter();
 
   /// If original result is non-varied, it will always have a zero derivative.
   /// Skip full pullback generation and simply emit zero derivatives for wrt
