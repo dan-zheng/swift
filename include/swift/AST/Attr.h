@@ -1733,8 +1733,11 @@ class DifferentiableAttr final
   /// May not be a valid declaration for `@differentiable` attributes.
   /// Resolved during parsing and deserialization.
   Decl *OriginalDeclaration = nullptr;
-  /// Whether this function is linear (optional).
+  /// Whether the declaration is linear (optional).
   bool Linear;
+  /// Whether the declaration is a computed property to be used in
+  /// `TangentVector` synthesis.
+  bool UseInTangentVectorComputedProperty;
   /// The number of parsed differentiability parameters specified in 'wrt:'.
   unsigned NumParsedParameters = 0;
   /// The differentiability parameter indices, resolved by the type checker.
@@ -1766,19 +1769,21 @@ class DifferentiableAttr final
 
   explicit DifferentiableAttr(Decl *original, bool implicit, SourceLoc atLoc,
                               SourceRange baseRange, bool linear,
+                              bool useInTangentVector,
                               IndexSubset *parameterIndices,
                               GenericSignature derivativeGenericSignature);
 
 public:
   static DifferentiableAttr *create(ASTContext &context, bool implicit,
                                     SourceLoc atLoc, SourceRange baseRange,
-                                    bool linear,
+                                    bool linear, bool useInTangentVector,
                                     ArrayRef<ParsedAutoDiffParameter> params,
                                     TrailingWhereClause *clause);
 
   static DifferentiableAttr *create(AbstractFunctionDecl *original,
                                     bool implicit, SourceLoc atLoc,
                                     SourceRange baseRange, bool linear,
+                                    bool useInTangentVector,
                                     IndexSubset *parameterIndices,
                                     GenericSignature derivativeGenSig);
 
