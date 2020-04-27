@@ -36,6 +36,9 @@ endfunction()
 generate_revision_inc(llvm_revision_inc LLVM "${LLVM_MAIN_SRC_DIR}")
 generate_revision_inc(clang_revision_inc Clang "${CLANG_MAIN_SRC_DIR}")
 generate_revision_inc(swift_revision_inc Swift "${SWIFT_SOURCE_DIR}")
+# SWIFT_ENABLE_TENSORFLOW
+generate_revision_inc(tensorflow_swift_apis_revision_inc Swift "${TENSORFLOW_SWIFT_APIS_SOURCE_DIR}")
+# SWIFT_ENABLE_TENSORFLOW END
 
 add_swift_host_library(swiftBasic STATIC
   AnyValue.cpp

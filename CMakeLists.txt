@@ -499,6 +499,8 @@ include(SwiftConfigureSDK)
 include(SwiftComponents)
 include(SwiftList)
 
+message(FATAL_ERROR "LLVM_MAIN_SRC_DIR: ${LLVM_MAIN_SRC_DIR}")
+
 # Configure swift include, install, build components.
 swift_configure_components()
 
@@ -507,6 +509,9 @@ include(SwiftToolchainUtils)
 if(NOT SWIFT_LIPO)
   find_toolchain_tool(SWIFT_LIPO "${SWIFT_DARWIN_XCRUN_TOOLCHAIN}" lipo)
 endif()
+
+# bad
+# message(FATAL_ERROR "LLVM_MAIN_SRC_DIR: ${LLVM_MAIN_SRC_DIR}")
 
 # Reset CMAKE_SYSTEM_PROCESSOR if not cross-compiling.
 # CMake refuses to use `uname -m` on OS X
