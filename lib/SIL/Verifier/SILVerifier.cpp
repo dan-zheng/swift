@@ -460,6 +460,10 @@ struct ImmutableAddressUseVerifier {
     ApplySite apply(use->getUser());
     assert(apply && "Not an apply instruction kind");
     auto conv = apply.getArgumentConvention(*use);
+#if 0
+    use->getUser()->getFunction()->dump();
+    apply.dump();
+#endif
     return isConsumingOrMutatingArgumentConvention(conv);
   }
 
@@ -5246,6 +5250,8 @@ void SILFunction::verify(bool SingleFunction) const {
   if (!verificationEnabled(getModule()))
     return;
 
+  llvm::errs() << "SILFunction::verify\n";
+  dump();
   // Please put all checks in visitSILFunction in SILVerifier, not here. This
   // ensures that the pretty stack trace in the verifier is included with the
   // back trace when the verifier crashes.

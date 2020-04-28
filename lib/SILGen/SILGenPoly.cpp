@@ -998,6 +998,15 @@ namespace {
                    CanType inputSubstType,
                    AbstractionPattern outputOrigType,
                    CanType outputSubstType) {
+#if 0
+      llvm::errs() << "TranslateArguments::translate\n";
+      llvm::errs() << "INPUT:\n";
+      inputOrigType.dump();
+      inputSubstType.dump();
+      llvm::errs() << "OUTPUT:\n";
+      outputOrigType.dump();
+      outputSubstType.dump();
+#endif
       // Most of this function is about tuples: tuples can be represented
       // as one or many values, with varying levels of indirection.
       auto inputTupleType = dyn_cast<TupleType>(inputSubstType);
@@ -1423,9 +1432,15 @@ namespace {
                                  CanType outputSubstType,
                                  ManagedValue input,
                                  SILType outputLoweredTy) {
+      llvm::errs() << "translateIntoGuaranteed: '" << input.getValue()->getFunction()->getName() << "'\n";
+      if (input.getValue()->getFunction()->getName() == "$s7sr126415ClassC13TangentVectorV23DifferentiationUnittest7TrackedVySfGIeggr_AeIIegnr_TR") {
+        llvm::errs() << "FOUND!\n";
+      }
+      
       auto output = translatePrimitive(inputOrigType, inputSubstType,
                                        outputOrigType, outputSubstType,
                                        input, outputLoweredTy);
+      output.dump();
 
       // If our output value is not guaranteed, we need to:
       //
@@ -1446,6 +1461,11 @@ namespace {
         output = SGF.emitManagedBeginBorrow(Loc, output.getValue());
       }
 
+      // If the output is unowned or owned, create a borrow.
+      if (output.getType().getCategory() != outputLoweredTy.getCategory()) {
+        llvm::errs() << "MISMATCH!\n";
+      }
+
       Outputs.push_back(output);
     }
 
@@ -1457,8 +1477,20 @@ namespace {
                          ManagedValue input,
                          SILParameterInfo result) {
       auto resultTy = SGF.getSILType(result, OutputTypesFuncTy);
+      llvm::errs() << "TranslateArguments::translateSingle\n";
+      llvm::errs() << "INPUT:\n";
+      inputOrigType.dump();
+      inputSubstType.dump();
+      llvm::errs() << "OUTPUT:\n";
+      outputOrigType.dump();
+      outputSubstType.dump();
+      llvm::errs() << "INPUT:\n";
+      input.dump();
+      llvm::errs() << "RESULT TYPE:\n";
+      resultTy.dump();
       // Easy case: we want to pass exactly this value.
       if (input.getType() == resultTy) {
+        llvm::errs() << "RESULT TYPES EQUAL!\n";
         switch (result.getConvention()) {
         case ParameterConvention::Direct_Owned:
         case ParameterConvention::Indirect_In:
@@ -1474,7 +1506,10 @@ namespace {
         Outputs.push_back(input);
         return;
       }
-      
+
+      llvm::errs() << "RESULT TYPES NOT EQUAL, CONVENTION DIFFERENCE!\n";
+      result.dump();
+      // Current invariants: add
       switch (result.getConvention()) {
       // Direct translation is relatively easy.
       case ParameterConvention::Direct_Owned:
@@ -2984,6 +3019,9 @@ static void buildThunkBody(SILGenFunction &SGF, SILLocation loc,
 
   scope.pop();
   SGF.B.createReturn(loc, outerResult);
+
+  llvm::errs() << "buildThunkBody\n";
+  SGF.F.dump();
 }
 
 /// Build a generic signature and environment for a re-abstraction thunk.
@@ -3375,6 +3413,14 @@ static ManagedValue createDifferentiableFunctionThunk(
     SILGenFunction &SGF, SILLocation loc, ManagedValue fn,
     AbstractionPattern inputOrigType, CanAnyFunctionType inputSubstType,
     AbstractionPattern outputOrigType, CanAnyFunctionType outputSubstType) {
+  llvm::errs() << "createDifferentiableFunctionThunk\n";
+  llvm::errs() << "INPUT\n";
+  inputOrigType.dump();
+  inputSubstType->dump();
+  llvm::errs() << "OUTPUT\n";
+  outputOrigType.dump();
+  outputSubstType->dump();
+
   // Applies a thunk to all the components by extracting them, applying thunks
   // to all of them, and then putting them back together.
   auto sourceType = fn.getType().castTo<SILFunctionType>();
