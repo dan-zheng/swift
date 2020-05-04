@@ -564,7 +564,7 @@ CLONE_AND_EMIT_TANGENT(StructExtract, sei) {
         tangentVectorDecl->lookupDirect(sei->getField()->getName());
     if (tanFieldLookup.empty()) {
       context.emitNondifferentiabilityError(
-          sei, invoker, diag::autodiff_stored_property_no_corresponding_tangent,
+          sei, invoker, diag::autodiff_no_tangent_property,
           sei->getStructDecl()->getNameStr(), sei->getField()->getNameStr());
       errorOccurred = true;
       return;
@@ -608,7 +608,7 @@ CLONE_AND_EMIT_TANGENT(StructElementAddr, seai) {
     if (tanFieldLookup.empty()) {
       context.emitNondifferentiabilityError(
           seai, invoker,
-          diag::autodiff_stored_property_no_corresponding_tangent,
+          diag::autodiff_no_tangent_property,
           seai->getStructDecl()->getNameStr(), seai->getField()->getNameStr());
       errorOccurred = true;
       return;

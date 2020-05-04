@@ -385,3 +385,35 @@ NominalTypeDecl *TangentSpace::getNominal() const {
   assert(isTangentVector());
   return getTangentVector()->getNominalOrBoundGenericNominal();
 }
+
+VarDecl *
+TangentVectorPropertyRequest::evaluate(Evaluator &evaluator,
+                                       VarDecl *originalProperty, SourceLoc loc) const {
+  auto &ctx = originalProperty->getASTContext();
+  auto *moduleDecl = originalProperty->getModuleContext();
+  auto *structDecl =
+      dyn_cast<StructDecl>(originalProperty->getInnermostDeclContext());
+  assert(structDecl);
+  assert(!originalProperty->getAttrs().hasAttribute<NoDerivativeAttr>() &&
+         "`@noDerivative` struct projections should never be active");
+  auto *diffProto = ctx.getProtocol(KnownProtocolKind::Differentiable);
+  auto structASTType = structDecl->getDeclaredInterfaceType();
+  auto conf = moduleDecl->lookupConformance(structASTType, diffProto);
+  conf.dump();
+#if 0
+  auto diagnoseInvalidTangentVectorStructProperty = [&](auto diag) {
+    getContext().emitNondifferentiabilityError(
+        // loc.getSourceLoc(), getInvoker(), diag, structDecl->getNameStr(),
+        loc, getInvoker(), diag, structTanType->getString(),
+        originalProperty->getNameStr(), projTanType);
+    errorOccurred = true;
+  };
+  auto *tanStructDecl = structTanType->getStructOrBoundGenericStruct();
+  if (!tanStructDecl) {
+    diagnoseInvalidTangentVectorStructProperty(
+        diag::autodiff_struct_property_no_corresponding_tangent);
+    return nullptr;
+  }
+#endif
+  return nullptr;
+}

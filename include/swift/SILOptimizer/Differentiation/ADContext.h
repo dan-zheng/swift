@@ -257,6 +257,32 @@ public:
                                 Diag<T...> diag, U &&... args);
 };
 
+/// Given an instruction and a differentiation task associated with the
+/// parent function, emits a "not differentiable" error based on the task. If
+/// the task is indirect, emits notes all the way up to the outermost task,
+/// and emits an error at the outer task. Otherwise, emits an error directly.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILInstruction *inst,
+                              DifferentiationInvoker invoker, Diag<T...> diag,
+                              U &&... args);
+
+/// Given a value and a differentiation task associated with the parent
+/// function, emits a "not differentiable" error based on the task. If the
+/// task is indirect, emits notes all the way up to the outermost task, and
+/// emits an error at the outer task. Otherwise, emits an error directly.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILValue value, DifferentiationInvoker invoker,
+                              Diag<T...> diag, U &&... args);
+
+/// Emit a "not differentiable" error based on the given differentiation task
+/// and diagnostic.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SourceLoc loc, DifferentiationInvoker invoker,
+                              Diag<T...> diag, U &&... args);
+
 template <typename... T, typename... U>
 InFlightDiagnostic
 ADContext::emitNondifferentiabilityError(SILValue value,

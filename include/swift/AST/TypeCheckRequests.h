@@ -2177,6 +2177,27 @@ public:
   bool isCached() const { return true; }
 };
 
+/// Resolves the `TangentVector` stored property corresponding to the given
+/// stored property in a `Differentiable`-conforming type.
+class TangentVectorPropertyRequest
+    : public SimpleRequest<TangentVectorPropertyRequest,
+                           VarDecl *(VarDecl *, SourceLoc),
+                           RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  VarDecl *evaluate(Evaluator &evaluator, VarDecl *originalProperty,
+                    SourceLoc loc) const;
+
+public:
+  // Caching.
+  bool isCached() const { return true; }
+};
+
 /// Checks whether a type eraser has a viable initializer.
 class TypeEraserHasViableInitRequest
     : public SimpleRequest<TypeEraserHasViableInitRequest,

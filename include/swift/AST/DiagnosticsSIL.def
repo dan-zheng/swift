@@ -504,9 +504,21 @@ NOTE(autodiff_loadable_value_addressonly_tangent_unsupported,none,
      "properties", (Type, Type))
 NOTE(autodiff_enums_unsupported,none,
      "differentiating enum values is not yet supported", ())
-NOTE(autodiff_stored_property_no_corresponding_tangent,none,
+NOTE(autodiff_no_tangent_property,none,
      "property cannot be differentiated because '%0.TangentVector' does not "
      "have a member named '%1'", (StringRef, StringRef))
+#if 0
+NOTE(autodiff_no_tangent_property,none,
+     "property cannot be differentiated because '%0' is not a struct with a "
+     "stored property named '%1' with type %2",
+     (StringRef, StringRef, Type))
+#endif
+#if 0
+NOTE(autodiff_ambiguous_tangent_property,none,
+     "property cannot be differentiated because '%0' has multiple stored "
+     "properties named '%1' with type %2",
+     (StringRef, StringRef, Type))
+#endif
 NOTE(autodiff_coroutines_not_supported,none,
      "differentiation of coroutine calls is not yet supported", ())
 NOTE(autodiff_cannot_differentiate_writes_to_global_variables,none,

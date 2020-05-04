@@ -1367,7 +1367,7 @@ void PullbackEmitter::visitStructInst(StructInst *si) {
         if (tanFieldLookup.empty()) {
           getContext().emitNondifferentiabilityError(
               si, getInvoker(),
-              diag::autodiff_stored_property_no_corresponding_tangent,
+              diag::autodiff_no_tangent_property,
               tangentVectorDecl->getNameStr(), field->getNameStr());
           errorOccurred = true;
           return;
@@ -1425,7 +1425,7 @@ void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
     if (tanFieldLookup.empty()) {
       getContext().emitNondifferentiabilityError(
           sei, getInvoker(),
-          diag::autodiff_stored_property_no_corresponding_tangent,
+          diag::autodiff_no_tangent_property,
           sei->getStructDecl()->getNameStr(), sei->getField()->getNameStr());
       errorOccurred = true;
       return;
@@ -1480,7 +1480,7 @@ void PullbackEmitter::visitRefElementAddrInst(RefElementAddrInst *reai) {
   if (tanFieldLookup.empty()) {
     getContext().emitNondifferentiabilityError(
         reai, getInvoker(),
-        diag::autodiff_stored_property_no_corresponding_tangent,
+        diag::autodiff_no_tangent_property,
         reai->getClassDecl()->getNameStr(), reai->getField()->getNameStr());
     errorOccurred = true;
     return;
