@@ -24,6 +24,7 @@ import Swift
 internal protocol _AnyDifferentiableBox {
   // `Differentiable` requirements.
   mutating func _move(along direction: AnyDerivative)
+  var _zeroTangentVectorInitializer: () -> AnyDerivative { get }
 
   /// The underlying base value, type-erased to `Any`.
   var _typeErasedBase: Any { get }
@@ -58,6 +59,10 @@ internal struct _ConcreteDifferentiableBox<T: Differentiable>: _AnyDifferentiabl
       _derivativeTypeMismatch(T.self, type(of: direction.base))
     }
     _base.move(along: directionBase)
+  }
+
+  var _zeroTangentVectorInitializer: () -> AnyDerivative {
+    { AnyDerivative(_base.zeroTangentVector) }
   }
 }
 
@@ -102,6 +107,10 @@ public struct AnyDifferentiable: Differentiable {
 
   public mutating func move(along direction: TangentVector) {
     _box._move(along: direction)
+  }
+
+  public var zeroTangentVectorInitializer: () -> TangentVector {
+    _box._zeroTangentVectorInitializer
   }
 }
 
@@ -294,12 +303,22 @@ public struct AnyDerivative: Differentiable & AdditiveArithmetic {
   /// Internal struct representing an opaque zero value.
   @frozen
   @usableFromInline
-  internal struct OpaqueZero: Differentiable & AdditiveArithmetic {}
+  internal struct OpaqueZero: Differentiable & AdditiveArithmetic {
+    @usableFromInline
+    var zeroTangentVectorInitializer: () -> Self {
+      { .zero }
+    }
+  }
 
   @inlinable
   public static var zero: AnyDerivative {
     return AnyDerivative(
       _box: _ConcreteDerivativeBox<OpaqueZero>(OpaqueZero.zero))
+  }
+
+  @inlinable
+  public var zeroTangentVectorInitializer: () -> TangentVector {
+    { TangentVector.zero }
   }
 
   @inlinable

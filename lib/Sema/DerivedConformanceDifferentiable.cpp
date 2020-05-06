@@ -17,7 +17,7 @@
 
 #include "CodeSynthesis.h"
 #include "TypeChecker.h"
-#include "DerivedConformances.h"
+#include "swift/AST/ASTWalker.h"
 #include "swift/AST/AutoDiff.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/Expr.h"
@@ -274,6 +274,157 @@ deriveBodyDifferentiable_move(AbstractFunctionDecl *funcDecl, void *) {
   return deriveBodyDifferentiable_method(funcDecl, C.Id_move, C.Id_along);
 }
 
+/// Find available closure discriminators.
+///
+/// The parser typically takes care of assigning unique discriminators to
+/// closures, but the parser is unavailable to this transform.
+class DiscriminatorFinder : public ASTWalker {
+  unsigned NextDiscriminator = 0;
+
+public:
+  Expr *walkToExprPost(Expr *E) override {
+    auto *ACE = dyn_cast<AbstractClosureExpr>(E);
+    if (!ACE)
+      return E;
+
+    unsigned Discriminator = ACE->getDiscriminator();
+    assert(Discriminator != AbstractClosureExpr::InvalidDiscriminator &&
+           "Existing closures should have valid discriminators");
+    if (Discriminator >= NextDiscriminator)
+      NextDiscriminator = Discriminator + 1;
+    return E;
+  }
+
+  // Get the next available closure discriminator.
+  unsigned getNextDiscriminator() {
+    if (NextDiscriminator == AbstractClosureExpr::InvalidDiscriminator)
+      llvm::report_fatal_error("Out of valid closure discriminators");
+    return NextDiscriminator++;
+  }
+};
+
+/// Synthesize body for a `Differentiable` method requirement.
+static std::pair<BraceStmt *, bool>
+deriveBodyDifferentiable_zeroTangentVectorInitializer_getter(
+    AbstractFunctionDecl *funcDecl, Identifier methodName) {
+  auto *parentDC = funcDecl->getParent();
+  auto *nominal = parentDC->getSelfNominalTypeDecl();
+  auto &C = nominal->getASTContext();
+
+  // Get method protocol requirement.
+  Identifier methodParamLabel;
+  auto *diffProto = C.getProtocol(KnownProtocolKind::Differentiable);
+  auto *methodReq = getProtocolRequirement(diffProto, methodName);
+
+  auto nominalType =
+      parentDC->mapTypeIntoContext(nominal->getDeclaredInterfaceType());
+  auto conf = TypeChecker::conformsToProtocol(nominalType, diffProto, parentDC);
+  Type tangentType = conf.getTypeWitnessByName(nominalType, C.Id_TangentVector);
+
+  auto *tangentTypeDecl = tangentType->getAnyNominal();
+
+  auto *nominalTypeExpr = TypeExpr::createForDecl(
+      DeclNameLoc(), tangentTypeDecl, parentDC, /*Implicit*/ true);
+
+  // Create memberwise initializer: `Nominal.init(...)`.
+  auto *memberwiseInitDecl =
+      tangentTypeDecl->getEffectiveMemberwiseInitializer();
+  assert(memberwiseInitDecl && "Memberwise initializer must exist");
+  auto *initDRE =
+      new (C) DeclRefExpr(memberwiseInitDecl, DeclNameLoc(), /*Implicit*/ true);
+  initDRE->setFunctionRefKind(FunctionRefKind::SingleApply);
+
+  auto *initExpr = new (C) ConstructorRefCallExpr(initDRE, nominalTypeExpr);
+
+  // Get references to `self` and parameter declarations.
+  auto *selfDecl = funcDecl->getImplicitSelfDecl();
+
+  SmallVector<VarDecl *, 8> diffProperties;
+  getStoredPropertiesForDifferentiation(nominal, parentDC, diffProperties);
+
+  // Create call expression applying a member method to a parameter member.
+  // Format: `<member>.method(<parameter>.<member>)`.
+  // Example: `x.move(along: direction.x)`.
+  auto createMemberMethodCallExpr = [&](VarDecl *member) -> Expr * {
+    auto *selfDRE =
+        new (C) DeclRefExpr(selfDecl, DeclNameLoc(), /*Implicit*/ true);
+
+    auto *module = nominal->getModuleContext();
+    auto memberType =
+        parentDC->mapTypeIntoContext(member->getValueInterfaceType());
+    auto confRef = module->lookupConformance(memberType, diffProto);
+    assert(confRef && "Member does not conform to `Differentiable`");
+
+    // Get member type's method, e.g. `Member.move(along:)`.
+    // Use protocol requirement declaration for the method by default: this
+    // will be dynamically dispatched.
+    ValueDecl *memberMethodDecl = methodReq;
+    // If conformance reference is concrete, then use concrete witness
+    // declaration for the operator.
+    if (confRef.isConcrete())
+      memberMethodDecl = confRef.getConcrete()->getWitnessDecl(methodReq);
+    assert(memberMethodDecl && "Member method declaration must exist");
+
+    // Create reference to member method: `x.move(along:)`.
+    auto *memberExpr =
+        new (C) MemberRefExpr(selfDRE, SourceLoc(), member, DeclNameLoc(),
+                              /*Implicit*/ true);
+    auto *memberZeroTangentVectorInitExpr =
+        new (C) MemberRefExpr(memberExpr, SourceLoc(), memberMethodDecl,
+                              DeclNameLoc(), /*Implicit*/ true);
+    auto *memberZeroTangentVector =
+        CallExpr::createImplicit(C, memberZeroTangentVectorInitExpr, {}, {});
+    return memberZeroTangentVector;
+  };
+
+  // Create array of member method call expressions.
+  llvm::SmallVector<Expr *, 2> memberOpExprs;
+  llvm::SmallVector<Identifier, 2> memberNames;
+  for (auto *member : diffProperties) {
+    memberOpExprs.push_back(createMemberMethodCallExpr(member));
+    memberNames.push_back(member->getName());
+  }
+
+  // Call memberwise initializer with member operator call expressions.
+  auto *callExpr =
+      CallExpr::createImplicit(C, initExpr, memberOpExprs, memberNames);
+
+  // Create closure expression.
+
+  DiscriminatorFinder DF;
+  for (Decl *D : parentDC->getParentSourceFile()->getTopLevelDecls())
+    D->walk(DF);
+  auto discriminator = DF.getNextDiscriminator();
+  auto resultTy = funcDecl->getMethodInterfaceType()
+                      ->castTo<AnyFunctionType>()
+                      ->getResult();
+
+  auto *closureParams = ParameterList::createEmpty(C);
+  auto *closure = new (C)
+      ClosureExpr(SourceRange(), /*capturedSelfDecl*/ nullptr, closureParams,
+                  SourceLoc(), SourceLoc(), SourceLoc(),
+                  TypeLoc::withoutLoc(resultTy), discriminator, funcDecl);
+  closure->setImplicit();
+  auto *closureReturn = new (C) ReturnStmt(SourceLoc(), callExpr, true);
+  auto *closureBody =
+      BraceStmt::create(C, SourceLoc(), {closureReturn}, SourceLoc(), true);
+  closure->setBody(closureBody, /*isSingleExpression=*/true);
+
+  ASTNode returnStmt = new (C) ReturnStmt(SourceLoc(), closure, true);
+  auto *braceStmt =
+      BraceStmt::create(C, SourceLoc(), returnStmt, SourceLoc(), true);
+  return std::pair<BraceStmt *, bool>(braceStmt, false);
+}
+
+/// Synthesize body for `move(along:)`.
+static std::pair<BraceStmt *, bool>
+deriveBodyDifferentiable_zeroTangentVectorInitializer(
+    AbstractFunctionDecl *funcDecl, void *) {
+  auto &C = funcDecl->getASTContext();
+  return deriveBodyDifferentiable_zeroTangentVectorInitializer_getter(
+      funcDecl, C.Id_zeroTangentVectorInitializer);
+}
+
 /// Synthesize function declaration for a `Differentiable` method requirement.
 static ValueDecl *deriveDifferentiable_method(
     DerivedConformance &derived, Identifier methodName, Identifier argumentName,
@@ -318,6 +469,31 @@ static ValueDecl *deriveDifferentiable_move(DerivedConformance &derived) {
   return deriveDifferentiable_method(
       derived, C.Id_move, C.Id_along, C.Id_direction, tangentType,
       C.TheEmptyTupleType, {deriveBodyDifferentiable_move, nullptr});
+}
+
+/// Synthesize the `zeroTangentVectorInitializer` computed property declaration.
+static ValueDecl *
+deriveDifferentiable_zeroTangentVectorInitializer(DerivedConformance &derived) {
+  auto &C = derived.Context;
+  auto *parentDC = derived.getConformanceContext();
+
+  auto *tangentDecl = getTangentVectorStructDecl(parentDC);
+  auto tangentType = tangentDecl->getDeclaredInterfaceType();
+  auto returnType = FunctionType::get({}, tangentType);
+
+  VarDecl *propDecl;
+  PatternBindingDecl *pbDecl;
+  std::tie(propDecl, pbDecl) = derived.declareDerivedProperty(
+      C.Id_zeroTangentVectorInitializer, returnType, returnType,
+      /*isStatic*/ false, /*isFinal*/ true);
+
+  // Define the getter.
+  auto *getterDecl =
+      derived.addGetterToReadOnlyDerivedProperty(propDecl, returnType);
+  getterDecl->setBodySynthesizer(
+      &deriveBodyDifferentiable_zeroTangentVectorInitializer);
+  derived.addMembersToConformanceContext({propDecl, pbDecl});
+  return propDecl;
 }
 
 /// Return associated `TangentVector` struct for a nominal type, if it exists.
@@ -634,6 +810,8 @@ ValueDecl *DerivedConformance::deriveDifferentiable(ValueDecl *requirement) {
     return nullptr;
   if (requirement->getBaseName() == Context.Id_move)
     return deriveDifferentiable_move(*this);
+  if (requirement->getBaseName() == Context.Id_zeroTangentVectorInitializer)
+    return deriveDifferentiable_zeroTangentVectorInitializer(*this);
   Context.Diags.diagnose(requirement->getLoc(),
                          diag::broken_differentiable_requirement);
   return nullptr;
