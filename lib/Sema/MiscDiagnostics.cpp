@@ -1423,6 +1423,14 @@ static void diagnoseImplicitSelfUseInClosure(const Expr *E,
           !cast<VarDecl>(DRE->getDecl())->isSelfParameter())
         return false;
 
+      if (DRE->isImplicit()) {
+        if (auto *decl = DRE->getDecl()->getInnermostDeclContext()->getAsDecl()) {
+          if (decl->isImplicit()) {
+            return true;
+          }
+        }
+      }
+
       // Defensive check for type. If the expression doesn't have type here, it
       // should have been diagnosed somewhere else.
       Type ty = DRE->getType();
