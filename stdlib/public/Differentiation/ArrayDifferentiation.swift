@@ -235,6 +235,7 @@ extension Array where Element: Differentiable {
   @derivative(of: append)
   mutating func _jvpAppend(_ element: Element) -> (
     value: Void,
+    // differential: (inout TangentVector, __owned Element.TangentVector) -> Void
     differential: (inout TangentVector, Element.TangentVector) -> Void
   ) {
     append(element)

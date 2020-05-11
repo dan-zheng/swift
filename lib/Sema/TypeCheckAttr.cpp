@@ -4360,6 +4360,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   auto *derivative = cast<FuncDecl>(D);
   auto lookupConformance =
       LookUpConformanceInModule(D->getDeclContext()->getParentModule());
+  auto originalName = attr->getOriginalFunctionName();
 
   // Resolve the referenced original function declaration.
   auto *originalAFD = evaluateOrDefault(
@@ -4372,7 +4373,11 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
       derivative->getInterfaceType()->castTo<AnyFunctionType>();
   auto *originalFnType =
       originalAFD->getInterfaceType()->castTo<AnyFunctionType>();
+#if 0
   auto derivativeResultType = derivative->getResultInterfaceType();
+#endif
+  auto derivativeResultType =
+      evaluateOrDefault(Ctx.evaluator, ResultTypeRequest{derivative}, Type());
   auto derivativeResultTupleType = derivativeResultType->getAs<TupleType>();
   assert(derivativeResultTupleType->getNumElements() == 2);
   auto valueResultElt = derivativeResultTupleType->getElement(0);
@@ -4511,8 +4516,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   Type expectedFuncEltType =
       originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
           resolvedDiffParamIndices, derivativeKind.getLinearMapKind(),
-          lookupConformance,
-          /*makeSelfParamFirst*/ true);
+          lookupConformance, /*makeSelfParamFirst*/ true);
   if (expectedFuncEltType->hasTypeParameter())
     expectedFuncEltType = derivative->mapTypeIntoContext(expectedFuncEltType);
   if (expectedFuncEltType->hasArchetype())
@@ -4520,6 +4524,11 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
 
   // Check if differential/pullback type matches expected type.
   if (!actualFuncEltType->isEqual(expectedFuncEltType)) {
+    llvm::errs() << "ACTUAL LINEAR MAP TYPE: " << actualFuncEltType << "\n";
+    // actualFuncEltType->dump();
+    llvm::errs() << "EXPECTED LINEAR MAP TYPE: " << expectedFuncEltType << "\n";
+    // expectedFuncEltType->dump();
+
     // Emit differential/pullback type mismatch error on attribute.
     diags.diagnose(attr->getLocation(),
                    diag::derivative_attr_result_func_type_mismatch,
