@@ -171,8 +171,10 @@ extension Vector: Differentiable where T: Differentiable {
     static func + (lhs: Self, rhs: Self) -> Self { fatalError() }
     static func - (lhs: Self, rhs: Self) -> Self { fatalError() }
     typealias TangentVector = Self
+    // var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
   }
   mutating func move(along direction: TangentVector) { fatalError() }
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 func inferredConformancesGeneric<T, U>(_: @differentiable (Vector<T>) -> Vector<U>) {}

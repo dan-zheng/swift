@@ -3384,6 +3384,7 @@ DynamicallyReplacedDeclRequest::evaluate(Evaluator &evaluator,
 /// resolved.
 static ProtocolConformanceRef getDifferentiableConformance(Type type,
                                                            DeclContext *DC) {
+  llvm::errs() << "getDifferentiableConformance\n";
   auto &ctx = type->getASTContext();
   auto *differentiableProto =
       ctx.getProtocol(KnownProtocolKind::Differentiable);
@@ -3391,11 +3392,17 @@ static ProtocolConformanceRef getDifferentiableConformance(Type type,
       TypeChecker::conformsToProtocol(type, differentiableProto, DC);
   if (!conf)
     return ProtocolConformanceRef();
+// #if 0
   // Try to get the `TangentVector` type witness, in case the conformance has
   // not been fully checked.
   Type tanType = conf.getTypeWitnessByName(type, ctx.Id_TangentVector);
+  llvm::errs() << "TAN TYPE of " << type << ": " << tanType.getPointer() << "\n";
+  if (tanType) {
+    tanType->dump();
+  }
   if (tanType.isNull() || tanType->hasError())
     return ProtocolConformanceRef();
+// #endif
   return conf;
 };
 
@@ -3404,9 +3411,12 @@ static ProtocolConformanceRef getDifferentiableConformance(Type type,
 /// type satisfies `TangentVector == Self`.
 static bool conformsToDifferentiable(Type type, DeclContext *DC,
                                      bool tangentVectorEqualsSelf = false) {
+  llvm::errs() << "conformsToDifferentiable\n";
   auto conf = getDifferentiableConformance(type, DC);
-  if (conf.isInvalid())
+  if (conf.isInvalid()) {
+    llvm::errs() << "CONF INVALID!\n";
     return false;
+  }
   if (!tangentVectorEqualsSelf)
     return true;
   auto &ctx = type->getASTContext();
@@ -3416,6 +3426,8 @@ static bool conformsToDifferentiable(Type type, DeclContext *DC,
 
 IndexSubset *TypeChecker::inferDifferentiabilityParameters(
     AbstractFunctionDecl *AFD, GenericEnvironment *derivativeGenEnv) {
+  llvm::errs() << "TypeChecker::inferDifferentiabilityParameters\n";
+  AFD->dumpRef(); llvm::errs() << "\n";
   auto &ctx = AFD->getASTContext();
   auto *functionType = AFD->getInterfaceType()->castTo<AnyFunctionType>();
   auto numUncurriedParams = functionType->getNumParams();
@@ -3431,10 +3443,13 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
     if (i >= allParamTypes.size())
       return false;
     auto paramType = allParamTypes[i];
+    llvm::errs() << "isDifferentiableParam " << i << "\n";
+    paramType->dump();
     if (derivativeGenEnv)
       paramType = derivativeGenEnv->mapTypeIntoContext(paramType);
     else
       paramType = AFD->mapTypeIntoContext(paramType);
+    paramType->dump();
     // Return false for existential types.
     if (paramType->isExistentialType())
       return false;
@@ -3452,6 +3467,10 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
       allParamTypes.push_back(param.getPlainType());
   for (auto &param : functionType->getParams())
     allParamTypes.push_back(param.getPlainType());
+
+  llvm::errs() << "ALL PARAM TYPES: " << allParamTypes.size() << "\n";
+  for (auto param : allParamTypes)
+    param.dump();
 
   // Set differentiability parameters.
   for (unsigned i : range(parameterBits.size()))

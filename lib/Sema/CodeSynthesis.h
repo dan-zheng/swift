@@ -18,6 +18,7 @@
 #ifndef SWIFT_TYPECHECKING_CODESYNTHESIS_H
 #define SWIFT_TYPECHECKING_CODESYNTHESIS_H
 
+#include "swift/AST/ASTWalker.h"
 #include "swift/AST/ForeignErrorConvention.h"
 #include "swift/Basic/ExternalUnion.h"
 #include "swift/Basic/LLVM.h"
@@ -74,6 +75,53 @@ bool hasLetStoredPropertyWithInitialValue(NominalTypeDecl *nominal);
 
 /// Add `@_fixed_layout` attribute to the nominal type, if possible.
 void addFixedLayoutAttr(NominalTypeDecl *nominal);
+
+
+
+/// Find available closure discriminators.
+///
+/// The parser typically takes care of assigning unique discriminators to
+/// closures, but the parser is unavailable during semantic analysis.
+class DiscriminatorFinder : public ASTWalker {
+  unsigned NextDiscriminator = 0;
+
+public:
+  Expr *walkToExprPost(Expr *E) override;
+
+  // Get the next available closure discriminator.
+  unsigned getNextDiscriminator();
+};
+
+#if 0
+/// Find available closure discriminators.
+///
+/// The parser typically takes care of assigning unique discriminators to
+/// closures, but the parser is unavailable during semantic analysis.
+class DiscriminatorFinder : public ASTWalker {
+  unsigned NextDiscriminator = 0;
+
+public:
+  Expr *walkToExprPost(Expr *E) override {
+    auto *ACE = dyn_cast<AbstractClosureExpr>(E);
+    if (!ACE)
+      return E;
+
+    unsigned Discriminator = ACE->getDiscriminator();
+    assert(Discriminator != AbstractClosureExpr::InvalidDiscriminator &&
+           "Existing closures should have valid discriminators");
+    if (Discriminator >= NextDiscriminator)
+      NextDiscriminator = Discriminator + 1;
+    return E;
+  }
+
+  // Get the next available closure discriminator.
+  unsigned getNextDiscriminator() {
+    if (NextDiscriminator == AbstractClosureExpr::InvalidDiscriminator)
+      llvm::report_fatal_error("Out of valid closure discriminators");
+    return NextDiscriminator++;
+  }
+};
+#endif
 
 } // end namespace swift
 
