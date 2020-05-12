@@ -841,7 +841,15 @@ void SILGenModule::emitDifferentiabilityWitness(
   if (!diffWitness) {
     // Strip external from linkage of original function.
     // Necessary for Clang-imported functions, which have external linkage.
-    auto linkage = stripExternalFromLinkage(originalFunction->getLinkage());
+    auto linkage = originalFunction->getLinkage();
+    if (jvp) {
+      linkage = jvp->getLinkage();
+      llvm::errs() << "USING JVP LINKAGE!\n";
+    } else if (vjp) {
+      llvm::errs() << "USING VJP LINKAGE!\n";
+      linkage = vjp->getLinkage();
+    }
+    linkage = stripExternalFromLinkage(linkage);
     diffWitness = SILDifferentiabilityWitness::createDefinition(
         M, linkage, originalFunction, silConfig.parameterIndices,
         silConfig.resultIndices, config.derivativeGenericSignature,
@@ -853,8 +861,17 @@ void SILGenModule::emitDifferentiabilityWitness(
   // Set derivative function in differentiability witness.
   auto setDerivativeInDifferentiabilityWitness =
       [&](AutoDiffDerivativeFunctionKind kind, SILFunction *derivative) {
-        auto derivativeThunk = getOrCreateCustomDerivativeThunk(
+        auto *derivativeThunk = getOrCreateCustomDerivativeThunk(
             derivative, originalFunction, silConfig, kind);
+        if (!diffWitness->getJVP() && !diffWitness->getVJP()) {
+          diffWitness->setLinkage(derivativeThunk->getLinkage());
+        }
+#if 0
+        if (!diffWitness->getJVP() && kind == AutoDiffDerivativeFunctionKind::JVP) {
+        }
+        if (!diffWitness->getVJP() && kind == AutoDiffDerivativeFunctionKind::VJP) {
+        }
+#endif
         // Check for existing same derivative.
         // TODO(TF-835): Remove condition below and simplify assertion to
         // `!diffWitness->getDerivative(kind)` after `@derivative` attribute
