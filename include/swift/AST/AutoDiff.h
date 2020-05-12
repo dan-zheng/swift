@@ -27,6 +27,7 @@
 #include "swift/Basic/Range.h"
 #include "swift/Basic/SourceLoc.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Error.h"
 
 namespace swift {
 
@@ -483,6 +484,52 @@ bool getBuiltinDifferentiableOrLinearFunctionConfig(
 /// Returns true if the function name is parsed successfully.
 bool getBuiltinDifferentiableOrLinearFunctionConfig(
     StringRef operationName, unsigned &arity, bool &throws);
+
+
+class DerivativeFunctionTypeError : public llvm::ErrorInfo<DerivativeFunctionTypeError> {
+public:
+  enum class Kind {
+    MultipleSemanticResults,
+    NonDifferentiableParameters,
+    NonDifferentiableResult
+  };
+
+  static const char ID;
+  /// The original function type.
+  AnyFunctionType *functionType;
+  /// The error kind.
+  Kind kind;
+
+private:
+  union Value {
+    /// The non-differentiable parameter indices.
+    IndexSubset *nonDifferentiableIndices;
+    Value(IndexSubset *indices) : nonDifferentiableIndices(indices) {}
+    Value() {}
+  } value;
+
+public:
+
+public:
+  explicit DerivativeFunctionTypeError(AnyFunctionType *functionType, Kind kind) : functionType(functionType), kind(kind), value(Value()) {
+    assert(kind == Kind::MultipleSemanticResults || kind == Kind::NonDifferentiableResult);
+  };
+
+  explicit DerivativeFunctionTypeError(AnyFunctionType *functionType, Kind kind, Value value) : functionType(functionType), kind(kind), value(value) {
+    assert(kind == Kind::NonDifferentiableParameters);
+  };
+
+  IndexSubset *getNonDifferentiableIndices() const {
+    assert(kind == Kind::NonDifferentiableParameters);
+    return value.nonDifferentiableIndices;
+  }
+
+  void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
 
 } // end namespace autodiff
 

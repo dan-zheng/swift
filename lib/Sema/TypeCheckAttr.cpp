@@ -3378,32 +3378,13 @@ DynamicallyReplacedDeclRequest::evaluate(Evaluator &evaluator,
 /// If the given type conforms to `Differentiable` in the given context, returns
 /// the `ProtocolConformanceRef`. Otherwise, returns an invalid
 /// `ProtocolConformanceRef`.
-///
-/// This helper verifies that the `TangentVector` type witness is valid, in case
-/// the conformance has not been fully checked and the type witness cannot be
-/// resolved.
 static ProtocolConformanceRef getDifferentiableConformance(Type type,
                                                            DeclContext *DC) {
   llvm::errs() << "getDifferentiableConformance\n";
   auto &ctx = type->getASTContext();
   auto *differentiableProto =
       ctx.getProtocol(KnownProtocolKind::Differentiable);
-  auto conf =
-      TypeChecker::conformsToProtocol(type, differentiableProto, DC);
-  if (!conf)
-    return ProtocolConformanceRef();
-// #if 0
-  // Try to get the `TangentVector` type witness, in case the conformance has
-  // not been fully checked.
-  Type tanType = conf.getTypeWitnessByName(type, ctx.Id_TangentVector);
-  llvm::errs() << "TAN TYPE of " << type << ": " << tanType.getPointer() << "\n";
-  if (tanType) {
-    tanType->dump();
-  }
-  if (tanType.isNull() || tanType->hasError())
-    return ProtocolConformanceRef();
-// #endif
-  return conf;
+  return TypeChecker::conformsToProtocol(type, differentiableProto, DC);
 };
 
 /// Returns true if the given type conforms to `Differentiable` in the given
@@ -4671,10 +4652,63 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
       cast<TupleType>(canActualResultType).getElementType(1);
 
   // Compute expected differential/pullback type.
-  Type expectedFuncEltType =
+  auto expectedFuncEltTypeOrError =
       originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
           resolvedDiffParamIndices, kind.getLinearMapKind(), lookupConformance,
           /*makeSelfParamFirst*/ true);
+  if (!expectedFuncEltTypeOrError) {
+    auto error = expectedFuncEltTypeOrError.takeError();
+#if 0
+    handleAllErrors(std::move(error));
+#endif
+    handleAllErrors(std::move(error),
+                    [&](const autodiff::DerivativeFunctionTypeError &error) {
+      switch (error.kind) {
+      case autodiff::DerivativeFunctionTypeError::Kind::MultipleSemanticResults:
+        diags
+            .diagnose(attr->getLocation(),
+                      diag::autodiff_attr_original_multiple_semantic_results)
+            .highlight(attr->getOriginalFunctionName().Loc.getSourceRange());
+        attr->setInvalid();
+        break;
+      case autodiff::DerivativeFunctionTypeError::Kind::NonDifferentiableParameters: {
+        auto *nonDiffParamIndices = error.getNonDifferentiableIndices();
+        SmallVector<AnyFunctionType::Param, 4> diffParams;
+        error.functionType->getSubsetParameters(resolvedDiffParamIndices, diffParams);
+        for (unsigned i : range(diffParams.size())) {
+          if (!nonDiffParamIndices->contains(i))
+            continue;
+          SourceLoc loc =
+              parsedDiffParams.empty() ? attr->getLocation() : parsedDiffParams[i].getLoc();
+          auto diffParamType = diffParams[i].getPlainType();
+          diags.diagnose(loc, diag::diff_params_clause_param_not_differentiable,
+                         diffParamType);
+        }
+        break;
+      }
+      case autodiff::DerivativeFunctionTypeError::Kind::NonDifferentiableResult:
+        diags.diagnose(attr->getLocation(),
+                       diag::differentiable_attr_result_not_differentiable,
+                       originalResultType);
+        attr->setInvalid();
+        break;
+      }
+      return;
+    });
+    diags.diagnose(attr->getLocation(),
+                   diag::derivative_attr_result_value_not_differentiable,
+                   valueResultElt.getType());
+    return true;
+  }
+  Type expectedFuncEltType = expectedFuncEltTypeOrError.get();
+
+#if 0
+  Type expectedFuncEltType =
+      originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
+          resolvedDiffParamIndices, kind.getLinearMapKind(), lookupConformance,
+          /*makeSelfParamFirst*/ true).get();
+#endif
+
   if (expectedFuncEltType->hasTypeParameter())
     expectedFuncEltType = derivative->mapTypeIntoContext(expectedFuncEltType);
   if (expectedFuncEltType->hasArchetype())

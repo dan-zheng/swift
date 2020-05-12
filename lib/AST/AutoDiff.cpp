@@ -370,6 +370,30 @@ bool autodiff::getBuiltinDifferentiableOrLinearFunctionConfig(
   return operationName.empty();
 }
 
+const char autodiff::DerivativeFunctionTypeError::ID = '\0';
+
+void autodiff::DerivativeFunctionTypeError::log(raw_ostream &OS) const {
+  OS << "original function type '";
+  functionType->print(OS);
+  OS << "' ";
+  switch (kind) {
+  case Kind::MultipleSemanticResults:
+    OS << "has multiple semantic results";
+    break;
+  case Kind::NonDifferentiableParameters:
+    OS << "has non-differentiable parameters: ";
+    value.nonDifferentiableIndices->print(OS);
+    OS << '\n';
+    break;
+  case Kind::NonDifferentiableResult:
+    OS << "has non-differentiable result: ";
+    value.nonDifferentiableIndices->print(OS);
+    OS << '\n';
+    break;
+  }
+  // OS << Path << " is malformed";
+}
+
 Type TangentSpace::getType() const {
   switch (kind) {
   case Kind::TangentVector:

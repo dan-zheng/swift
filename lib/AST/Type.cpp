@@ -5085,6 +5085,7 @@ TypeBase::getAutoDiffTangentSpace(LookupConformanceFn lookupConformance) {
   auto *dependentType = DependentMemberType::get(
       differentiableProtocol->getDeclaredInterfaceType(),
       cast<AssociatedTypeDecl>(associatedTypeLookup[0]));
+  // TypeChecker::conforms
 
   // Try to get the `TangentVector` associated type of `base`.
   // Return the associated type if it is valid.
@@ -5136,9 +5137,11 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
 
   auto originalResult = curryLevels.back()->getResult();
 
-  Type linearMapType = getAutoDiffDerivativeFunctionLinearMapType(
+  auto linearMapTypeExpected = getAutoDiffDerivativeFunctionLinearMapType(
       parameterIndices, kind.getLinearMapKind(), lookupConformance,
       makeSelfParamFirst);
+  assert(linearMapTypeExpected && "Invalid linear map type invalid");
+  Type linearMapType = linearMapTypeExpected.get();
 
   // Build the full derivative function type: `(T...) -> (R, LinearMapType)`.
   SmallVector<TupleTypeElt, 2> retElts;
@@ -5165,7 +5168,14 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
   return derivativeFunctionType;
 }
 
-AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType(
+AnyFunctionType *AnyFunctionType::getActualAutoDiffDerivativeFunctionLinearMapType(
+    IndexSubset *parameterIndices, AutoDiffLinearMapKind kind,
+    LookupConformanceFn lookupConformance, bool makeSelfParamFirst) {
+  return nullptr;
+}
+
+llvm::Expected<AnyFunctionType *>
+AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType(
     IndexSubset *parameterIndices, AutoDiffLinearMapKind kind,
     LookupConformanceFn lookupConformance, bool makeSelfParamFirst) {
   assert(!parameterIndices->isEmpty() &&
@@ -5188,6 +5198,10 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType(
   // Get the original semantic result type's `TangentVector` associated type.
   auto resultTan =
       originalResultType->getAutoDiffTangentSpace(lookupConformance);
+  if (!resultTan) {
+    llvm::errs() << "MISSING RESULT\n";
+    return llvm::make_error<autodiff::DerivativeFunctionTypeError>(this, autodiff::DerivativeFunctionTypeError::Kind::NonDifferentiableResult);
+  }
   assert(resultTan && "Original result has no tangent space?");
   auto resultTanType = resultTan->getType();
 
@@ -5243,6 +5257,10 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType(
     for (auto diffParam : diffParams) {
       auto paramType = diffParam.getPlainType();
       auto paramTan = paramType->getAutoDiffTangentSpace(lookupConformance);
+      if (!paramTan) {
+        llvm::errs() << "MISSING PARAM\n";
+        return llvm::make_error<autodiff::DerivativeFunctionTypeError>(this, autodiff::DerivativeFunctionTypeError::Kind::NonDifferentiableParameters, parameterIndices);
+      }
       assert(paramTan && "Parameter has no tangent space?");
       if (diffParam.isInOut()) {
         hasInoutDiffParameter = true;
