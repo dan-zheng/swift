@@ -3076,6 +3076,10 @@ NOTE(derivative_attr_fix_access,none,
      "mark the derivative function as "
      "'%select{private|fileprivate|internal|@usableFromInline|@usableFromInline}0' "
      "to match the original function", (AccessLevel))
+ERROR(derivative_attr_usable_from_inline_mismatch,none,
+      "non-'@usableFromInline' original function must not have a "
+      "'@usableFromInline' derivative function; consider removing "
+      "'@usableFromInline' from derivative function %0", (DeclName))
 
 // @transpose
 ERROR(transpose_attr_invalid_linearity_parameter_or_result,none,
