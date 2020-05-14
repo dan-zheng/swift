@@ -998,6 +998,8 @@ static void maybeDiagnoseBadConformanceRef(DeclContext *dc,
     if (conformanceRef.isConcrete())
       conformance = conformanceRef.getConcrete();
   }
+  llvm::errs() << "CONFORMANCE: " << conformance << ", CONDITONAL REQS: " << bool(conformance->getConditionalRequirementsIfAvailable()) << "\n";
+  conformance->dump();
 
   // If any errors have occurred, don't bother diagnosing this cross-file
   // issue.
@@ -1027,9 +1029,24 @@ static Type resolveTypeDecl(TypeDecl *typeDecl, DeclContext *foundDC,
       (isa<AssociatedTypeDecl>(typeDecl) || isa<TypeAliasDecl>(typeDecl))) {
     auto fromDC = resolution.getDeclContext();
     assert(fromDC && "No declaration context for type resolution?");
+    llvm::errs() << "BAD TYPE\n";
+    type->dump();
+    llvm::errs() << "FOUND DC\n";
+    foundDC->dumpContext();
+    bool flag = true;
+#if 0
+    if (auto *depType = dyn_cast<DependentMemberType>(type)) {
+      if (depType->getAssocType()->getName() == depType->getASTContext().Id_TangentVector) {
+        flag = false;
+      }
+    }
+#endif
+    if (flag) {
     maybeDiagnoseBadConformanceRef(fromDC, foundDC->getDeclaredInterfaceType(),
                                    comp->getNameLoc().getBaseNameLoc(),
                                    typeDecl);
+    }
+    assert(false);
   }
 
   return applyGenericArguments(type, resolution, comp);

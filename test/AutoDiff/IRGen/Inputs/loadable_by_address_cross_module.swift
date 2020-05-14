@@ -1,6 +1,6 @@
 import _Differentiation
 
-public struct LargeLoadableType<T>: AdditiveArithmetic, Differentiable {
+public struct LargeLoadableType<T>: Differentiable {
   public var a, b, c, d, e: Float
 
   public init(a: Float) {

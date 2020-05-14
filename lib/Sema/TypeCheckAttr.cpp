@@ -3441,6 +3441,8 @@ static bool conformsToDifferentiable(Type type, DeclContext *DC,
 
 IndexSubset *TypeChecker::inferDifferentiabilityParameters(
     AbstractFunctionDecl *AFD, GenericEnvironment *derivativeGenEnv) {
+  llvm::errs() << "TypeChecker::inferDifferentiabilityParameters\n";
+  AFD->dumpRef(); llvm::errs() << "\n";
   auto &ctx = AFD->getASTContext();
   auto *functionType = AFD->getInterfaceType()->castTo<AnyFunctionType>();
   auto numUncurriedParams = functionType->getNumParams();
@@ -3456,10 +3458,13 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
     if (i >= allParamTypes.size())
       return false;
     auto paramType = allParamTypes[i];
+    llvm::errs() << "isDifferentiableParam " << i << "\n";
+    paramType->dump();
     if (derivativeGenEnv)
       paramType = derivativeGenEnv->mapTypeIntoContext(paramType);
     else
       paramType = AFD->mapTypeIntoContext(paramType);
+    paramType->dump();
     // Return false for existential types.
     if (paramType->isExistentialType())
       return false;
@@ -3477,6 +3482,10 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
       allParamTypes.push_back(param.getPlainType());
   for (auto &param : functionType->getParams())
     allParamTypes.push_back(param.getPlainType());
+
+  llvm::errs() << "ALL PARAM TYPES: " << allParamTypes.size() << "\n";
+  for (auto param : allParamTypes)
+    param.dump();
 
   // Set differentiability parameters.
   for (unsigned i : range(parameterBits.size()))

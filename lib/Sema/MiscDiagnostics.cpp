@@ -1426,6 +1426,22 @@ static void diagnoseImplicitSelfUseInClosure(const Expr *E,
           !cast<VarDecl>(DRE->getDecl())->isSelfParameter())
         return false;
 
+      if (DRE->isImplicit()) {
+        if (auto *decl = DRE->getDecl()->getInnermostDeclContext()->getAsDecl())
+          if (decl->isImplicit()) {
+            llvm::errs() << "FOUND SELF DECLREFEXPR IN IMPLICIT DECL!\n";
+            // decl->dump();
+            if (auto *accessor = dyn_cast<AccessorDecl>(decl)) {
+              if (auto *varDecl = accessor->getStorage()) {
+                if (varDecl->getName() == decl->getASTContext().Id_zeroTangentVectorInitializer) {
+                  llvm::errs() << "FOUND!!!!!!!!!\n";
+                  return false;
+                }
+              }
+            }
+          }
+      }
+
       // Defensive check for type. If the expression doesn't have type here, it
       // should have been diagnosed somewhere else.
       Type ty = DRE->getType();

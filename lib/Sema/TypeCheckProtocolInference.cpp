@@ -1980,6 +1980,15 @@ void ConformanceChecker::resolveTypeWitnesses() {
     return;
   }
 
+  // Conformance->getDeclContext()
+  if (auto *nominal = Adoptee->getNominalOrBoundGenericNominal()) {
+    // if (DerivedConformance::derivesProtocolConformance(Conformance->getDeclContext(), nominal, Proto)) {
+    if (DerivedConformance::derivesProtocolConformance(DC, nominal, Proto)) {
+      llvm::errs() << "HELLO YES!!! '" << nominal->getName() << "' CAN DERIVE '" << Proto->getName() << "'!\n";
+      return;
+    }
+  }
+
   // Conformance failed. Record errors for each of the witnesses.
   Conformance->setInvalid();
 

@@ -121,8 +121,15 @@ enum Tree : Differentiable & AdditiveArithmetic {
   case branch(Float, Float)
 
   typealias TangentVector = Self
-  typealias AllDifferentiableVariables = Self
   static var zero: Self { .leaf(0) }
+  var zeroTangentVectorInitializer: () -> TangentVector {
+    {
+      switch (self) {
+        case .leaf: return .leaf(0)
+        case .branch: return .branch(0, 0)
+      }
+    }
+  }
 
   // expected-error @+1 {{function is not differentiable}}
   @differentiable
