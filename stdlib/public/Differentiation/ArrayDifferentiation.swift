@@ -21,12 +21,15 @@ extension Array {
   /// The view of an array as the differentiable product manifold of `Element`
   /// multiplied with itself `count` times.
   @frozen
-  public struct DifferentiableView {
+  public struct TangentVector {
     var _base: [Element]
   }
+
+  @available(*, deprecated, renamed: "TangentVector")
+  public typealias DifferentiableView = TangentVector
 }
 
-extension Array.DifferentiableView: Differentiable
+extension Array.TangentVector: Differentiable
 where Element: Differentiable {
   /// The viewed array.
   public var base: [Element] {
@@ -48,18 +51,18 @@ where Element: Differentiable {
   @usableFromInline
   @derivative(of: init(_:))
   static func _vjpInit(_ base: [Element]) -> (
-    value: Array.DifferentiableView, pullback: (TangentVector) -> TangentVector
+    value: Array.TangentVector, pullback: (TangentVector) -> TangentVector
   ) {
-    return (Array.DifferentiableView(base), { $0 })
+    return (Array.TangentVector(base), { $0 })
   }
 
   public typealias TangentVector =
-    Array<Element.TangentVector>.DifferentiableView
+    Array<Element.TangentVector>.TangentVector
 
   public mutating func move(along direction: TangentVector) {
     precondition(
       base.count == direction.base.count,
-      "cannot move Array.DifferentiableView with count \(base.count) along "
+      "cannot move Array.TangentVector with count \(base.count) along "
         + "direction with different count \(direction.base.count)")
     for i in base.indices {
       base[i].move(along: direction.base[i])
@@ -67,11 +70,11 @@ where Element: Differentiable {
   }
 }
 
-extension Array.DifferentiableView: Equatable
+extension Array.TangentVector: Equatable
 where Element: Differentiable & Equatable {
   public static func == (
-    lhs: Array.DifferentiableView,
-    rhs: Array.DifferentiableView
+    lhs: Array.TangentVector,
+    rhs: Array.TangentVector
   ) -> Bool {
     return lhs.base == rhs.base
   }
