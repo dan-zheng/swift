@@ -10,6 +10,7 @@ public struct DummyTangentVector: Differentiable & AdditiveArithmetic {
   public static func + (_: Self, _: Self) -> Self { Self() }
   public static func - (_: Self, _: Self) -> Self { Self() }
   public typealias TangentVector = Self
+  public var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // Test public non-generic function.
@@ -83,6 +84,7 @@ func generic_vjp<T: Differentiable>(_ x: T, _ y: Float) -> (
 public struct Foo: Differentiable {
   public typealias TangentVector = DummyTangentVector
   public mutating func move(along _: TangentVector) {}
+  public var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   @differentiable
   public var x: Float

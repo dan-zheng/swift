@@ -1449,6 +1449,16 @@ static void diagnoseImplicitSelfUseInClosure(const Expr *E,
     /// use or capture of "self." for qualification of member references.
     static bool isClosureRequiringSelfQualification(
                   const AbstractClosureExpr *CE) {
+      // If the closure is in an implicit declaration, then it doesn't need
+      // qualification. Diagnostics would show an invalid source location.
+      //
+      // Currently used for `Differentiable.zeroTangentVectorInitializer`
+      // derived conformances.
+      if (CE->isImplicit()) {
+        auto *decl = CE->getInnermostDeclarationDeclContext();
+        if (decl && decl->isImplicit())
+          return false;
+      }
       // If the closure's type was inferred to be noescape, then it doesn't
       // need qualification.
       return !AnyFunctionRef(const_cast<AbstractClosureExpr *>(CE))

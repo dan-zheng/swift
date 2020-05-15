@@ -22,11 +22,13 @@ struct DummyTangentVector: Differentiable & AdditiveArithmetic {
   static func + (_: Self, _: Self) -> Self { Self() }
   static func - (_: Self, _: Self) -> Self { Self() }
   typealias TangentVector = Self
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 struct Struct: Protocol {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   @differentiable(wrt: (self, x, y))
   @differentiable(wrt: x)

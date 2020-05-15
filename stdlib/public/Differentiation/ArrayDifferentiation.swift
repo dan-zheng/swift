@@ -65,6 +65,10 @@ where Element: Differentiable {
       base[i].move(along: direction.base[i])
     }
   }
+
+  public var zeroTangentVectorInitializer: () -> TangentVector {
+    base.zeroTangentVectorInitializer
+  }
 }
 
 extension Array.DifferentiableView: Equatable
@@ -168,9 +172,7 @@ extension Array: Differentiable where Element: Differentiable {
   /// A closure that produces a `TangentVector` of zeros with the same
   /// `count` as `self`.
   public var zeroTangentVectorInitializer: () -> TangentVector {
-    { [count = self.count] in
-      TangentVector(.init(repeating: .zero, count: count))
-    }
+    { TangentVector(map { $0.zeroTangentVector }) }
   }
 }
 

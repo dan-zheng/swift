@@ -653,6 +653,7 @@ enum DirectEnum: Differentiable & AdditiveArithmetic {
   static var zero: Self { fatalError() }
   static func +(_ lhs: Self, _ rhs: Self) -> Self { fatalError() }
   static func -(_ lhs: Self, _ rhs: Self) -> Self { fatalError() }
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // expected-error @+1 {{function is not differentiable}}
@@ -695,6 +696,7 @@ enum IndirectEnum<T: Differentiable>: Differentiable & AdditiveArithmetic {
   static var zero: Self { fatalError() }
   static func +(_ lhs: Self, _ rhs: Self) -> Self { fatalError() }
   static func -(_ lhs: Self, _ rhs: Self) -> Self { fatalError() }
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // expected-error @+1 {{function is not differentiable}}

@@ -53,6 +53,7 @@ func dupe_attributes(arg1: Float, arg2: Float) -> Float { return arg1 }
 struct ComputedPropertyDupeAttributes<T: Differentiable>: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var value: T
 
@@ -85,6 +86,7 @@ protocol WrtOnlySelfProtocol: Differentiable {
 class Class: Differentiable {
   typealias TangentVector = DummyTangentVector
   func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 @differentiable(wrt: x)
 func invalidDiffWrtClass(_ x: Class) -> Class {
@@ -144,6 +146,7 @@ struct InstanceMethod {
 struct DifferentiableInstanceMethod: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   @differentiable // ok
   func noParams() -> Float {
@@ -155,6 +158,7 @@ struct DifferentiableInstanceMethod: Differentiable {
 struct SubscriptMethod: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   @differentiable // ok
   subscript(implicitGetter x: Float) -> Float {
@@ -247,6 +251,7 @@ protocol ProtocolRequirementsRefined: ProtocolRequirements {
 struct InternalDiffAttrConformance: ProtocolRequirements {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var x: Float
   var y: Float
@@ -285,6 +290,7 @@ struct InternalDiffAttrConformance: ProtocolRequirements {
 public struct PublicDiffAttrConformance: ProtocolRequirements {
   public typealias TangentVector = DummyTangentVector
   public mutating func move(along _: TangentVector) {}
+  public var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var x: Float
   var y: Float
@@ -368,6 +374,7 @@ protocol TF285: Differentiable {
 struct TF285MissingOneDiffAttr: TF285 {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   // Requirement is missing the required `@differentiable(wrt: (x, y))` attribute.
   // Since `TF285MissingOneDiffAttr.foo` is internal, the attribute is implicitly created.
@@ -416,6 +423,7 @@ func infer2(_ fn: @differentiable(Float) -> Float, x: Float) -> Float {
 struct DiffableStruct: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var a: Float
 
@@ -439,6 +447,7 @@ struct NonDiffableStruct {
 struct NumberWrtStruct: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var a, b: Float
 
@@ -564,6 +573,7 @@ extension ProtocolRequirementUnsupported {
 class Super: Differentiable {
   typealias TangentVector = DummyTangentVector
   func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var base: Float
 
@@ -629,6 +639,7 @@ class Sub: Super {
 final class FinalClass: Differentiable {
   typealias TangentVector = DummyTangentVector
   func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var base: Float
 
@@ -654,6 +665,7 @@ func swap(x: inout Float, y: inout Float) {}
 struct InoutParameters: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 extension InoutParameters {
@@ -679,6 +691,7 @@ extension InoutParameters {
 struct Accessors: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var stored: Float
   var computed: Float {

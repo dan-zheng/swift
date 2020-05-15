@@ -109,28 +109,13 @@ final class VectorSpacesEqualSelf: Differentiable & DummyAdditiveArithmetic {
   var w: Float
   var b: Float
   typealias TangentVector = VectorSpacesEqualSelf
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   init(w: Float, b: Float) {
     self.w = w
     self.b = b
   }
 }
-/*
-extension VectorSpacesEqualSelf : Equatable, AdditiveArithmetic {
-  static func == (lhs: VectorSpacesEqualSelf, rhs: VectorSpacesEqualSelf) -> Bool {
-    fatalError()
-  }
-  static var zero: VectorSpacesEqualSelf {
-    fatalError()
-  }
-  static func + (lhs: VectorSpacesEqualSelf, rhs: VectorSpacesEqualSelf) -> VectorSpacesEqualSelf {
-    fatalError()
-  }
-  static func - (lhs: VectorSpacesEqualSelf, rhs: VectorSpacesEqualSelf) -> VectorSpacesEqualSelf {
-    fatalError()
-  }
-}
-*/
 
 // Test generic type with vector space types to `Self`.
 class GenericVectorSpacesEqualSelf<T>: Differentiable
@@ -339,21 +324,13 @@ final class TF_260<T: Differentiable>: Differentiable & DummyAdditiveArithmetic
 // TF-269: Test crash when differentiation properties have no getter.
 // Related to access levels and associated type inference.
 
-// TODO(TF-631): Blocked by class type differentiation support.
-// [AD] Unhandled instruction in adjoint emitter:   %2 = ref_element_addr %0 : $TF_269, #TF_269.filter // user: %3
-// [AD] Diagnosing non-differentiability.
-// [AD] For instruction:
-//   %2 = ref_element_addr %0 : $TF_269, #TF_269.filter // user: %3
-/*
-public protocol TF_269_Layer: Differentiable & KeyPathIterable
-  where TangentVector: KeyPathIterable {
-
+public protocol TF_269_Layer: Differentiable {
   associatedtype Input: Differentiable
   associatedtype Output: Differentiable
   func applied(to input: Input) -> Output
 }
 
-public class TF_269 : TF_269_Layer {
+public class TF_269: TF_269_Layer {
   public var filter: Float
   public typealias Activation = @differentiable (Output) -> Output
   @noDerivative public let activation: @differentiable (Output) -> Output
@@ -363,17 +340,10 @@ public class TF_269 : TF_269_Layer {
     self.activation = activation
   }
 
-  // NOTE: `KeyPathIterable` derived conformances do not yet support class
-  // types.
-  public var allKeyPaths: [PartialKeyPath<TF_269>] {
-    []
-  }
-
   public func applied(to input: Float) -> Float {
     return input
   }
 }
-*/
 
 // Test errors.
 

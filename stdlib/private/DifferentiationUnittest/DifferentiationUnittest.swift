@@ -169,6 +169,11 @@ extension Tracked : Strideable where T : Strideable, T.Stride == T.Stride.Magnit
 // For now, `T` must be restricted to trivial types (like `Float` or `Tensor`).
 extension Tracked : Differentiable where T : Differentiable, T == T.TangentVector {
   public typealias TangentVector = Tracked<T.TangentVector>
+
+  @inlinable
+  public var zeroTangentVectorInitializer: () -> TangentVector {
+    { .zero }
+  }
 }
 
 extension Tracked where T : Differentiable, T == T.TangentVector {

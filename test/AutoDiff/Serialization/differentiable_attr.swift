@@ -57,8 +57,10 @@ struct InstanceMethod : Differentiable {
     static var zero: Self { fatalError() }
     static func +(_: Self, _: Self) -> Self { fatalError() }
     static func -(_: Self, _: Self) -> Self { fatalError() }
+    var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
   }
   mutating func move(along direction: TangentVector) {}
+  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // CHECK: @differentiable(wrt: x where T : Differentiable)
