@@ -25,14 +25,9 @@ struct DifferentiableSubset : Differentiable {
     var w: Tracked<Float>
     var b: Tracked<Float>
   }
-
   mutating func move(along v: TangentVector) {
     w.move(along: v.w)
     b.move(along: v.b)
-  }
-
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { TangentVector(w: w.zeroTangentVector, b: b.zeroTangentVector) }
   }
 }
 

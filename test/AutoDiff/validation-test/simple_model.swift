@@ -32,9 +32,6 @@ extension DenseLayer : Differentiable, AdditiveArithmetic {
   static func * (lhs: Tracked<Float>, rhs: DenseLayer) -> DenseLayer {
     return DenseLayer(w: lhs * rhs.w, b: lhs * rhs.b)
   }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { DenseLayer(w: 0, b: 0) }
-  }
 }
 
 extension DenseLayer {
@@ -71,9 +68,6 @@ extension Model : Differentiable, AdditiveArithmetic {
   }
   static func * (lhs: Tracked<Float>, rhs: Model) -> Model {
     return Model(l1: lhs * rhs.l1, l2: lhs * rhs.l2, l3: lhs * rhs.l3)
-  }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { Model(l1: l1.zeroTangentVector, l2: l2.zeroTangentVector, l3: l3.zeroTangentVector) }
   }
 }
 

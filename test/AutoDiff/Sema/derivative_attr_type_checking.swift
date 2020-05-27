@@ -399,7 +399,6 @@ where T: Differentiable & AdditiveArithmetic {
   mutating func move(along direction: TangentVector) {
     x.move(along: direction.x)
   }
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // Test computed properties.
@@ -592,7 +591,6 @@ func vjpMultipleSemanticResults(x: inout Float) -> (
 struct InoutParameters: Differentiable {
   typealias TangentVector = DummyTangentVector
   mutating func move(along _: TangentVector) {}
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 extension InoutParameters {

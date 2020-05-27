@@ -16,13 +16,11 @@ struct DummyTangentVector: Differentiable & AdditiveArithmetic {
   static func + (_: Self, _: Self) -> Self { Self() }
   static func - (_: Self, _: Self) -> Self { Self() }
   typealias TangentVector = Self
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 class Super: Differentiable {
   typealias TangentVector = DummyTangentVector
   func move(along _: TangentVector) {}
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 
   var base: Float
   // FIXME(TF-648): Dummy to make `Super.TangentVector` be nontrivial.

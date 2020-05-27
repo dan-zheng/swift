@@ -65,9 +65,6 @@ extension Parameter : Differentiable, AdditiveArithmetic {
     return Parameter(x: lhs * rhs.x)
   }
   static var zero: Parameter { return Parameter(x: 0) }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { Parameter(x: 0) }
-  }
 }
 
 MethodTests.testWithLeakChecking(
@@ -210,9 +207,6 @@ extension CustomParameter : Differentiable, AdditiveArithmetic {
     return CustomParameter(x: lhs * rhs.x)
   }
   static var zero: CustomParameter { return CustomParameter(x: 0) }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { CustomParameter(x: 0) }
-  }
 }
 
 extension Tracked where T : FloatingPoint {

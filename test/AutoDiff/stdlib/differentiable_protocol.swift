@@ -42,7 +42,4 @@ extension Wrapper: Differentiable where T: Differentiable {
   mutating func move(along direction: TangentVector) {
     value.move(along: direction.value)
   }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { TangentVector(value: value.zeroTangentVector) }
-  }
 }

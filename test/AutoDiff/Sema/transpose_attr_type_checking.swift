@@ -260,9 +260,8 @@ extension Int {
 }
 
 // Static methods.
-struct A: Differentiable & AdditiveArithmetic {
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
-
+struct A : Differentiable & AdditiveArithmetic {
+  typealias TangentVector = A
   var x: Double
 
   static prefix func -(a: A) -> A {
@@ -402,7 +401,6 @@ struct level1 {
     static func - (_: Self, _: Self) -> Self { Self() }
     typealias TangentVector = Self
     mutating func move(along: TangentVector) {}
-    var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
     func foo(x: Float) -> Float {
       return x
     }
@@ -483,7 +481,6 @@ where T: Differentiable & AdditiveArithmetic {
   static func - (_: Self, _: Self) -> Self { Self() }
   typealias TangentVector = Self
   mutating func move(along: TangentVector) {}
-  var zeroTangentVectorInitializer: () -> TangentVector { { Self() } }
 }
 
 // Test computed properties.
@@ -555,9 +552,6 @@ extension Struct where T: Differentiable & AdditiveArithmetic {
 struct StoredProperty: Differentiable & AdditiveArithmetic {
   var stored: Float
   typealias TangentVector = StoredProperty
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { Self(stored: stored.zeroTangentVector) }
-  }
   static var zero: StoredProperty { StoredProperty(stored: 0) }
   static func + (_: StoredProperty, _: StoredProperty) -> StoredProperty {
     StoredProperty(stored: 0)

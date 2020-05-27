@@ -65,10 +65,6 @@ where Element: Differentiable {
       base[i].move(along: direction.base[i])
     }
   }
-
-  public var zeroTangentVectorInitializer: () -> TangentVector {
-    base.zeroTangentVectorInitializer
-  }
 }
 
 extension Array.DifferentiableView: Equatable

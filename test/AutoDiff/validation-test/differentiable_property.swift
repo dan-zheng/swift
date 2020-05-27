@@ -47,9 +47,6 @@ extension Space : Differentiable {
     x.move(along: direction.x)
     y.move(along: direction.y)
   }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { TangentSpace(x: 0, y: 0) }
-  }
 }
 
 E2EDifferentiablePropertyTests.testWithLeakChecking("computed property") {
@@ -119,9 +116,6 @@ extension ProductSpaceOtherTangent : Differentiable {
   mutating func move(along direction: ProductSpaceOtherTangentTangentSpace) {
     x.move(along: direction.x)
     y.move(along: direction.y)
-  }
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { TangentVector(x: 0, y: 0) }
   }
 }
 

@@ -59,7 +59,4 @@ extension NontrivialLoadable: AdditiveArithmetic where T: AdditiveArithmetic {
 extension NontrivialLoadable: Differentiable
 where T: Differentiable, T == T.TangentVector {
   typealias TangentVector = NontrivialLoadable<T.TangentVector>
-  var zeroTangentVectorInitializer: () -> TangentVector {
-    { NontrivialLoadable(value.zeroTangentVector) }
-  }
 }

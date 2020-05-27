@@ -2,9 +2,10 @@
 
 import _Differentiation
 
-struct GenericTangentVectorMember<T: Differentiable>: Differentiable, AdditiveArithmetic {
+struct GenericTangentVectorMember<T: Differentiable>: Differentiable,
+  AdditiveArithmetic
+{
   var x: T.TangentVector
-  var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // CHECK-AST-LABEL: internal struct GenericTangentVectorMember<T> : Differentiable, AdditiveArithmetic where T : Differentiable

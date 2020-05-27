@@ -111,7 +111,7 @@ static Type getTangentVectorType(DeclContext *DC) {
   assert(assocType && "`Differentiable.TangentVector` type not found");
   if (assocType->hasArchetype())
     assocType = assocType->mapTypeOutOfContext();
-  return assocType();
+  return assocType;
 }
 
 #if 0
@@ -379,6 +379,7 @@ deriveBodyDifferentiable_move(AbstractFunctionDecl *funcDecl, void *) {
 static std::pair<BraceStmt *, bool>
 deriveBodyDifferentiable_zeroTangentVectorInitializer_getter(
     AbstractFunctionDecl *funcDecl, Identifier methodName) {
+  llvm::errs() << "deriveBodyDifferentiable_zeroTangentVectorInitializer_getter\n";
   auto *parentDC = funcDecl->getParent();
   auto *nominal = parentDC->getSelfNominalTypeDecl();
   auto &C = nominal->getASTContext();
@@ -401,13 +402,37 @@ deriveBodyDifferentiable_zeroTangentVectorInitializer_getter(
                                         /*includeLetProperties*/ true);
 
   // Create memberwise initializer: `Nominal.init(...)`.
-  auto *memberwiseInitDecl =
-      tangentTypeDecl->getEffectiveMemberwiseInitializer();
-  assert(memberwiseInitDecl && "Memberwise initializer must exist");
-  llvm::errs() << "MEMBERWISE INIT PARAMS: "
-               << memberwiseInitDecl->getParameters()->size() << "\n";
-  llvm::errs() << "DIFF PROPERTIES: " << diffProperties.size() << "\n";
-  if (memberwiseInitDecl->getParameters()->size() != diffProperties.size()) {
+  bool canDeriveMemberwise = [&]() -> bool {
+    if (!tangentTypeDecl->getSelfStructDecl())
+      return false;
+    auto *memberwiseInitDecl =
+        tangentTypeDecl->getEffectiveMemberwiseInitializer();
+    llvm::errs() << "DIFF PROPERTY COUNT: " << diffProperties.size() << "\n";
+    llvm::errs() << "MEMBERWISE PROPS COUNT: " << memberwiseInitDecl->getParameters()->size() << "\n";
+    if (memberwiseInitDecl->getParameters()->size() != diffProperties.size())
+      return false;
+    for (auto pair : llvm::zip(memberwiseInitDecl->getParameters()->getArray(), diffProperties)) {
+      auto *initParam = std::get<0>(pair);
+      auto *diffProp = std::get<1>(pair);
+      if (initParam->getParameterName() != diffProp->getName()) {
+        llvm::errs() << "LABEL MISMATCH!\n";
+        llvm::errs() << initParam->getParameterName() << "\n";
+        llvm::errs() << diffProp->getName() << "\n";
+        return false;
+      }
+      auto diffPropTangentType = getTangentVectorType(diffProp, parentDC);
+      if (diffPropTangentType->hasArchetype())
+        diffPropTangentType = diffPropTangentType->mapTypeOutOfContext();
+      if (!initParam->getValueInterfaceType()->isEqual(diffPropTangentType)) {
+        llvm::errs() << "TYPE MISMATCH!\n";
+        initParam->getValueInterfaceType()->dump();
+        diffPropTangentType->dump();;
+        return false;
+      }
+    }
+    return true;
+  }();
+  if (!canDeriveMemberwise) {
     llvm::errs() << "FALLBACK TANGENTVECTOR.ZERO:\n";
     auto *module = nominal->getModuleContext();
     auto *addArithProto = C.getProtocol(KnownProtocolKind::AdditiveArithmetic);
@@ -450,7 +475,11 @@ deriveBodyDifferentiable_zeroTangentVectorInitializer_getter(
         BraceStmt::create(C, SourceLoc(), returnStmt, SourceLoc(), true);
     return std::pair<BraceStmt *, bool>(braceStmt, false);
   }
+  llvm::errs() << "CAN DERIVE MEMBERWISE!\n";
 
+  auto *memberwiseInitDecl =
+      tangentTypeDecl->getEffectiveMemberwiseInitializer();
+  assert(memberwiseInitDecl && "Memberwise initializer must exist");
   auto *initDRE =
       new (C) DeclRefExpr(memberwiseInitDecl, DeclNameLoc(), /*Implicit*/ true);
   initDRE->setFunctionRefKind(FunctionRefKind::SingleApply);
@@ -683,14 +712,12 @@ getOrSynthesizeTangentVectorStruct(DerivedConformance &derived, Identifier id) {
     auto memberAssocInterfaceType = memberAssocType->hasArchetype()
                                         ? memberAssocType->mapTypeOutOfContext()
                                         : memberAssocType;
-    auto memberAssocContextualType =
-        parentDC->mapTypeIntoContext(memberAssocInterfaceType);
     newMember->setInterfaceType(memberAssocInterfaceType);
     Pattern *memberPattern = NamedPattern::createImplicit(C, newMember);
-    memberPattern->setType(memberAssocContextualType);
+    memberPattern->setType(memberAssocType);
     memberPattern = TypedPattern::createImplicit(C, memberPattern,
-                                                 memberAssocContextualType);
-    memberPattern->setType(memberAssocContextualType);
+                                                 memberAssocType);
+    memberPattern->setType(memberAssocType);
     auto *memberBinding = PatternBindingDecl::createImplicit(
         C, StaticSpellingKind::None, memberPattern, /*initExpr*/ nullptr,
         structDecl);
