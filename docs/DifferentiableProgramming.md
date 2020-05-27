@@ -1079,11 +1079,6 @@ public extension Differentiable where Self == TangentVector {
     mutating func move(along direction: TangentVector) {
         self += direction
     }
-
-    @noDerivative
-    var zeroTangentVectorInitializer: () -> TangentVector {
-        { .zero }
-    }
 }
 ```
 

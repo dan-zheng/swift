@@ -74,8 +74,10 @@ bool DerivedConformance::derivesProtocolConformance(DeclContext *DC,
   if (*derivableKind == KnownDerivableProtocolKind::AdditiveArithmetic)
     return canDeriveAdditiveArithmetic(Nominal, DC);
 
-  if (*derivableKind == KnownDerivableProtocolKind::Differentiable)
-    return canDeriveDifferentiable(Nominal, DC);
+  if (*derivableKind == KnownDerivableProtocolKind::Differentiable) {
+    // return canDeriveDifferentiable(Nominal, DC);
+    return true;
+  }
 
   if (auto *enumDecl = dyn_cast<EnumDecl>(Nominal)) {
     switch (*derivableKind) {

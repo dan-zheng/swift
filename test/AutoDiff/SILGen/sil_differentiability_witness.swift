@@ -10,7 +10,6 @@ public struct DummyTangentVector: Differentiable & AdditiveArithmetic {
   public static func + (_: Self, _: Self) -> Self { Self() }
   public static func - (_: Self, _: Self) -> Self { Self() }
   public typealias TangentVector = Self
-  public var zeroTangentVectorInitializer: () -> TangentVector { fatalError() }
 }
 
 // Test public non-generic function.
