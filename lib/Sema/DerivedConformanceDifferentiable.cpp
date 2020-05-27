@@ -130,6 +130,9 @@ static bool canDeriveTangentVectorAsSelf(NominalTypeDecl *nominal,
 /// Returns true iff the given nominal type declaration can derive
 /// `TangentVector` as `Self` in the given conformance context.
 static bool canDeriveTangentVector(NominalTypeDecl *nominal, DeclContext *DC) {
+  // Nominal type must be a struct or class. (No stored properties is okay.)
+  if (!isa<StructDecl>(nominal) && !isa<ClassDecl>(nominal))
+    return false;
   auto &C = nominal->getASTContext();
   // If there are any `TangentVector` type witness candidates, check whether
   // there exists only a single valid candidate.
@@ -205,39 +208,69 @@ static bool canDeriveZeroTangentVectorInitializer(NominalTypeDecl *nominal,
   return canDeriveTangentVector(nominal, DC);
 }
 
+// Synthesizable `Differentiable` protocol requirements.
+enum class DifferentiableRequirement {
+  // associatedtype TangentVector
+  TangentVector,
+  // mutating func move(along direction: TangentVector)
+  MoveAlong,
+  // var zeroTangentVectorInitializer: () -> TangentVector
+  ZeroTangentVectorInitializer,
+};
+
+static DifferentiableRequirement
+getDifferentiableRequirementKind(ValueDecl *requirement) {
+  auto &C = requirement->getASTContext();
+  if (requirement->getBaseName() == C.Id_TangentVector)
+    return DifferentiableRequirement::TangentVector;
+  if (requirement->getBaseName() == C.Id_move)
+    return DifferentiableRequirement::MoveAlong;
+  if (requirement->getBaseName() == C.Id_zeroTangentVectorInitializer)
+    return DifferentiableRequirement::ZeroTangentVectorInitializer;
+  llvm_unreachable("Invalid `Differentiable` protocol requirement");
+}
+
 bool DerivedConformance::canDeriveDifferentiable(NominalTypeDecl *nominal,
                                                  DeclContext *DC,
                                                  ValueDecl *requirement) {
-  // Check derivation conditions required by all `Differentiable` requirements.
   // Experimental differentiable programming must be enabled.
   if (auto *SF = DC->getParentSourceFile())
     if (!isDifferentiableProgrammingEnabled(*SF))
       return false;
-  // Nominal type must be a struct or class. (No stored properties is okay.)
-  if (!isa<StructDecl>(nominal) && !isa<ClassDecl>(nominal))
-    return false;
 
-#if 0
+  auto reqKind = getDifferentiableRequirementKind(requirement);
+
   auto &C = nominal->getASTContext();
   // If there are any `TangentVector` type witness candidates, check whether
   // there exists only a single valid candidate.
   bool canUseTangentVectorAsSelf = canDeriveTangentVectorAsSelf(nominal, DC);
-  auto isValidTangentVectorCandidate = [&](ValueDecl *v) -> StructDecl * {
+  auto isValidTangentVectorCandidate = [&](ValueDecl *v) -> bool {
+    if (requirement->getBaseName() == C.Id_zeroTangentVectorInitializer) {
+      auto *tangentVectorTypeDecl = dyn_cast<TypeDecl>(v);
+      if (tangentVectorTypeDecl) {
+        auto tangentType = tangentVectorTypeDecl->getDeclaredInterfaceType();
+        auto *addArithProto = C.getProtocol(KnownProtocolKind::AdditiveArithmetic);
+        if (TypeChecker::conformsToProtocol(tangentType, addArithProto, DC)) {
+          llvm::errs() << "YES!\n";
+          return true;
+        }
+      }
+    }
     // Valid candidate must be a struct or a typealias to a struct.
     auto *structDecl = convertToStructDecl(v);
     if (!structDecl)
-      return nullptr;
+      return false;
     // Valid candidate must either:
     // 1. Be implicit (previously synthesized).
     if (structDecl->isImplicit())
-      return structDecl;
+      return true;
     // 2. Equal nominal, when the nominal can derive `TangentVector` as `Self`.
     // Nominal type must not customize `TangentVector` to anything other than
     // `Self`. Otherwise, synthesis is semantically unsupported.
     if (structDecl == nominal && canUseTangentVectorAsSelf)
-      return structDecl;
+      return true;
     // Otherwise, candidate is invalid.
-    return nullptr;
+    return false;
   };
   auto tangentDecls = nominal->lookupDirect(C.Id_TangentVector);
   auto invalidTangentDecls = llvm::partition(tangentDecls, [&](ValueDecl *v) {
@@ -249,18 +282,26 @@ bool DerivedConformance::canDeriveDifferentiable(NominalTypeDecl *nominal,
       std::distance(invalidTangentDecls, tangentDecls.end());
   if (requirement->getBaseName() == C.Id_zeroTangentVectorInitializer &&
       validTangentDeclCount == 1) {
-    auto *tangentDecl = convertToStructDecl(tangentDecls.front());
+    return true;
+#if 0
+    auto *tangentDecl = (tangentDecls.front());
     auto tangentType = tangentDecl->TypeDecl::getDeclaredInterfaceType();
     auto *addArithProto = C.getProtocol(KnownProtocolKind::AdditiveArithmetic);
     if (TypeChecker::conformsToProtocol(tangentType, addArithProto, DC)) {
       llvm::errs() << "YES!\n";
       return true;
     }
+#endif
   }
   // There cannot be any invalid `TangentVector` types.
   // There can be at most one valid `TangentVector` type.
   if (invalidTangentDeclCount != 0 || validTangentDeclCount > 1)
     return false;
+
+  // Nominal type must be a struct or class. (No stored properties is okay.)
+  if (reqKind != DifferentiableRequirement::ZeroTangentVectorInitializer)
+    if (!isa<StructDecl>(nominal) && !isa<ClassDecl>(nominal))
+      return false;
 
   // If there are no `TangentVector` candidates, derivation is possible if all
   // differentiation stored properties conform to `Differentiable`.
@@ -273,9 +314,15 @@ bool DerivedConformance::canDeriveDifferentiable(NominalTypeDecl *nominal,
     auto varType = DC->mapTypeIntoContext(v->getValueInterfaceType());
     return (bool)TypeChecker::conformsToProtocol(varType, diffableProto, DC);
   });
+
+#if 0
+  // Nominal type must be a struct or class. (No stored properties is okay.)
+  if (reqKind != DifferentiableRequirement::ZeroTangentVectorInitializer)
+    if (!isa<StructDecl>(nominal) && !isa<ClassDecl>(nominal))
+      return false;
 #endif
 
-// #if 0
+#if 0
   // Check requirement-specific derivation conditions.
   auto &C = nominal->getASTContext();
   if (requirement->getBaseName() == C.Id_TangentVector ||
@@ -284,7 +331,7 @@ bool DerivedConformance::canDeriveDifferentiable(NominalTypeDecl *nominal,
   if (requirement->getBaseName() == C.Id_zeroTangentVectorInitializer)
     return canDeriveZeroTangentVectorInitializer(nominal, DC);
   llvm_unreachable("Invalid `Differentiable` protocol requirement");
-// #endif
+#endif
 }
 
 /// Synthesize body for `move(along:)`.
