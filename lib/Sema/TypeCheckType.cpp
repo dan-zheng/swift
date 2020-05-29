@@ -3098,7 +3098,10 @@ bool TypeResolver::resolveSingleSILResult(TypeRepr *repr,
                                        Optional<SILResultInfo> &errorResult) {
   Type type;
   auto convention = DefaultResultConvention;
+  auto differentiability =
+      SILResultDifferentiability::DifferentiableOrNotApplicable;
   bool isErrorResult = false;
+  options.setContext(TypeResolverContext::FunctionResult);
 
   if (auto attrRepr = dyn_cast<AttributedTypeRepr>(repr)) {
     // Copy the attributes out; we're going to destructively modify them.
@@ -3124,6 +3127,12 @@ bool TypeResolver::resolveSingleSILResult(TypeRepr *repr,
 
       // Error results are always implicitly @owned.
       convention = ResultConvention::Owned;
+    }
+
+    // Recognize `@noDerivative`.
+    if (attrs.has(TAK_noDerivative)) {
+      attrs.clearAttribute(TAK_noDerivative);
+      differentiability = SILResultDifferentiability::NotDifferentiable;
     }
 
     // Recognize result conventions.
@@ -3160,7 +3169,8 @@ bool TypeResolver::resolveSingleSILResult(TypeRepr *repr,
   }
 
   assert(!isErrorResult || convention == ResultConvention::Owned);
-  SILResultInfo resolvedResult(type->getCanonicalType(), convention);
+  SILResultInfo resolvedResult(type->getCanonicalType(), convention,
+                               differentiability);
 
   if (!isErrorResult) {
     ordinaryResults.push_back(resolvedResult);

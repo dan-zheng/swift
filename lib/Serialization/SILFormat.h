@@ -452,12 +452,14 @@ namespace sil_block {
     // may be trailed by an inline protocol conformance
   >;
 
-  using SILInstDifferentiableFunctionLayout = BCRecordLayout<
-    SIL_INST_DIFFERENTIABLE_FUNCTION,
-    BCVBR<8>,             // number of function parameters
-    BCFixed<1>,           // has derivative functions?
-    BCArray<ValueIDField> // parameter indices and operands
-  >;
+  using SILInstDifferentiableFunctionLayout =
+      BCRecordLayout<SIL_INST_DIFFERENTIABLE_FUNCTION,
+                     BCVBR<8>,   // number of function parameters
+                     BCVBR<8>,   // number of function results
+                     BCVBR<8>,   // number of differentiability parameters
+                     BCFixed<1>, // has derivative functions?
+                     BCArray<ValueIDField> // parameter indices and operands
+                     >;
 
   using SILInstLinearFunctionLayout = BCRecordLayout<
     SIL_INST_LINEAR_FUNCTION,
