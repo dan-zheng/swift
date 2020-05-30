@@ -55,6 +55,18 @@ SimpleMathTests.test("ResultSelection") {
   expectEqual((0, 1), gradient(at: 3, 3, in: { x, y in foo(x, y).1 }))
 }
 
+SimpleMathTests.test("MultipleResults") {
+  func tuple(_ x: Float, _ y: Float) -> (Float, Float) {
+    return (x, y)
+  }
+  func multiply(_ x: Float, _ y: Float) -> Float {
+    let z = tuple(x, y)
+    return z.0 * z.1
+  }
+  expectEqual((4, 3), gradient(at: 3, 4, in: multiply))
+  expectEqual((10, 5), gradient(at: 5, 10, in: multiply))
+}
+
 SimpleMathTests.test("CaptureLocal") {
   let z: Float = 10
   func foo(_ x: Float) -> Float {

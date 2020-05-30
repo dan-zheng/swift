@@ -577,6 +577,7 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
                  activeResultIndices.begin(), activeResultIndices.end(),
                  [&s](unsigned i) { s << i; }, [&s] { s << ", "; });
              s << "}\n";);
+#if 0
   // Diagnose multiple active results.
   // TODO(TF-983): Support multiple active results.
   if (activeResultIndices.size() > 1) {
@@ -586,6 +587,7 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
     errorOccurred = true;
     return;
   }
+#endif
 
   // Form expected indices.
   auto numSemanticResults =

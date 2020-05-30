@@ -215,6 +215,9 @@ void PullbackEmitter::setAdjointValue(SILBasicBlock *origBB,
   LLVM_DEBUG(getADDebugStream()
              << "The new adjoint value, replacing the existing one, is: "
              << insertion.first->getSecond());
+#if 0
+  assert(insertion.second);
+#endif
   if (!insertion.second)
     insertion.first->getSecond() = adjointValue;
 }
@@ -933,44 +936,47 @@ bool PullbackEmitter::run() {
   }
 
   auto *pullbackEntry = pullback.getEntryBlock();
-  // The pullback function has type (seed, exit_pbs) -> ([arg0], ..., [argn]).
+  // The pullback function has type:
+  // `(seed0, seed1, ..., exit_pb_struct) -> (arg0, ..., argn)`.
   auto pbParamArgs = pullback.getArgumentsWithoutIndirectResults();
-  assert(pbParamArgs.size() == 2);
-  seed = pbParamArgs[0];
-  // TODO(TF-983): Handle multiple original results.
-  assert(getIndices().results->getNumIndices() == 1);
-  auto origResult = origFormalResults[*getIndices().results->begin()];
-
-  // Assign adjoint for original result.
+  assert(pbParamArgs.size() >= 2 &&
+         getIndices().results->getNumIndices() == pbParamArgs.size() - 1);
+  // Assign adjoints for original result.
   builder.setInsertionPoint(pullbackEntry,
                             getNextFunctionLocalAllocationInsertionPoint());
-  if (seed->getType().isAddress()) {
-    // If the pullback `seed` is an `inout` parameter, assign it directly as the
-    // adjoint buffer of the original result.
-    if (pullback.getLoweredFunctionType()
-            ->getParameters()
-            .front()
-            .isIndirectInOut()) {
-      setAdjointBuffer(origExit, origResult, seed);
-    }
-    // Otherwise, assign a copy of `seed` as the adjoint buffer of the original
-    // result.
-    else {
-      auto *seedBufCopy = builder.createAllocStack(pbLoc, seed->getType());
-      builder.createCopyAddr(pbLoc, seed, seedBufCopy, IsNotTake,
-                             IsInitialization);
-      functionLocalAllocations.push_back(seedBufCopy);
-      setAdjointBuffer(origExit, origResult, seedBufCopy);
+  unsigned seedIndex = 0;
+  for (auto resultIndex : getIndices().results->getIndices()) {
+    auto origResult = origFormalResults[resultIndex];
+    auto seed = pbParamArgs[seedIndex++];
+    if (seed->getType().isAddress()) {
+      // If the pullback `seed` is an `inout` parameter, assign it directly as
+      // the adjoint buffer of the original result.
+      if (pullback.getLoweredFunctionType()
+              ->getParameters()
+              .front()
+              .isIndirectInOut()) {
+        setAdjointBuffer(origExit, origResult, seed);
+      }
+      // Otherwise, assign a copy of `seed` as the adjoint buffer of the
+      // original result.
+      else {
+        auto *seedBufCopy =
+            createFunctionLocalAllocation(seed->getType(), pbLoc);
+        builder.createCopyAddr(pbLoc, seed, seedBufCopy, IsNotTake,
+                               IsInitialization);
+        setAdjointBuffer(origExit, origResult, seedBufCopy);
+        LLVM_DEBUG(getADDebugStream()
+                   << "Assigned seed buffer " << seedBufCopy
+                   << " as the adjoint of original indirect result "
+                   << origResult);
+      }
+    } else {
+      addAdjointValue(origExit, origResult, makeConcreteAdjointValue(seed),
+                      pbLoc);
       LLVM_DEBUG(getADDebugStream()
-                 << "Assigned seed buffer " << seedBufCopy
-                 << " as the adjoint of original indirect result "
-                 << origResult);
+                 << "Assigned seed " << *seed
+                 << " as the adjoint of original result " << origResult);
     }
-  } else {
-    setAdjointValue(origExit, origResult, makeConcreteAdjointValue(seed));
-    LLVM_DEBUG(getADDebugStream()
-               << "Assigned seed " << *seed
-               << " as the adjoint of original result " << origResult);
   }
 
   // If the original function is an accessor with special-case pullback
@@ -1479,8 +1485,8 @@ void PullbackEmitter::visitApplyInst(ApplyInst *ai) {
 
   // Get formal callee pullback arguments.
   auto *bb = ai->getParent();
-  assert(applyInfo.indices.results->getNumIndices() == 1);
   for (auto resultIndex : applyInfo.indices.results->getIndices()) {
+    // TODO: Test inout arguments
     assert(resultIndex < origAllResults.size());
     auto origResult = origAllResults[resultIndex];
     // Get the seed (i.e. adjoint value of the original result).

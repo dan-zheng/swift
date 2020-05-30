@@ -135,7 +135,7 @@ func checked_cast_branch(_ x: Float) -> Float {
   return x * x
 }
 
-// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_branch{{.*}} at (source=0 parameters=(0))
+// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_branch{{.*}} at (parameters=(0) results=(0))
 // CHECK: bb0:
 // CHECK: [ACTIVE] %0 = argument of bb0 : $Float
 // CHECK: [NONE]   %2 = metatype $@thin Int.Type
@@ -173,7 +173,7 @@ func checked_cast_addr_nonactive_result<T: Differentiable>(_ x: T) -> T {
   return x
 }
 
-// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_addr_nonactive_result{{.*}} at (source=0 parameters=(0))
+// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_addr_nonactive_result{{.*}} at (parameters=(0) results=(0))
 // CHECK: bb0:
 // CHECK: [ACTIVE] %0 = argument of bb0 : $*T
 // CHECK: [ACTIVE] %1 = argument of bb0 : $*T
@@ -208,7 +208,7 @@ func checked_cast_addr_active_result<T: Differentiable>(x: T) -> T {
   return x
 }
 
-// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_addr_active_result{{.*}} at (source=0 parameters=(0))
+// CHECK-LABEL: [AD] Activity info for ${{.*}}checked_cast_addr_active_result{{.*}} at (parameters=(0) results=(0))
 // CHECK: bb0:
 // CHECK: [ACTIVE] %0 = argument of bb0 : $*T
 // CHECK: [ACTIVE] %1 = argument of bb0 : $*T

@@ -4131,6 +4131,9 @@ ERROR(opaque_type_in_protocol_requirement,none,
 ERROR(attr_only_on_parameters_of_differentiable,none,
       "'%0' may only be used on parameters of '@differentiable' function "
       "types", (StringRef))
+ERROR(noderivative_function_result_only_allowed_in_sil,none,
+      "'@noDerivative' in '@differentiable' function result types is only "
+      "supported in SIL", ())
 ERROR(differentiable_function_type_invalid_parameter,none,
       "parameter type '%0' does not conform to 'Differentiable'"
       "%select{| and satisfy '%0 == %0.TangentVector'}1, but the enclosing "

@@ -820,8 +820,6 @@ void JVPEmitter::emitTangentForApplyInst(
       diffBuilder.createApply(loc, differential, SubstitutionMap(), diffArgs,
                               /*isNonThrowing*/ false);
   diffBuilder.emitDestroyValueOperation(loc, differential);
-  assert(differentialCall->getNumResults() == 1 &&
-         "Expected differential to return one result");
 
   // Get the original results of the `apply` instructions.
   SmallVector<SILValue, 8> origDirectResults;
@@ -829,14 +827,15 @@ void JVPEmitter::emitTangentForApplyInst(
     origDirectResults.push_back(directResult);
   });
   SmallVector<SILValue, 8> origAllResults;
+  llvm::errs() << "HI 0\n";
   collectAllActualResultsInTypeOrder(ai, origDirectResults, origAllResults);
 
   // Get the differential results of the `apply` instructions.
   SmallVector<SILValue, 8> differentialDirectResults;
-  forEachApplyDirectResult(differentialCall, [&](SILValue directResult) {
-    differentialDirectResults.push_back(directResult);
-  });
+  extractAllElements(differentialCall, getDifferentialBuilder(),
+                     differentialDirectResults);
   SmallVector<SILValue, 8> differentialAllResults;
+  llvm::errs() << "HI 1\n";
   collectAllActualResultsInTypeOrder(
       differentialCall, differentialDirectResults, differentialAllResults);
 
@@ -871,15 +870,14 @@ void JVPEmitter::emitReturnInstForDifferential() {
   auto diffLoc = differential.getLocation();
   auto &diffBuilder = getDifferentialBuilder();
 
-  SmallVector<SILValue, 2> activeResults;
-
   // This vector will contain all the materialized return elements.
   SmallVector<SILValue, 8> retElts;
+  // Collect origina lresults.
   SmallVector<SILValue, 2> originalResults;
   collectAllDirectResultsInTypeOrder(*original, originalResults);
 
-  // Materializes the return element corresponding to the result
-  // `resultIndex` into the `retElts` vector.
+  SmallVector<SILValue, 2> activeResults;
+  // Materializes the direct result result at `resultIndex` into `retElts`.
   auto addActiveResult = [&](unsigned resultIndex) -> void {
     auto origResult = originalResults[resultIndex];
     assert(origResult->getType().isObject() &&
@@ -892,8 +890,8 @@ void JVPEmitter::emitReturnInstForDifferential() {
   // Create an array of the direct tangent values of the original results.
   for (auto i : range(originalResults.size()))
     addActiveResult(i);
-  assert(activeResults.size() <= 1);
 
+  // If original results exist but there are no
   if (activeResults.empty() && !originalResults.empty()) {
     // Create zero tangent value for direct results.
     for (auto resultIndex : getIndices().results->getIndices()) {
@@ -907,9 +905,11 @@ void JVPEmitter::emitReturnInstForDifferential() {
       retElts.push_back(zero);
     }
   } else if (!activeResults.empty()) {
-    auto diffVal = getTangentValue(activeResults.front());
-    auto val = materializeTangent(diffVal, diffLoc);
-    retElts.push_back(val);
+    for (auto activeResult : activeResults) {
+      auto diffVal = getTangentValue(activeResult);
+      auto val = materializeTangent(diffVal, diffLoc);
+      retElts.push_back(val);
+    }
   }
 
   diffBuilder.createReturn(diffLoc,
@@ -1251,15 +1251,6 @@ void JVPEmitter::visitApplyInst(ApplyInst *ai) {
                  activeResultIndices.begin(), activeResultIndices.end(),
                  [&s](unsigned i) { s << i; }, [&s] { s << ", "; });
              s << "}\n";);
-  // Diagnose multiple active results.
-  // TODO(TF-983): Support multiple active results.
-  if (activeResultIndices.size() > 1) {
-    context.emitNondifferentiabilityError(
-        ai, invoker,
-        diag::autodiff_cannot_differentiate_through_multiple_results);
-    errorOccurred = true;
-    return;
-  }
 
   // Form expected indices.
   auto numResults =
@@ -1327,9 +1318,8 @@ void JVPEmitter::visitApplyInst(ApplyInst *ai) {
     auto diagnoseNondifferentiableOriginalFunctionType =
         [&](CanSILFunctionType origFnTy) {
           // Check and diagnose non-differentiable arguments.
-          for (unsigned paramIndex : range(originalFnTy->getNumParameters())) {
-            if (indices.isWrtParameter(paramIndex) &&
-                !originalFnTy->getParameters()[paramIndex]
+          for (auto paramIndex : indices.parameters->getIndices()) {
+            if (!originalFnTy->getParameters()[paramIndex]
                      .getSILStorageInterfaceType()
                      .isDifferentiable(getModule())) {
               context.emitNondifferentiabilityError(

@@ -105,8 +105,11 @@ private:
   /// A set used to remember local allocations that were destroyed.
   llvm::SmallDenseSet<SILValue> destroyedLocalAllocations;
 
-  /// The seed argument in the pullback function.
+  /// The seed arguments of the pullback function.
+#if 0
   SILArgument *seed = nullptr;
+#endif
+  SmallVector<SILArgument *, 4> seeds;
 
   llvm::BumpPtrAllocator allocator;
 

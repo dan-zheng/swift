@@ -1997,6 +1997,9 @@ Type TypeResolver::resolveAttributedType(TypeAttributes &attrs,
   // Remember whether this is a function parameter.
   bool isParam = options.is(TypeResolverContext::FunctionInput);
 
+  // Remember whether this is a function result.
+  bool isResult = options.is(TypeResolverContext::FunctionResult);
+
   // Remember whether this is a variadic function parameter.
   bool isVariadicFunctionParam =
       options.is(TypeResolverContext::VariadicFunctionInput) &&
@@ -2401,6 +2404,10 @@ Type TypeResolver::resolveAttributedType(TypeAttributes &attrs,
   }
 
   if (attrs.has(TAK_noDerivative)) {
+    // @noDerivative is only valid on function parameters, or on function
+    // results in SIL.
+    bool isNoDerivativeAllowed =
+        isParam || (isResult && (options & TypeResolutionFlags::SILType));
     auto *SF = DC->getParentSourceFile();
     if (SF && !isDifferentiableProgrammingEnabled(*SF)) {
       diagnose(
@@ -2408,13 +2415,19 @@ Type TypeResolver::resolveAttributedType(TypeAttributes &attrs,
           diag::differentiable_programming_attr_used_without_required_module,
           TypeAttributes::getAttrName(TAK_noDerivative),
           Context.Id_Differentiation);
-    } else if (!isParam) {
-      // @noDerivative is only valid on parameters.
-      diagnose(attrs.getLoc(TAK_noDerivative),
-               (isVariadicFunctionParam
-                    ? diag::attr_not_on_variadic_parameters
-                    : diag::attr_only_on_parameters_of_differentiable),
-               "@noDerivative");
+    } else if (!isNoDerivativeAllowed) {
+      if (isResult) {
+        llvm::errs() << "HI 1!\n";
+        diagnose(attrs.getLoc(TAK_noDerivative),
+                 diag::noderivative_function_result_only_allowed_in_sil);
+      } else {
+        llvm::errs() << "HI 2!\n";
+        diagnose(attrs.getLoc(TAK_noDerivative),
+                 (isVariadicFunctionParam
+                      ? diag::attr_not_on_variadic_parameters
+                      : diag::attr_only_on_parameters_of_differentiable),
+                 "@noDerivative");
+      }
     }
     attrs.clearAttribute(TAK_noDerivative);
   }
@@ -2652,7 +2665,9 @@ Type TypeResolver::resolveASTFunctionType(
     return Type();
   }
 
-  Type outputTy = resolveType(repr->getResultTypeRepr(), options);
+  auto resultOptions = options.withoutContext();
+  resultOptions.setContext(TypeResolverContext::FunctionResult);
+  Type outputTy = resolveType(repr->getResultTypeRepr(), resultOptions);
   if (!outputTy || outputTy->hasError()) return outputTy;
 
   // If this is a function type without parens around the parameter list,
@@ -3098,9 +3113,9 @@ bool TypeResolver::resolveSingleSILResult(TypeRepr *repr,
                                        Optional<SILResultInfo> &errorResult) {
   Type type;
   auto convention = DefaultResultConvention;
+  bool isErrorResult = false;
   auto differentiability =
       SILResultDifferentiability::DifferentiableOrNotApplicable;
-  bool isErrorResult = false;
   options.setContext(TypeResolverContext::FunctionResult);
 
   if (auto attrRepr = dyn_cast<AttributedTypeRepr>(repr)) {
