@@ -163,6 +163,8 @@ public:
   // with an `apply` of its VJP.
   void visitApplyInst(ApplyInst *ai);
 
+  void visitBeginApplyInst(BeginApplyInst *bai);
+
   void visitDifferentiableFunctionInst(DifferentiableFunctionInst *dfi);
 };
 

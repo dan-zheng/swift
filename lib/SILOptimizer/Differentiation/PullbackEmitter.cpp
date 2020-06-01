@@ -23,6 +23,7 @@
 #include "swift/SILOptimizer/Differentiation/VJPEmitter.h"
 
 #include "swift/AST/Expr.h"
+#include "swift/AST/ParameterList.h"
 #include "swift/AST/PropertyWrappers.h"
 #include "swift/SIL/InstructionUtils.h"
 #include "swift/SIL/Projection.h"
@@ -396,6 +397,121 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
                                           StoreOwnershipQualifier::Init);
         });
     return eltAdjBuffer;
+  }
+  // Handle `begin_access`.
+  // Adjoint projection: the base adjoint buffer itself.
+  if (auto result = originalProjection->getDefiningInstructionResult()) {
+    if (auto *bai = dyn_cast<BeginApplyInst>(result.getValue().Instruction)) {
+    // auto *bai = dyn_cast<BeginApplyInst>(originalProjection)
+    auto *callee = bai->getCalleeFunction();
+    if (callee && bai->getParent() == origBB && getPullbackInfo().shouldDifferentiateApplySite(bai)) {
+      auto *modifyDecl = isSemanticCollectionSubscriptPositionModifyAccessor(callee);
+      if (modifyDecl) {
+        assert(getPullbackInfo().shouldDifferentiateApplySite(bai));
+        auto loc = bai->getLoc();
+        auto selfArg = bai->getArgument(1);
+        auto elementYield = bai->getResult(0);
+        auto adjSelf = getAdjointBuffer(origBB, selfArg);
+        auto adjSelfType = adjSelf->getType().getASTType();
+
+// #if 0
+        auto adjElement = createFunctionLocalAllocation(getRemappedTangentType(elementYield->getType()), loc);
+        emitZeroIndirect(adjElement->getType().getASTType(), adjElement, loc);
+// #endif
+
+        auto *swiftModule = getModule().getSwiftModule();
+        auto &ctx = getASTContext();
+        auto *collectionProto = ctx.getProtocol(KnownProtocolKind::MutableCollection);
+        auto conf = swiftModule->lookupConformance(adjSelfType, collectionProto);
+        // Look up `Collection.subscript(index:)` requirement.
+        // DeclName subscriptName(ctx, DeclBaseName::createSubscript(), { ctx.getIdentifier("position") });
+        auto lookup = collectionProto->lookupDirect(DeclBaseName::createSubscript());
+        llvm::erase_if(lookup, [&](ValueDecl *v) {
+          if (!isa<ProtocolDecl>(v->getDeclContext()) || !v->isProtocolRequirement())
+            return true;
+          auto *subscript = dyn_cast<SubscriptDecl>(v);
+          if (!subscript)
+            return true;
+          auto *subscriptGetter = subscript->getAccessor(AccessorKind::Get);
+          return subscriptGetter->getParameters()->get(0)->getParameterName() != ctx.getIdentifier("position");
+        });
+        assert(lookup.size() == 1 && "Ambiguous protocol requirement");
+        auto *collectionSubscriptDecl = cast<SubscriptDecl>(lookup.front());
+
+        auto *collectionSubscriptModifyDecl = collectionSubscriptDecl->getAccessor(AccessorKind::Modify);
+        SILDeclRef declRef(collectionSubscriptModifyDecl, SILDeclRef::Kind::Func);
+
+        auto silFnTy = getContext().getTypeConverter().getConstantType(
+            TypeExpansionContext::minimal(), declRef);
+        // %0 = witness_method @Collection.subscript!read
+        auto witnessMethod = builder.createWitnessMethod(loc, adjSelfType, conf,
+                                                         declRef, silFnTy);
+        auto subMap =
+            SubstitutionMap::getProtocolSubstitutions(collectionProto, adjSelfType, conf);
+        // TODO: Require Collection and Collection.TangentVector to have the same Index type
+        // conf.get`
+        // TODO: Eventually, need to capture in VJP
+        auto adjIndexType = conf.getTypeWitnessByName(adjSelfType, ctx.getIdentifier("Index"))->getCanonicalType();
+
+        auto *indexArgField = getPullbackInfo().lookUpCoroutineDataDecl(bai);
+#if 0
+        llvm::errs() << "ADJ INDEX VAL\n";
+        indexArgField->dumpRef();
+        llvm::errs() << "\n";
+        llvm::errs() << "BAI AND ORIG BB\n";
+        // origBB->dump();
+        getPullback().dump();
+        pullbackBBMap[origBB]->dump();
+        getPullbackInfo().getLinearMapStruct(origBB)->dump();
+        bai->dump();
+#endif
+
+        auto insertionPoint = builder.getInsertionBB();
+        builder.setInsertionPoint(pullbackBBMap[origBB]);
+
+        auto adjIndexVal = getPullbackStructElement(origBB, indexArgField);
+  // #if 0
+        llvm::errs() << "ADJ INDEX VAL\n";
+        adjIndexVal->dump();
+        adjIndexVal->getType().dump();
+  // #endif
+
+        // TODO: add assertion
+        if (adjIndexType != adjIndexVal->getType().getASTType()) {
+          adjIndexType->dump();
+          adjIndexVal->getType().getASTType()->dump();
+          assert(false);
+        }
+        auto adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+        if (adjIndexVal->getType().isObject()) {
+          builder.emitStoreValueOperation(loc, adjIndexVal, adjIndexBuf, StoreOwnershipQualifier::Init);
+        } else {
+          builder.createCopyAddr(loc, adjIndexVal, adjIndexBuf, IsTake, IsInitialization);
+          // adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+        }
+
+        // %2 = apply $0(%result, %new, %old, %1)
+        auto *adjBai = builder.createBeginApply(loc, witnessMethod, subMap, {adjIndexBuf, adjSelf});
+        accumulateIndirect(adjElement, adjBai->getResult(0), loc);
+        builder.createEndApply(loc, adjBai->getTokenResult());
+        emitZeroIndirect(adjElement->getType().getASTType(), adjBai->getResult(0), loc);
+
+        llvm::errs() << "ADJ BAI\n";
+        adjBai->dumpInContext();
+#if 0
+        accumulateIndirect(adjElement, adjBai->getResult(0), loc);
+        // addToAdjointBuffer(bb, elementYield, bai->getResult(0), loc);
+#endif
+        // builder.createEndApply(loc, adjBai->getTokenResult());
+        builder.createDeallocStack(loc, adjIndexBuf);
+
+        builder.setInsertionPoint(insertionPoint);
+
+        return adjElement;
+        // return adjBai->getResult(0);
+      }
+    }
+  }
   }
   // Handle `begin_access`.
   // Adjoint projection: the base adjoint buffer itself.
@@ -874,11 +990,34 @@ bool PullbackEmitter::run() {
       initializePullbackStructElements(origBB, dsi->getResults());
       continue;
     }
+#if 0
+    // Add a pullback struct argument.
+    auto *pbStructArg = pullbackBB->createPhiArgument(
+        pbStructLoweredType, ValueOwnershipKind::Owned);
+    pullbackStructArguments[origBB] = pbStructArg;
+    // Destructure the pullback struct to get the elements.
+    builder.setInsertionPoint(pullbackBB);
+    auto *dsi = builder.createDestructureStruct(pbLoc, pbStructArg);
+    initializePullbackStructElements(origBB, dsi->getResults());
+#endif
+
     // Get all active values in the original block.
     // If the original block has no active values, continue.
     auto &bbActiveValues = activeValues[origBB];
     if (bbActiveValues.empty())
       continue;
+
+    for (auto activeValue : bbActiveValues) {
+      if (activeValue->getType().isObject()) {
+        // Create and register pullback block argument for the active value.
+        auto *pullbackArg = pullbackBB->createPhiArgument(
+            getRemappedTangentType(activeValue->getType()),
+            ValueOwnershipKind::Owned);
+        activeValuePullbackBBArgumentMap[{origBB, activeValue}] = pullbackArg;
+        recordTemporary(pullbackArg);
+      }
+    }
+#if 0
     // Otherwise, if the original block has active values:
     // - For each active buffer in the original block, allocate a new local
     //   buffer in the pullback entry. (All adjoint buffers are allocated in
@@ -900,6 +1039,8 @@ bool PullbackEmitter::run() {
         recordTemporary(pullbackArg);
       }
     }
+#endif
+// #if 0
     // Add a pullback struct argument.
     auto *pbStructArg = pullbackBB->createPhiArgument(
         pbStructLoweredType, ValueOwnershipKind::Owned);
@@ -908,6 +1049,21 @@ bool PullbackEmitter::run() {
     builder.setInsertionPoint(pullbackBB);
     auto *dsi = builder.createDestructureStruct(pbLoc, pbStructArg);
     initializePullbackStructElements(origBB, dsi->getResults());
+// #endif
+    // Otherwise, if the original block has active values:
+    // - For each active buffer in the original block, allocate a new local
+    //   buffer in the pullback entry. (All adjoint buffers are allocated in
+    //   the pullback entry and deallocated in the pullback exit.)
+    // - For each active value in the original block, add adjoint value
+    //   arguments to the pullback block.
+    for (auto activeValue : bbActiveValues) {
+      if (activeValue->getType().isAddress()) {
+        // Allocate and zero initialize a new local buffer using
+        // `getAdjointBuffer`.
+        builder.setInsertionPoint(pullback.getEntryBlock());
+        getAdjointBuffer(origBB, activeValue);
+      }
+    }
 
     // - Create pullback trampoline blocks for each successor block of the
     //   original block. Pullback trampoline blocks only have a pullback
@@ -1557,6 +1713,185 @@ void PullbackEmitter::visitApplyInst(ApplyInst *ai) {
   }
 }
 
+void PullbackEmitter::visitBeginApplyInst(BeginApplyInst *bai) {
+  assert(getPullbackInfo().shouldDifferentiateApplySite(bai));
+  auto *callee = bai->getCalleeFunction();
+  if (callee && isSemanticCollectionSubscriptPositionModifyAccessor(callee)) {
+    return;
+  }
+
+#if 0
+  auto &ctx = builder.getASTContext();
+  auto *bb = bai->getParent();
+  auto loc = bai->getLoc();
+  auto *callee = bai->getCalleeFunction();
+  if (callee) {
+    auto *accessor = isSemanticCollectionSubscriptPositionModifyAccessor(callee);
+    if (accessor) {
+      assert(bai->getNumArguments() == 2);
+      assert(bai->getNumResults() == 2);
+      // TODO: assert self operand conforms to Differentiable
+      auto indexArg = bai->getArgument(0);
+      auto selfArg = bai->getArgument(1);
+      auto elementYield = bai->getResult(0);
+      auto adjSelf = getAdjointBuffer(bb, selfArg);
+      auto adjSelfType = adjSelf->getType().getASTType();
+      auto adjElement = getAdjointBuffer(bb, elementYield);
+
+// #if 0
+      llvm::errs() << "ADJ SELF\n";
+      adjSelf->dumpInContext();
+      adjSelfType.dump();
+      llvm::errs() << "ADJ ELEMENT\n";
+      adjElement->dumpInContext();
+// #endif
+
+      auto *swiftModule = getModule().getSwiftModule();
+      auto *collectionProto = ctx.getProtocol(KnownProtocolKind::MutableCollection);
+      auto conf = swiftModule->lookupConformance(adjSelfType, collectionProto);
+      // Look up `Collection.subscript(index:)` requirement.
+      // DeclName subscriptName(ctx, DeclBaseName::createSubscript(), { ctx.getIdentifier("position") });
+      auto lookup = collectionProto->lookupDirect(DeclBaseName::createSubscript());
+      llvm::erase_if(lookup, [&](ValueDecl *v) {
+        if (!isa<ProtocolDecl>(v->getDeclContext()) || !v->isProtocolRequirement())
+          return true;
+        auto *subscript = dyn_cast<SubscriptDecl>(v);
+        if (!subscript)
+          return true;
+        auto *subscriptGetter = subscript->getAccessor(AccessorKind::Get);
+        return subscriptGetter->getParameters()->get(0)->getParameterName() != ctx.getIdentifier("position");
+      });
+      assert(lookup.size() == 1 && "Ambiguous protocol requirement");
+      auto *collectionSubscriptDecl = cast<SubscriptDecl>(lookup.front());
+      // collectionSubscriptDecl->dump();
+
+#if 0
+      auto *collectionSubscriptGetterDecl = collectionSubscriptDecl->getAccessor(AccessorKind::Get);
+      SILDeclRef declRef(collectionSubscriptGetterDecl, SILDeclRef::Kind::Func);
+
+      auto silFnTy = getContext().getTypeConverter().getConstantType(
+          TypeExpansionContext::minimal(), declRef);
+      // %0 = witness_method @+
+      auto witnessMethod = builder.createWitnessMethod(loc, adjSelfType, conf,
+                                                       declRef, silFnTy);
+      auto subMap =
+          SubstitutionMap::getProtocolSubstitutions(collectionProto, adjSelfType, conf);
+      auto adjElementBuf = builder.createAllocStack(loc, adjElement->getType().getObjectType());
+      // TODO: Require Collection and Collection.TangentVector to have the same
+      // conf.get`
+      // TODO: Eventually, need to capture in VJP
+      auto adjIndexType = conf.getTypeWitnessByName(adjSelfType, ctx.getIdentifier("Index"))->getCanonicalType();
+      auto adjIndex = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+      // %2 = apply $0(%result, %new, %old, %1)
+      builder.createApply(loc, witnessMethod, subMap,
+                          {adjElementBuf, adjIndex, adjSelf},
+                          /*isNonThrowing*/ false);
+      addToAdjointBuffer(bb, elementYield, adjElementBuf, loc);
+      builder.createDeallocStack(loc, adjIndex);
+      builder.createDeallocStack(loc, adjElementBuf);
+#endif
+
+#if 0
+      auto *collectionSubscriptReadDecl = collectionSubscriptDecl->getAccessor(AccessorKind::Read);
+      SILDeclRef declRef(collectionSubscriptReadDecl, SILDeclRef::Kind::Func);
+
+      auto silFnTy = getContext().getTypeConverter().getConstantType(
+          TypeExpansionContext::minimal(), declRef);
+      // %0 = witness_method @Collection.subscript!read
+      auto witnessMethod = builder.createWitnessMethod(loc, adjSelfType, conf,
+                                                       declRef, silFnTy);
+      auto subMap =
+          SubstitutionMap::getProtocolSubstitutions(collectionProto, adjSelfType, conf);
+      // TODO: Require Collection and Collection.TangentVector to have the same Index type
+      // conf.get`
+      // TODO: Eventually, need to capture in VJP
+      auto adjIndexType = conf.getTypeWitnessByName(adjSelfType, ctx.getIdentifier("Index"))->getCanonicalType();
+
+      auto *indexArgField = getPullbackInfo().lookUpCoroutineDataDecl(bai);
+      auto adjIndexVal = getPullbackStructElement(bb, indexArgField);
+#if 0
+      llvm::errs() << "ADJ INDEX VAL\n";
+      adjIndexVal->dump();
+      adjIndexVal->getType().dump();
+#endif
+      if (adjIndexType != adjIndexVal->getType().getASTType()) {
+        adjIndexType->dump();
+        adjIndexVal->getType().getASTType()->dump();
+        assert(false);
+      }
+      auto adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+      if (adjIndexVal->getType().isObject()) {
+        builder.emitStoreValueOperation(loc, adjIndexVal, adjIndexBuf, StoreOwnershipQualifier::Init);
+      } else {
+        builder.createCopyAddr(loc, adjIndexVal, adjIndexBuf, IsTake, IsInitialization);
+        // adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+      }
+
+      // %2 = apply $0(%result, %new, %old, %1)
+      auto *bai = builder.createBeginApply(loc, witnessMethod, subMap, {adjIndexBuf, adjSelf});
+      addToAdjointBuffer(bb, elementYield, bai->getResult(0), loc);
+      builder.createEndApply(loc, bai->getTokenResult());
+      builder.createDeallocStack(loc, adjIndexBuf);
+#endif
+
+// #if 0
+      // NEW: TRY MODIFY
+      auto *collectionSubscriptModifyDecl = collectionSubscriptDecl->getAccessor(AccessorKind::Modify);
+      SILDeclRef declRef(collectionSubscriptModifyDecl, SILDeclRef::Kind::Func);
+
+      auto silFnTy = getContext().getTypeConverter().getConstantType(
+          TypeExpansionContext::minimal(), declRef);
+      // %0 = witness_method @Collection.subscript!read
+      auto witnessMethod = builder.createWitnessMethod(loc, adjSelfType, conf,
+                                                       declRef, silFnTy);
+      auto subMap =
+          SubstitutionMap::getProtocolSubstitutions(collectionProto, adjSelfType, conf);
+      // TODO: Require Collection and Collection.TangentVector to have the same Index type
+      // conf.get`
+      // TODO: Eventually, need to capture in VJP
+      auto adjIndexType = conf.getTypeWitnessByName(adjSelfType, ctx.getIdentifier("Index"))->getCanonicalType();
+
+      auto *indexArgField = getPullbackInfo().lookUpCoroutineDataDecl(bai);
+      auto adjIndexVal = getPullbackStructElement(bb, indexArgField);
+#if 0
+      llvm::errs() << "ADJ INDEX VAL\n";
+      adjIndexVal->dump();
+      adjIndexVal->getType().dump();
+#endif
+      // TODO: add assertion
+      if (adjIndexType != adjIndexVal->getType().getASTType()) {
+        adjIndexType->dump();
+        adjIndexVal->getType().getASTType()->dump();
+        assert(false);
+      }
+      auto adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+      if (adjIndexVal->getType().isObject()) {
+        builder.emitStoreValueOperation(loc, adjIndexVal, adjIndexBuf, StoreOwnershipQualifier::Init);
+      } else {
+        builder.createCopyAddr(loc, adjIndexVal, adjIndexBuf, IsTake, IsInitialization);
+        // adjIndexBuf = builder.createAllocStack(loc, SILType::getPrimitiveObjectType(adjIndexType));
+      }
+
+      // %2 = apply $0(%result, %new, %old, %1)
+      auto *adjBai = builder.createBeginApply(loc, witnessMethod, subMap, {adjIndexBuf, adjSelf});
+      accumulateIndirect(adjElement, adjBai->getResult(0), loc);
+      // addToAdjointBuffer(bb, elementYield, bai->getResult(0), loc);
+      builder.createEndApply(loc, adjBai->getTokenResult());
+      builder.createDeallocStack(loc, adjIndexBuf);
+// #endif
+
+      return;
+    }
+  }
+#endif
+  // Diagnose `begin_apply` instructions.
+  // Coroutine differentiation is not yet supported.
+  getContext().emitNondifferentiabilityError(
+      bai, getInvoker(), diag::autodiff_coroutines_not_supported);
+  errorOccurred = true;
+  return;
+}
+
 void PullbackEmitter::visitStructInst(StructInst *si) {
   auto *bb = si->getParent();
   auto loc = si->getLoc();
@@ -1620,15 +1955,6 @@ void PullbackEmitter::visitStructInst(StructInst *si) {
                      "instructions");
   }
   }
-}
-
-void PullbackEmitter::visitBeginApplyInst(BeginApplyInst *bai) {
-  // Diagnose `begin_apply` instructions.
-  // Coroutine differentiation is not yet supported.
-  getContext().emitNondifferentiabilityError(
-      bai, getInvoker(), diag::autodiff_coroutines_not_supported);
-  errorOccurred = true;
-  return;
 }
 
 void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
