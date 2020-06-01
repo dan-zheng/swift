@@ -381,55 +381,84 @@ std::string ASTMangler::mangleReabstractionThunkHelper(
   return finalize();
 }
 
+/// Get a `NodePointer` representing an autodiff associated function for the
+/// given original function mangled name, associated function node kind,
+/// and parameter indices.
+static NodePointer getMangledAutoDiffAssociatedFunctionNode(
+    Demangler &D, StringRef name, Node::Kind assocFnNodeKind,
+    AutoDiffConfig config) {
+  // TODO(TF-680): Mangle `@differentiable` atttribute requirements as well.
+  auto topLevel = D.createNode(Node::Kind::Global);
+  auto assocFn = D.createNode(assocFnNodeKind);
+  topLevel->addChild(assocFn, D);
+
+  auto funcTopLevel = D.demangleSymbol(name);
+  // If original function name cannot be demangled (e.g. it has a custom name
+  // via `@_silgen_name`), add it as an identifier node.
+  if (!funcTopLevel) {
+    funcTopLevel = D.createNode(Node::Kind::Global);
+    funcTopLevel->addChild(D.createNode(Node::Kind::Identifier, name), D);
+  }
+  assert(funcTopLevel);
+  for (auto funcChild : *funcTopLevel)
+    assocFn->addChild(funcChild, D);
+
+  auto paramIndices =
+      D.createNode(Node::Kind::AutoDiffParameterIndices);
+  for (unsigned i : indices.parameters->getIndices()) {
+    auto paramIdx = D.createNode(Node::Kind::Index, i);
+    paramIndices->addChild(paramIdx, D);
+  }
+  assocFn->addChild(paramIndices, D);
+  auto resultIdx =
+      D.createNode(Node::Kind::AutoDiffResultIndex, indices.source);
+  assocFn->addChild(resultIdx, D);
+  return topLevel;
+}
+
 std::string ASTMangler::mangleAutoDiffDerivativeFunctionHelper(
     StringRef name, AutoDiffDerivativeFunctionKind kind,
     AutoDiffConfig config) {
   // TODO(TF-20): Make the mangling scheme robust. Support demangling.
   beginManglingWithoutPrefix();
 
-  Buffer << "AD__" << name << '_';
+  Demangler D;
+  Node::Kind assocFnNodeKind;
   switch (kind) {
   case AutoDiffDerivativeFunctionKind::JVP:
-    Buffer << "_jvp_";
+    assocFnNodeKind = Node::Kind::AutoDiffJVP;
     break;
   case AutoDiffDerivativeFunctionKind::VJP:
-    Buffer << "_vjp_";
+    assocFnNodeKind = Node::Kind::AutoDiffVJP;
     break;
   }
-  Buffer << config.getSILAutoDiffIndices().mangle();
-  if (config.derivativeGenericSignature) {
-    Buffer << '_';
-    appendGenericSignature(config.derivativeGenericSignature);
-  }
-
-  auto result = Storage.str().str();
-  Storage.clear();
-  return result;
+  auto result = getMangledAutoDiffAssociatedFunctionNode(
+      D, name, assocFnNodeKind, config);
+  auto mangled = Demangle::mangleNode(result);
+  verify(mangled);
+  return mangled;
 }
 
 std::string ASTMangler::mangleAutoDiffLinearMapHelper(
-    StringRef name, AutoDiffLinearMapKind kind, AutoDiffConfig config) {
+  StringRef name, AutoDiffLinearMapKind kind, AutoDiffConfig config) {
   // TODO(TF-20): Make the mangling scheme robust. Support demangling.
   beginManglingWithoutPrefix();
 
-  Buffer << "AD__" << name << '_';
+  Demangler D;
+  Node::Kind assocFnNodeKind;
   switch (kind) {
   case AutoDiffLinearMapKind::Differential:
-    Buffer << "_differential_";
+    assocFnNodeKind = Node::Kind::AutoDiffDifferential;
     break;
   case AutoDiffLinearMapKind::Pullback:
-    Buffer << "_pullback_";
+    assocFnNodeKind = Node::Kind::AutoDiffPullback;
     break;
   }
-  Buffer << config.getSILAutoDiffIndices().mangle();
-  if (config.derivativeGenericSignature) {
-    Buffer << '_';
-    appendGenericSignature(config.derivativeGenericSignature);
-  }
-
-  auto result = Storage.str().str();
-  Storage.clear();
-  return result;
+  auto result = getMangledAutoDiffAssociatedFunctionNode(
+      D, name, assocFnNodeKind, config);
+  auto mangled = Demangle::mangleNode(result);
+  verify(mangled);
+  return mangled;
 }
 
 std::string ASTMangler::mangleAutoDiffGeneratedDeclaration(
@@ -491,6 +520,7 @@ std::string ASTMangler::mangleSILDifferentiabilityWitnessKey(
   Storage.clear();
   return result;
 }
+// SWIFT_ENABLE_TENSORFLOW END
 
 // In order for the remangler to work correctly, it must agree with
 // AST mangler on the substitution scheme. The AST mangler will use a

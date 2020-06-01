@@ -329,6 +329,14 @@ private:
     case Node::Kind::AssociatedTypeMetadataAccessor:
     case Node::Kind::AssociatedTypeWitnessTableAccessor:
     case Node::Kind::AutoClosureType:
+    // SWIFT_ENABLE_TENSORFLOW
+    case Node::Kind::AutoDiffParameterIndices:
+    case Node::Kind::AutoDiffResultIndex:
+    case Node::Kind::AutoDiffJVP:
+    case Node::Kind::AutoDiffVJP:
+    case Node::Kind::AutoDiffDifferential:
+    case Node::Kind::AutoDiffPullback:
+    // SWIFT_ENABLE_TENSORFLOW END
     case Node::Kind::BaseConformanceDescriptor:
     case Node::Kind::BaseWitnessTableAccessor:
     case Node::Kind::ClassMetadataBaseOffset:
@@ -666,6 +674,25 @@ private:
       }
     }
   }
+
+  // SWIFT_ENABLE_TENSORFLOW
+  void printAutoDiffAssociatedFunction(NodePointer Node) {
+    if (Node->getKind() == Node::Kind::AutoDiffJVP)
+      Printer << "JVP ";
+    else if (Node->getKind() == Node::Kind::AutoDiffVJP)
+      Printer << "VJP ";
+    else if (Node->getKind() == Node::Kind::AutoDiffDifferential)
+      Printer << "differential ";
+    else if (Node->getKind() == Node::Kind::AutoDiffPullback)
+      Printer << "pullback ";
+    else
+      assert(false && "Unknown autodiff associated function kind");
+    print(Node->getChild(1)); // wrt param indices
+    print(Node->getChild(2)); // result index
+    Printer << "for ";
+    print(Node->getChild(0)); // original function
+  }
+  // SWIFT_ENABLE_TENSORFLOW END
 
   NodePointer getChildIf(NodePointer Node, Node::Kind Kind) {
     auto result =
@@ -1654,6 +1681,27 @@ NodePointer NodePrinter::print(NodePointer Node, bool asPrefixContext) {
     print(Node->getChild(idx));
     return nullptr;
   }
+  case Node::Kind::AutoDiffParameterIndices: {
+    Printer << "wrt ";
+    llvm::interleave(Node->begin(), Node->end(),
+               [&](NodePointer child) {
+      Printer << child->getIndex();
+    }, [&]() { Printer << ", "; });
+    Printer << ' ';
+    return nullptr;
+  }
+  case Node::Kind::AutoDiffResultIndex: {
+    Printer << "source " << Node->getIndex() << ' ';
+    return nullptr;
+  }
+  case Node::Kind::AutoDiffJVP:
+  case Node::Kind::AutoDiffVJP:
+  case Node::Kind::AutoDiffDifferential:
+  case Node::Kind::AutoDiffPullback: {
+    printAutoDiffAssociatedFunction(Node);
+    return nullptr;
+  }
+  // SWIFT_ENABLE_TENSORFLOW END
   case Node::Kind::MergedFunction:
     if (!Options.ShortenThunk) {
       Printer << "merged ";
