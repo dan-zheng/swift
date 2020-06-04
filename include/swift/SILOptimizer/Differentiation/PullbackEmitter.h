@@ -64,8 +64,12 @@ private:
   /// adjoint buffers.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, SILValue> bufferMap;
 
-  /// Mapping from pullback basic blocks to pullback struct arguments.
+  /// Mapping from original basic blocks to pullback struct arguments.
   llvm::DenseMap<SILBasicBlock *, SILArgument *> pullbackStructArguments;
+
+  /// Mapping from original basic blocks to pullback struct `destructure_struct`
+  /// users.
+  llvm::DenseMap<SILBasicBlock *, DestructureStructInst *> pullbackStructDestructures;
 
   /// Mapping from pullback struct field declarations to pullback struct
   /// elements destructured from the linear map basic block argument. In the
@@ -216,6 +220,7 @@ private:
   /// Remap any archetypes into the current function's context.
   SILType remapType(SILType ty);
 
+  /// Get the tangent space for `type`, if it exists.
   Optional<TangentSpace> getTangentSpace(CanType type);
 
   /// Assuming the given type conforms to `Differentiable` after remapping,

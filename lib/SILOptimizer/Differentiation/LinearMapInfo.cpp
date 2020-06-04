@@ -262,6 +262,51 @@ VarDecl *LinearMapInfo::addLinearMapDecl(ApplyInst *ai, SILType linearMapType) {
   return linearMapDecl;
 }
 
+VarDecl *LinearMapInfo::addZeroTangentVectorInitializerDecl(
+    SILBasicBlock *origBB, SILValue aggregate, CanType zeroTangentType) {
+  auto fnType = FunctionType::get({}, zeroTangentType);
+  auto *linearMapStruct = getLinearMapStruct(origBB);
+  std::string linearMapName;
+  switch (kind) {
+  case AutoDiffLinearMapKind::Differential:
+    linearMapName = "differential_zero_" +
+        llvm::itostr(zeroTangentVectorInitializerMap.size());
+    break;
+  case AutoDiffLinearMapKind::Pullback:
+    linearMapName = "pullback_zero_" +
+        llvm::itostr(zeroTangentVectorInitializerMap.size());
+    break;
+  }
+  auto *linearMapDecl = addVarDecl(linearMapStruct, linearMapName, fnType);
+  zeroTangentVectorInitializerMap2.insert({aggregate, linearMapDecl});
+  return linearMapDecl;
+}
+
+VarDecl *LinearMapInfo::addZeroTangentVectorInitializerDecl(
+    SILBasicBlock *origBB, SILValue aggregate, unsigned fieldIndex,
+    CanType zeroTangentType) {
+  auto fnType = FunctionType::get({}, zeroTangentType);
+  auto *linearMapStruct = getLinearMapStruct(origBB);
+  std::string linearMapName = "zero_" + llvm::itostr(zeroTangentVectorInitializerMap.size());
+#if 0
+  std::string linearMapName;
+  auto mapSize = llvm::itostr(zeroTangentVectorInitializerMap.size());
+  switch (kind) {
+  case AutoDiffLinearMapKind::Differential:
+    linearMapName = "differential_zero_" + mapSize + "_field_" + llvm::itostr(fieldIndex);
+    break;
+  case AutoDiffLinearMapKind::Pullback:
+    linearMapName = "pullback_zero_" + mapSize + "_field_" + llvm::itostr(fieldIndex);
+    break;
+  }
+#endif
+  auto *linearMapDecl = addVarDecl(linearMapStruct, linearMapName, fnType);
+  zeroTangentVectorInitializerSet.insert(aggregate);
+  assert(!zeroTangentVectorInitializerMap.count({aggregate, fieldIndex}));
+  zeroTangentVectorInitializerMap.insert({{aggregate, fieldIndex}, linearMapDecl});
+  return linearMapDecl;
+}
+
 void LinearMapInfo::addLinearMapToStruct(ADContext &context, ApplyInst *ai) {
   SmallVector<SILValue, 4> allResults;
   SmallVector<unsigned, 8> activeParamIndices;
@@ -370,6 +415,7 @@ void LinearMapInfo::generateDifferentiationDataStructures(
   auto &astCtx = original->getASTContext();
   auto *loopAnalysis = context.getPassManager().getAnalysis<SILLoopAnalysis>();
   auto *loopInfo = loopAnalysis->get(original);
+  auto *moduleDecl = original->getModule().getSwiftModule();
 
   // Get the derivative function generic signature.
   CanGenericSignature derivativeFnGenSig = nullptr;
@@ -425,7 +471,105 @@ void LinearMapInfo::generateDifferentiationDataStructures(
         LLVM_DEBUG(getADDebugStream()
                    << "Adding linear map struct field for " << *ai);
         addLinearMapToStruct(context, ai);
+      } else if (auto *sei = dyn_cast<StructExtractInst>(&inst)) {
+        if (!shouldDifferentiateInstruction(sei))
+          continue;
+#if 0
+        if (field->getAttrs().hasAttribute<NoDerivativeAttr>())
+          continue;
+#endif
+        if (hasZeroTangentVectorInitializer(sei->getOperand()))
+          continue;
+        LLVM_DEBUG(getADDebugStream()
+                   << "Adding zero tangent vector initializer struct field for "
+                   << *sei);
+        llvm::errs()
+            << "Adding zero tangent vector initializer struct field for "
+            << *sei;
+#if 0
+        auto tanASTType =
+            sei->getOperand()
+                ->getType()
+                .getASTType()
+                ->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))
+                ->getCanonicalType();
+        addZeroTangentVectorInitializerDecl(&origBB, sei->getOperand(),
+                                            tanASTType);
+#endif
+        auto tanStructType = sei->getOperand()
+            ->getType().getASTType()->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))->getType();
+        auto tanASTStructDecl =
+                tanStructType->getStructOrBoundGenericStruct();
+        for (auto pair : enumerate(tanASTStructDecl->getStoredProperties())) {
+          auto *field = pair.value();
+          auto index = pair.index();
+          auto substMap = tanStructType->getMemberSubstitutionMap(
+              field->getModuleContext(), field);
+          auto fieldTy = field->getValueInterfaceType().subst(substMap)->getCanonicalType();
+          llvm::errs() << "FIELD TYPE\n";
+          fieldTy->dump();
+          addZeroTangentVectorInitializerDecl(&origBB, sei->getOperand(), index,
+                                              fieldTy);
+        }
+      } else if (auto *cai = dyn_cast<CopyAddrInst>(&inst)) {
+        if (!shouldDifferentiateInstruction(cai))
+          continue;
+        auto dest = cai->getDest();
       }
+#if 0
+      else if (auto *seai = dyn_cast<StructElementAddrInst>(&inst)) {
+        if (!shouldDifferentiateInstruction(seai))
+          continue;
+        // QUESTION: DO WE WANT THIS? MAYBE NEED MULTIPLE DUE TO NO SSA
+        auto structOperand = seai->getOperand();
+        if (auto *bai = dyn_cast<BeginAccessInst>(structOperand))
+          structOperand = bai->getOperand();
+
+// #if 0
+        if (hasZeroTangentVectorInitializer(structOperand))
+          continue;
+// #endif
+        LLVM_DEBUG(getADDebugStream()
+                   << "Adding zero tangent vector initializer struct field for "
+                   << *seai);
+        llvm::errs()
+            << "Adding zero tangent vector initializer struct field for "
+            << *seai;
+#if 0
+        auto tanASTType =
+            seai->getOperand()
+                ->getType()
+                .getASTType()
+                ->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))
+                ->getCanonicalType();
+        addZeroTangentVectorInitializerDecl(&origBB, seai->getOperand(),
+                                            tanASTType);
+#endif
+        auto tanStructType = seai->getOperand()->getType().getASTType()->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))->getType();
+        auto tanASTStructDecl = tanStructType->getStructOrBoundGenericStruct();
+
+#if 0
+        auto tanStructType = seai->getOperand()
+            ->getType()
+            .getASTType();
+        auto tanASTStructDecl =
+                tanStructType
+                ->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))
+                ->getType()->getStructOrBoundGenericStruct();
+#endif
+        for (auto pair : enumerate(tanASTStructDecl->getStoredProperties())) {
+          auto *field = pair.value();
+          auto index = pair.index();
+          auto substMap = tanStructType->getMemberSubstitutionMap(
+              field->getModuleContext(), field);
+          auto fieldTy = field->getValueInterfaceType().subst(substMap)->getCanonicalType();
+          llvm::errs() << "FIELD TYPE\n";
+          fieldTy->dump();
+          addZeroTangentVectorInitializerDecl(&origBB, structOperand, index,
+                                              fieldTy);
+        }
+      }
+#endif
     }
   }
 
@@ -465,6 +609,8 @@ void LinearMapInfo::generateDifferentiationDataStructures(
 /// 3. The instruction has both an active result (direct or indirect) and an
 ///    active argument.
 bool LinearMapInfo::shouldDifferentiateApplySite(FullApplySite applySite) {
+  if (isSemanticMemberAccessor(original))
+    return false;
   // Function applications with an inout argument should be differentiated.
   for (auto inoutArg : applySite.getInoutArguments())
     if (activityInfo.isActive(inoutArg, indices))
@@ -505,6 +651,16 @@ bool LinearMapInfo::shouldDifferentiateApplySite(FullApplySite applySite) {
 ///    ending, or destroying on an active operand.
 /// 5. The instruction creates an SSA copy of an active operand.
 bool LinearMapInfo::shouldDifferentiateInstruction(SILInstruction *inst) {
+  // If the original function is a semantic member accessor, do not
+  // differentiate any instructions.
+  if (isSemanticMemberAccessor(original))
+    return false;
+  if (auto *sei = dyn_cast<StructExtractInst>(inst))
+    if (sei->getField()->getAttrs().hasAttribute<NoDerivativeAttr>())
+      return false;
+  if (auto *seai = dyn_cast<StructElementAddrInst>(inst))
+    if (seai->getField()->getAttrs().hasAttribute<NoDerivativeAttr>())
+      return false;
   // A full apply site with an active argument and an active result (direct or
   // indirect) should be differentiated.
   if (FullApplySite::isa(inst))

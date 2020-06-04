@@ -78,6 +78,21 @@ private:
   /// corresponding linear map field declaration in the linear map struct.
   llvm::DenseMap<ApplyInst *, VarDecl *> linearMapFieldMap;
 
+  /// Mapping from aggregate projection operations in the original function to
+  /// the corresponding zero tangent vector initializer field declaration in
+  /// the linear map struct.
+  llvm::DenseSet<SILValue> zeroTangentVectorInitializerSet;
+
+  llvm::DenseMap<SILValue, VarDecl *> zeroTangentVectorInitializerMap2;
+// #if 0
+  llvm::DenseMap<std::pair<SILValue, unsigned>, VarDecl *>
+      zeroTangentVectorInitializerMap;
+// #endif
+
+#if 0
+  llvm::DenseMap<SILValue, VarDecl *> zeroTangentVectorInitializerMap;
+#endif
+
   /// Mapping from predecessor-succcessor basic block pairs in the original
   /// function to the corresponding branching trace enum case.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILBasicBlock *>, EnumElementDecl *>
@@ -123,6 +138,25 @@ private:
 
   /// Adds a linear map field to the linear map struct.
   VarDecl *addLinearMapDecl(ApplyInst *ai, SILType linearMapType);
+
+#if 0
+  /// Adds a zero tangent vector initializer field to the linear map struct.
+  VarDecl *addZeroTangentVectorInitializerDecl(
+      SILBasicBlock *origBB, SILValue aggregate, unsigned fieldIndex,
+      CanType zeroTangentType);
+#endif
+
+  /// Adds a zero tangent vector initializer field to the linear map struct.
+  VarDecl *addZeroTangentVectorInitializerDecl(SILBasicBlock *origBB,
+                                               SILValue aggregate,
+                                               unsigned fieldIndex,
+                                               CanType zeroTangentType);
+
+  /// Adds zero tangent vector initializer fields to the linear map struct for
+  /// the given aggregate value.
+  VarDecl *addZeroTangentVectorInitializerDecl(SILBasicBlock *origBB,
+                                               SILValue aggregate,
+                                               CanType zeroTangentType);
 
   /// Given an `apply` instruction, conditionally adds a linear map struct field
   /// for its linear map function if it is active.
@@ -214,6 +248,62 @@ public:
            "No linear map field corresponding to the given `apply`");
     return lookup->getSecond();
   }
+
+  bool hasZeroTangentVectorInitializer(SILValue value) {
+    return zeroTangentVectorInitializerSet.count(value);
+  }
+
+  /// Finds the zero tangent vector initializer declaration in the pullback
+  /// struct for the given value in the original function.
+  VarDecl *lookUpZeroTangentVectorInitializer(SILValue value) {
+    assert(value->getFunction() == original);
+    assert(hasZeroTangentVectorInitializer(value));
+    auto lookup = zeroTangentVectorInitializerMap2.find(value);
+    assert(lookup != zeroTangentVectorInitializerMap2.end() &&
+           "No zero tangent vector initializer field corresponding to the "
+           "given value");
+    return lookup->getSecond();
+#if 0
+    if (lookup != zeroTangentVectorInitializerMap.end())
+      return lookup->getSecond();
+    return nullptr;
+#endif
+  }
+
+  /// Finds the zero tangent vector initializer declaration in the pullback
+  /// struct for the given value in the original function.
+  VarDecl *lookUpZeroTangentVectorInitializer(SILValue value, unsigned index) {
+    assert(value->getFunction() == original);
+    assert(hasZeroTangentVectorInitializer(value));
+    auto lookup = zeroTangentVectorInitializerMap.find({value, index});
+    assert(lookup != zeroTangentVectorInitializerMap.end() &&
+           "No zero tangent vector initializer field corresponding to the "
+           "given value");
+    return lookup->getSecond();
+#if 0
+    if (lookup != zeroTangentVectorInitializerMap.end())
+      return lookup->getSecond();
+    return nullptr;
+#endif
+  }
+
+#if 0
+  /// Finds the zero tangent vector initializer declaration in the pullback
+  /// struct for the given `apply` instruction in the original function.
+  VarDecl *lookUpZeroTangentVectorInitializer(SILValue value) {
+    assert(value->getFunction() == original);
+    auto lookup = zeroTangentVectorInitializerMap.find(value);
+#if 0
+    assert(lookup != zeroTangentVectorInitializerMap.end() &&
+           "No zero tangent vector initializer field corresponding to the "
+           "given value");
+    return lookup->getSecond();
+#endif
+    if (lookup != zeroTangentVectorInitializerMap.end())
+      return lookup->getSecond();
+    return nullptr;
+  }
+#endif
 };
 
 } // end namespace autodiff

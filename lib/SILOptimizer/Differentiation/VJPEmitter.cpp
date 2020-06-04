@@ -22,6 +22,7 @@
 #include "swift/SILOptimizer/Differentiation/PullbackEmitter.h"
 #include "swift/SILOptimizer/Differentiation/Thunk.h"
 
+#include "swift/SIL/Projection.h"
 #include "swift/SILOptimizer/PassManager/PrettyStackTrace.h"
 #include "swift/SILOptimizer/Utils/CFGOptUtils.h"
 #include "swift/SILOptimizer/Utils/SILOptFunctionBuilder.h"
@@ -313,6 +314,14 @@ SILType VJPEmitter::getNominalDeclLoweredType(NominalTypeDecl *nominal) {
   auto nominalType =
       getOpASTType(nominal->getDeclaredInterfaceType()->getCanonicalType());
   return getLoweredType(nominalType);
+}
+
+Optional<TangentSpace> VJPEmitter::getTangentSpace(CanType type) {
+  // Use witness generic signature to remap types.
+  if (auto witnessGenSig = witness->getDerivativeGenericSignature())
+    type = witnessGenSig->getCanonicalTypeInContext(type);
+  return type->getAutoDiffTangentSpace(
+      LookUpConformanceInModule(getModule().getSwiftModule()));
 }
 
 StructInst *VJPEmitter::buildPullbackValueStructValue(TermInst *termInst) {
@@ -793,6 +802,316 @@ void VJPEmitter::visitApplyInst(ApplyInst *ai) {
     if (origCallee->hasOneUse())
       recursivelyDeleteTriviallyDeadInstructions(
           getOpValue(origCallee)->getDefiningInstruction());
+}
+
+/// Given a value of a `Differentiable`-conforming type, emits an `apply`
+/// instruction that calls its `zeroTangentVectorInitializer` property.
+ApplyInst *VJPEmitter::emitApplyZeroTangentVectorInitializerGetter(
+    SILBuilder &builder, SILValue self, SILLocation loc) {
+  auto &astCtx = builder.getASTContext();
+  auto *swiftMod = builder.getModule().getSwiftModule();
+  auto type = self->getType();
+  // Look up conformance to `Differentiable`.
+  auto *differentiableProto =
+      astCtx.getProtocol(KnownProtocolKind::Differentiable);
+  auto confRef =
+      swiftMod->lookupConformance(type.getASTType(), differentiableProto);
+  assert(!confRef.isInvalid() && "Missing conformance to `Differentiable`");
+  // Look up `Differentiable.zeroTangentVectorInitializer.getter`.
+  auto zeroTanInitLookup =
+      differentiableProto->lookupDirect(astCtx.Id_zeroTangentVectorInitializer);
+  auto *zeroTanInitDecl = cast<VarDecl>(zeroTanInitLookup.front());
+  assert(zeroTanInitDecl->isProtocolRequirement());
+  auto *accessorDecl = zeroTanInitDecl->getAccessor(AccessorKind::Get);
+  SILDeclRef accessorDeclRef(accessorDecl, SILDeclRef::Kind::Func);
+  auto silFnType = context.getTypeConverter().getConstantType(
+      TypeExpansionContext::minimal(), accessorDeclRef);
+  // %wm = witness_method ...
+  auto *getter = builder.createWitnessMethod(loc, type.getASTType(), confRef,
+                                             accessorDeclRef, silFnType);
+  auto subMap = SubstitutionMap::getProtocolSubstitutions(
+      differentiableProto, type.getASTType(), confRef);
+  AllocStackInst *selfBuffer = nullptr;
+  if (self->getType().isObject()) {
+    selfBuffer = builder.createAllocStack(loc, self->getType());
+    auto selfCopy = builder.emitCopyValueOperation(loc, self);
+    builder.emitStoreValueOperation(loc, selfCopy, selfBuffer,
+                                    StoreOwnershipQualifier::Init);
+    self = selfBuffer;
+  }
+  auto result = builder.createApply(loc, getter, subMap, {self},
+                                    /*isNonThrowing*/ false);
+  assert(result->getType().is<SILFunctionType>());
+  if (selfBuffer) {
+    builder.emitDestroyAddr(loc, selfBuffer);
+    builder.createDeallocStack(loc, selfBuffer);
+  }
+  builder.emitDestroyValueOperation(loc, getter);
+  return result;
+}
+
+void VJPEmitter::visitStructExtractInst(StructExtractInst *sei) {
+  TypeSubstCloner::visitStructExtractInst(sei);
+  if (!pullbackInfo.shouldDifferentiateInstruction(sei))
+    return;
+  if (registeredZeroTangentVectorInitializerValues[sei->getParent()].count(sei->getOperand()))
+    return;
+  registeredZeroTangentVectorInitializerValues[sei->getParent()].insert(sei->getOperand());
+  llvm::errs() << "VJPEmitter::visitStructExtractInst:\n";
+  sei->dump();
+  auto loc = sei->getLoc();
+  auto structValue = getOpValue(sei->getOperand());
+  // auto structValueCopy = getBuilder().emitCopyValueOperation(loc, structValue);
+  auto structValueCopy = structValue;
+  auto *dsi = getBuilder().emitDestructureValueOperation(loc, structValueCopy);
+  auto structType = structValue->getType().getASTType();
+  auto structDecl = structType->getStructOrBoundGenericStruct();
+  unsigned adjIndex = 0;
+  // for (auto *field : structDecl->getStoredProperties()) {
+  for (auto pair : enumerate(structDecl->getStoredProperties())) {
+    auto *field = pair.value();
+    auto fieldIndex = pair.index();
+    auto structFieldValue = dsi->getResult(fieldIndex);
+    if (auto *originalProperty = field->getOriginalWrappedProperty()) {
+      llvm::errs() << "FOUND ORIGINAL PROPERTY\n";
+      originalProperty->dump();
+      field = originalProperty;
+      auto *originalPropertyGetterDecl = originalProperty->getAccessor(AccessorKind::Get);
+      SILOptFunctionBuilder fb(context.getTransform());
+      auto *subscriptGetterFn = fb.getOrCreateFunction(
+          loc, SILDeclRef(originalPropertyGetterDecl), NotForDefinition);
+      subscriptGetterFn->dump();
+      auto *subscriptGetterFnRef = getBuilder().createFunctionRef(loc, subscriptGetterFn);
+      structFieldValue = getBuilder().createApply(loc, subscriptGetterFnRef, SubstitutionMap(), {structFieldValue});
+    }
+    llvm::errs() << "LOOKING AT FIELD\n";
+    field->dump();
+    if (field->getAttrs().hasAttribute<NoDerivativeAttr>())
+      continue;
+    llvm::errs() << "PASSED FIELD\n";
+    // TODO: REMAP TYPE
+    if (!getTangentSpace(getOpASTType(field->getValueInterfaceType()->getCanonicalType())))
+      continue;
+    auto *zeroTanInitDecl =
+        pullbackInfo.lookUpZeroTangentVectorInitializer(sei->getOperand(), adjIndex);
+    SILValue zeroTanInit = emitApplyZeroTangentVectorInitializerGetter(
+        getBuilder(), structFieldValue, loc);
+    // If actual pullback type does not match lowered pullback type, reabstract
+    // the pullback using a thunk.
+    auto actualPullbackType =
+        getOpType(zeroTanInit->getType()).getAs<SILFunctionType>();
+    auto loweredPullbackType =
+        getOpType(getLoweredType(zeroTanInitDecl->getInterfaceType()))
+            .castTo<SILFunctionType>();
+    if (!loweredPullbackType->isEqual(actualPullbackType)) {
+      llvm::errs() << "ACTUAL PULLBACK TYPE\n";
+      actualPullbackType->dump();
+      llvm::errs() << "LOWERED PULLBACK TYPE\n";
+      loweredPullbackType->dump();
+      // Set non-reabstracted original pullback type in nested apply info.
+      SILOptFunctionBuilder fb(context.getTransform());
+      zeroTanInit = reabstractFunction(
+          getBuilder(), fb, loc, zeroTanInit, loweredPullbackType,
+          [this](SubstitutionMap subs) -> SubstitutionMap {
+            return this->getOpSubstitutionMap(subs);
+          });
+    }
+    vjp->dump();
+    pullbackValues[sei->getParent()].push_back(zeroTanInit);
+    ++adjIndex;
+  }
+#if 0
+  auto *zeroTanInitDecl =
+      pullbackInfo.lookUpZeroTangentVectorInitializer(sei->getOperand(), sei->getFieldNo());
+  SILValue zeroTanInit = emitApplyZeroTangentVectorInitializerGetter(
+      getBuilder(), structValue, sei->getLoc());
+  // If actual pullback type does not match lowered pullback type, reabstract
+  // the pullback using a thunk.
+  auto actualPullbackType =
+      getOpType(zeroTanInit->getType()).getAs<SILFunctionType>();
+  auto loweredPullbackType =
+      getOpType(getLoweredType(zeroTanInitDecl->getInterfaceType()))
+          .castTo<SILFunctionType>();
+  if (!loweredPullbackType->isEqual(actualPullbackType)) {
+    // Set non-reabstracted original pullback type in nested apply info.
+    SILOptFunctionBuilder fb(context.getTransform());
+    zeroTanInit = reabstractFunction(
+        getBuilder(), fb, sei->getLoc(), zeroTanInit, loweredPullbackType,
+        [this](SubstitutionMap subs) -> SubstitutionMap {
+          return this->getOpSubstitutionMap(subs);
+        });
+  }
+  pullbackValues[sei->getParent()].push_back(zeroTanInit);
+#endif
+}
+
+void VJPEmitter::visitCopyAddrInst(CopyAddrInst *cai) {
+  TypeSubstCloner::visitCopyAddrInst(cai);
+  auto *bb = cai->getParent();
+  auto dest = cai->getDest();
+  auto *destInst = dest->getDefiningInstruction();
+  if (!destInst)
+    return;
+  if (!pullbackInfo.shouldDifferentiateInstruction(destInst))
+    return;
+
+  llvm::errs() << "VJPEmitter::visitCopyAddrInst\n";
+  cai->dump();
+  // Projection(dest).
+  if (!isa<StructElementAddrInst>(dest))
+    return;
+  auto base = peerThroughProjections(dest);
+  if (!base)
+    return;
+  if (registeredZeroTangentVectorInitializerValues[bb].count(base))
+    return;
+  auto loc = destInst->getLoc();
+
+  llvm::errs() << "BASE!\n";
+  base->dump();
+
+  auto newBase = getOpValue(base);
+  llvm::errs() << "NEW BASE!\n";
+  newBase->dump();
+
+  auto *tanStruct = newBase->getType().getASTType()->getStructOrBoundGenericStruct();
+  assert(tanStruct);
+
+  SILValue zeroTanInit = emitApplyZeroTangentVectorInitializerGetter(
+      getBuilder(), newBase, loc);
+#if 0
+  // If actual pullback type does not match lowered pullback type, reabstract
+  // the pullback using a thunk.
+  auto *zeroTanInitDecl =
+      pullbackInfo.lookUpZeroTangentVectorInitializer(structOperand, adjIndex);
+  auto actualPullbackType =
+      getOpType(zeroTanInit->getType()).getAs<SILFunctionType>();
+  auto loweredPullbackType =
+      getOpType(getLoweredType(zeroTanInitDecl->getInterfaceType()))
+          .castTo<SILFunctionType>();
+  if (!loweredPullbackType->isEqual(actualPullbackType)) {
+    llvm::errs() << "ACTUAL PULLBACK TYPE\n";
+    actualPullbackType->dump();
+    llvm::errs() << "LOWERED PULLBACK TYPE\n";
+    loweredPullbackType->dump();
+    // Set non-reabstracted original pullback type in nested apply info.
+    originalZeroTangentVectorInitializerTypes[field] = actualPullbackType;
+    SILOptFunctionBuilder fb(context.getTransform());
+    zeroTanInit = reabstractFunction(
+        getBuilder(), fb, loc, zeroTanInit, loweredPullbackType,
+        [this](SubstitutionMap subs) -> SubstitutionMap {
+          return this->getOpSubstitutionMap(subs);
+        });
+  }
+#endif
+  pullbackValues[bb].push_back(zeroTanInit);
+
+#if 0
+  auto structOperand = dest->getOperand();
+  if (auto *bai = dyn_cast<BeginAccessInst>(structOperand))
+    structOperand = bai->getOperand();
+  auto structValue = getOpValue(structOperand);
+#endif
+}
+
+void VJPEmitter::visitStructElementAddrInst(StructElementAddrInst *seai) {
+  TypeSubstCloner::visitStructElementAddrInst(seai);
+
+#if 0
+  if (!pullbackInfo.shouldDifferentiateInstruction(seai))
+    return;
+
+  auto loc = seai->getLoc();
+  auto structOperand = seai->getOperand();
+  if (auto *bai = dyn_cast<BeginAccessInst>(structOperand))
+    structOperand = bai->getOperand();
+  auto structValue = getOpValue(structOperand);
+
+  if (registeredZeroTangentVectorInitializerValues[seai->getParent()].count(structValue))
+    return;
+  registeredZeroTangentVectorInitializerValues[seai->getParent()].insert(structValue);
+  llvm::errs() << "VJPEmitter::visitStructElementAddrInst:\n";
+  seai->dump();
+
+  // auto structValueCopy = getBuilder().emitCopyValueOperation(loc, structValue);
+  auto structValueCopy = structValue;
+  auto structType = structValue->getType().getASTType();
+  auto structDecl = structType->getStructOrBoundGenericStruct();
+  unsigned adjIndex = 0;
+  for (auto *field : structDecl->getStoredProperties()) {
+    // TODO: REMAP TYPE
+    // ALSO SKIP NODERIVATIVE
+    if (auto *originalProperty = field->getOriginalWrappedProperty())
+      field = originalProperty;
+    if (field->getAttrs().hasAttribute<NoDerivativeAttr>())
+      continue;
+    if (!getTangentSpace(getOpASTType(field->getValueInterfaceType()->getCanonicalType())))
+      continue;
+    llvm::errs() << "FIELD!\n";
+    field->dump();
+    llvm::errs() << "\n";
+    // TODO: Check only Differentiable properties
+    auto *zeroTanInitDecl =
+        pullbackInfo.lookUpZeroTangentVectorInitializer(structOperand, adjIndex);
+    assert(zeroTanInitDecl);
+    SILValue structFieldValue;
+    if (adjIndex == seai->getFieldNo()) {
+      structFieldValue = getOpValue(seai);
+    } else {
+      structFieldValue = getBuilder().createStructElementAddr(loc, structValueCopy, field);
+    }
+    SILValue zeroTanInit = emitApplyZeroTangentVectorInitializerGetter(
+        getBuilder(), structFieldValue, loc);
+    // If actual pullback type does not match lowered pullback type, reabstract
+    // the pullback using a thunk.
+    auto actualPullbackType =
+        getOpType(zeroTanInit->getType()).getAs<SILFunctionType>();
+    auto loweredPullbackType =
+        getOpType(getLoweredType(zeroTanInitDecl->getInterfaceType()))
+            .castTo<SILFunctionType>();
+    if (!loweredPullbackType->isEqual(actualPullbackType)) {
+      llvm::errs() << "ACTUAL PULLBACK TYPE\n";
+      actualPullbackType->dump();
+      llvm::errs() << "LOWERED PULLBACK TYPE\n";
+      loweredPullbackType->dump();
+      // Set non-reabstracted original pullback type in nested apply info.
+      originalZeroTangentVectorInitializerTypes[field] = actualPullbackType;
+      SILOptFunctionBuilder fb(context.getTransform());
+      zeroTanInit = reabstractFunction(
+          getBuilder(), fb, loc, zeroTanInit, loweredPullbackType,
+          [this](SubstitutionMap subs) -> SubstitutionMap {
+            return this->getOpSubstitutionMap(subs);
+          });
+    }
+    pullbackValues[seai->getParent()].push_back(zeroTanInit);
+    ++adjIndex;
+  }
+  vjp->dump();
+
+#if 0
+  auto *zeroTanInitDecl =
+      pullbackInfo.lookUpZeroTangentVectorInitializer(seai->getOperand(), seai->getFieldNo());
+  SILValue zeroTanInit = emitApplyZeroTangentVectorInitializerGetter(
+      getBuilder(), getOpValue(seai->getOperand()), seai->getLoc());
+  // If actual pullback type does not match lowered pullback type, reabstract
+  // the pullback using a thunk.
+  auto actualPullbackType =
+      getOpType(zeroTanInit->getType()).getAs<SILFunctionType>();
+  auto loweredPullbackType =
+      getOpType(getLoweredType(zeroTanInitDecl->getInterfaceType()))
+          .castTo<SILFunctionType>();
+  if (!loweredPullbackType->isEqual(actualPullbackType)) {
+    // Set non-reabstracted original pullback type in nested apply info.
+    SILOptFunctionBuilder fb(context.getTransform());
+    zeroTanInit = reabstractFunction(
+        getBuilder(), fb, seai->getLoc(), zeroTanInit, loweredPullbackType,
+        [this](SubstitutionMap subs) -> SubstitutionMap {
+          return this->getOpSubstitutionMap(subs);
+        });
+  }
+  pullbackValues[seai->getParent()].push_back(zeroTanInit);
+#endif
+#endif // begin
 }
 
 void VJPEmitter::visitDifferentiableFunctionInst(
