@@ -852,8 +852,16 @@ bool PullbackEmitter::run() {
     // If node is the `nullptr` marker basic block, do not push it.
     if (!origBB)
       continue;
+    if (isa<UnreachableInst>(origBB->getTerminator()))
+      continue;
     postOrderPostDomOrder.push_back(origBB);
   }
+  // postDomOrder.d
+  llvm::errs() << "POST DOM ORDER\n";
+  for (auto *origBB : postOrderPostDomOrder) {
+    llvm::errs() << "BB " << origBB->getDebugID() << "\n";
+  }
+  // postDomInfo->getRootNode()->d
   for (auto *origBB : postOrderPostDomOrder) {
     auto *pullbackBB = pullback.createBasicBlock();
     pullbackBBMap.insert({origBB, pullbackBB});
@@ -1230,6 +1238,11 @@ void PullbackEmitter::visitSILBasicBlock(SILBasicBlock *bb) {
   // so we leave the block non-terminated.
   if (bb->isEntry())
     return;
+
+#if 0
+  if (isa<UnreachableInst>(bb->getTerminator()))
+    return;
+#endif
 
   // Otherwise, add a `switch_enum` terminator for non-exit
   // pullback blocks.

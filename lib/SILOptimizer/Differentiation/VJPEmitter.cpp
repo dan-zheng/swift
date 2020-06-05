@@ -524,6 +524,27 @@ void VJPEmitter::visitCheckedCastAddrBranchInst(
       ccabi->getTrueBBCount(), ccabi->getFalseBBCount());
 }
 
+void VJPEmitter::visitTryApplyInst(TryApplyInst *tai) {
+  // Build pullback struct value for original block.
+  auto *pbStructVal = buildPullbackValueStructValue(tai);
+  // Create a new `try_apply` instruction.
+  auto args = getOpValueArray<8>(tai->getArguments());
+  getBuilder().createTryApply(tai->getLoc(), getOpValue(tai->getCallee()),
+                              getOpSubstitutionMap(tai->getSubstitutionMap()), args,
+                              createTrampolineBasicBlock(tai, pbStructVal, tai->getNormalBB()),
+                              createTrampolineBasicBlock(tai, pbStructVal, tai->getErrorBB()));
+}
+
+void VJPEmitter::visitUnreachableInst(UnreachableInst *ui) {
+  // TODO: Delete this
+  TypeSubstCloner::visitUnreachableInst(ui);
+#if 0
+  // Build pullback struct value for original block.
+  auto *pbStructVal = buildPullbackValueStructValue(ui);
+  getBuilder().createUnreachable(ui->getLoc());
+#endif
+}
+
 void VJPEmitter::visitApplyInst(ApplyInst *ai) {
   // If callee should not be differentiated, do standard cloning.
   if (!pullbackInfo.shouldDifferentiateApplySite(ai)) {
@@ -828,15 +849,16 @@ bool VJPEmitter::run() {
   // `-enable-strip-ownership-after-serialization` is true.
   mergeBasicBlocks(vjp);
 
+  LLVM_DEBUG(getADDebugStream()
+             << "Generated VJP for " << original->getName() << ":\n"
+             << *vjp);
+
   // Generate pullback code.
   PullbackEmitter PullbackEmitter(*this);
   if (PullbackEmitter.run()) {
     errorOccurred = true;
     return true;
   }
-  LLVM_DEBUG(getADDebugStream()
-             << "Generated VJP for " << original->getName() << ":\n"
-             << *vjp);
   return errorOccurred;
 }
 
