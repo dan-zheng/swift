@@ -751,6 +751,25 @@ bool PullbackEmitter::run() {
     return false;
   }
 
+  // Perform some non-differentiability diagnostics.
+  for (auto &origBB : getOriginal()) {
+    auto type = v->getType();
+    // Diagnose `try_apply` with active result, which is not yet supported.
+#if 0
+    auto *termInst = origBB.getTerminator();
+    if (auto *tai = dyn_cast<TryApplyInst>(termInst)) {
+      auto *normalBBArg = tai->getNormalBB()->getArgument(0);
+      if (getActivityInfo().isActive(normalBBArg, getIndices())) {
+        getContext().emitNondifferentiabilityError(
+            tai, getInvoker(), diag::autodiff_active_try_apply_unsupported);
+        errorOccurred = true;
+      }
+    }
+#endif
+  }
+  if (errorOccurred)
+    return true;
+
   // Get dominated active values in original blocks.
   // Adjoint values of dominated active values are passed as pullback block
   // arguments.
@@ -814,6 +833,20 @@ bool PullbackEmitter::run() {
             v, getInvoker(), diag::autodiff_enums_unsupported);
         errorOccurred = true;
         diagnosedActiveEnumValue = true;
+      }
+      // Diagnose `try_apply` active "result" (normal successor block argument),
+      // which is not yet supported.
+      if (auto *arg = dyn_cast<SILArgument>(v)) {
+        if (auto *termInst = arg->getSingleTerminator()) {
+          if (auto *tai = dyn_cast<TryApplyInst>(termInst)) {
+            auto *normalBBArg = tai->getNormalBB()->getArgument(0);
+            if (getActivityInfo().isActive(normalBBArg, getIndices())) {
+              getContext().emitNondifferentiabilityError(
+                  tai, getInvoker(), diag::autodiff_active_try_apply_unsupported);
+              errorOccurred = true;
+            }
+          }
+        }
       }
       // Skip address projections.
       // Address projections do not need their own adjoint buffers; they

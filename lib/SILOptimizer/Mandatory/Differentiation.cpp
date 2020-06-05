@@ -158,7 +158,7 @@ static bool diagnoseUnsupportedControlFlow(ADContext &context,
         isa<SwitchEnumInst>(term) || isa<SwitchEnumAddrInst>(term) ||
         isa<CheckedCastBranchInst>(term) ||
         isa<CheckedCastValueBranchInst>(term) ||
-        isa<CheckedCastAddrBranchInst>(term))
+        isa<CheckedCastAddrBranchInst>(term) || isa<TryApplyInst>(term))
       continue;
     // If terminator is an unsupported branching terminator, emit an error.
     if (term->isBranch()) {
