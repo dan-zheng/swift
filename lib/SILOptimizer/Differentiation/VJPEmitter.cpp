@@ -524,6 +524,18 @@ void VJPEmitter::visitCheckedCastAddrBranchInst(
       ccabi->getTrueBBCount(), ccabi->getFalseBBCount());
 }
 
+void VJPEmitter::visitTryApplyInst(TryApplyInst *tai) {
+  // Build pullback struct value for original block.
+  auto *pbStructVal = buildPullbackValueStructValue(tai);
+  // Create a new `try_apply` instruction.
+  auto args = getOpValueArray<8>(tai->getArguments());
+  getBuilder().createTryApply(
+      tai->getLoc(), getOpValue(tai->getCallee()),
+      getOpSubstitutionMap(tai->getSubstitutionMap()), args,
+      createTrampolineBasicBlock(tai, pbStructVal, tai->getNormalBB()),
+      createTrampolineBasicBlock(tai, pbStructVal, tai->getErrorBB()));
+}
+
 void VJPEmitter::visitApplyInst(ApplyInst *ai) {
   // If callee should not be differentiated, do standard cloning.
   if (!pullbackInfo.shouldDifferentiateApplySite(ai)) {

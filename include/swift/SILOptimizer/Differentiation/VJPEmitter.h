@@ -160,6 +160,8 @@ public:
 
   void visitCheckedCastAddrBranchInst(CheckedCastAddrBranchInst *ccabi);
 
+  void visitTryApplyInst(TryApplyInst *tai);
+
   // If an `apply` has active results or active inout arguments, replace it
   // with an `apply` of its VJP.
   void visitApplyInst(ApplyInst *ai);

@@ -736,4 +736,40 @@ ControlFlowTests.test("BranchingCastInstructions") {
   expectEqual((3, 1), valueWithGradient(at: Float(3), in: conditionalCast))
 }
 
+ControlFlowTests.test("ThrowingCalls") {
+  // TF-433: Test non-active `try_apply` differentiation.
+
+  func rethrowing(_ body: () throws -> Void) rethrows -> Void {}
+  @differentiable
+  func identity(_ x: Float) -> Float {
+    rethrowing({}) // non-active `try_apply`
+    return x
+  }
+  expectEqual(10, pullback(at: 3, in: identity)(10))
+
+  func mapping(_ x: Float, _ axes: [Int]) -> Float {
+    let ints = axes.map { $0 }.max()!
+    print("Max", ints)
+    return x
+  }
+  print(gradient(at: 3, in: { x in mapping(x, [2, 3]) }))
+
+  func mapping2(_ x: [Float]) -> [Float] {
+    let ints = x.map { $0 }.max()!
+    print("Max", ints)
+    return x
+  }
+  print(pullback(at: 3, in: { x in mapping2([2, 3]) })([10, 10]))
+
+/*
+  // TF-433: Test non-active `try_apply` differentiation.
+  func mapping(_ x: Float, _ axes: [Int]) -> Float {
+    let ints = axes.map { $0 }.max()!
+    print("Max", ints)
+    return x
+  }
+  print(gradient(at: 3, in: { x in mapping(x, [2, 3]) }))
+*/
+}
+
 runAllTests()
