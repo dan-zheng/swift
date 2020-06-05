@@ -141,6 +141,9 @@ template <class Inst> Inst *peerThroughFunctionConversions(SILValue value) {
   return nullptr;
 }
 
+// TODO: Document
+SILValue peerThroughProjections(SILValue value);
+
 //===----------------------------------------------------------------------===//
 // Code emission utilities
 //===----------------------------------------------------------------------===//

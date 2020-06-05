@@ -2655,6 +2655,11 @@ static bool isSimplePartialApply(IRGenFunction &IGF, PartialApplyInst *i) {
 }
 
 void IRGenSILFunction::visitPartialApplyInst(swift::PartialApplyInst *i) {
+#if 0
+  llvm::errs() << "IRGenSILFunction::visitPartialApplyInst\n";
+  i->getFunction()->dump();
+  i->dumpInContext();
+#endif
   SILValue v(i);
 
   if (isSimplePartialApply(*this, i)) {

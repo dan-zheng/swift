@@ -76,6 +76,13 @@ private:
   /// struct instances.
   llvm::DenseMap<SILBasicBlock *, SmallVector<SILValue, 8>> pullbackValues;
 
+  /// Mapping from original blocks to values which have a registered zero
+  /// tangent vector initializer. Used to build pullback struct instances.
+  llvm::DenseMap<SILBasicBlock *, llvm::DenseSet<SILValue>> registeredZeroTangentVectorInitializerValues;
+
+  // llvm::DenseMap<SILValue, CanSILFunctionType> originalZeroTangentVectorInitializerTypes;
+  llvm::DenseMap<VarDecl *, CanSILFunctionType> originalZeroTangentVectorInitializerTypes;
+
   ASTContext &getASTContext() const { return vjp->getASTContext(); }
   SILModule &getModule() const { return vjp->getModule(); }
   const SILAutoDiffIndices getIndices() const {
@@ -130,6 +137,9 @@ private:
                                             StructInst *pbStructVal,
                                             SILBasicBlock *succBB);
 
+  /// Get the tangent space for `type`, if it exists.
+  Optional<TangentSpace> getTangentSpace(CanType type);
+
   /// Build a pullback struct value for the given original terminator
   /// instruction.
   StructInst *buildPullbackValueStructValue(TermInst *termInst);
@@ -140,6 +150,11 @@ private:
                                       SILBasicBlock *predBB,
                                       SILBasicBlock *succBB,
                                       SILValue pbStructVal);
+
+  // TODO: Document
+  ApplyInst *emitApplyZeroTangentVectorInitializerGetter(SILBuilder &builder,
+                                                         SILValue self,
+                                                         SILLocation loc);
 
 public:
   void visitReturnInst(ReturnInst *ri);
@@ -160,9 +175,15 @@ public:
 
   void visitCheckedCastAddrBranchInst(CheckedCastAddrBranchInst *ccabi);
 
+  void visitCopyAddrInst(CopyAddrInst *cai);
+
   // If an `apply` has active results or active inout arguments, replace it
   // with an `apply` of its VJP.
   void visitApplyInst(ApplyInst *ai);
+
+  void visitStructExtractInst(StructExtractInst *sei);
+
+  void visitStructElementAddrInst(StructElementAddrInst *seai);
 
   void visitDifferentiableFunctionInst(DifferentiableFunctionInst *dfi);
 };

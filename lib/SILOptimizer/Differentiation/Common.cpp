@@ -257,6 +257,22 @@ void collectMinimalIndicesForFunctionCall(
   }));
 }
 
+SILValue peerThroughProjections(SILValue value) {
+  if (auto *bai = dyn_cast<BeginAccessInst>(value))
+    return peerThroughProjections(bai->getOperand());
+  if (auto *seai = dyn_cast<StructElementAddrInst>(value)) {
+    auto *field = seai->getField();
+    if (auto *originalProperty = field->getOriginalWrappedProperty())
+      field = originalProperty;
+    if (field->getAttrs().hasAttribute<NoDerivativeAttr>())
+      return SILValue();
+    return peerThroughProjections(seai->getOperand());
+  }
+  if (auto *teai = dyn_cast<TupleElementAddrInst>(value))
+    return peerThroughProjections(teai->getOperand());
+  return value;
+}
+
 //===----------------------------------------------------------------------===//
 // Code emission utilities
 //===----------------------------------------------------------------------===//

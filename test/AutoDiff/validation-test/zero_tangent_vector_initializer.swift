@@ -38,22 +38,13 @@ ZeroTangentVectorTests.test("DifferentiationCorrectness") {
   }
   func test(_ s: Struct) -> [Float] {
     let result = concatenated(s, s).withDerivative { dresult in
-      // FIXME(TF-1008): Fix incorrect derivative values for
-      // "projection operation" operands when differentiation transform uses
-      // `Differentiable.zeroTangentVectorInitializer`.
-      //   Actual: TangentVector(x: [1.0, 1.0, 1.0], y: [])
-      // Expected: TangentVector(x: [1.0, 1.0, 1.0], y: [1.0, 1.0, 1.0])
       expectEqual(dresult, Struct.TangentVector(x: [1, 1, 1], y: [1, 1, 1]))
     }
     return result.x
   }
   let s = Struct(x: [1, 2, 3], y: [1, 2, 3])
   let pb = pullback(at: s, in: test)
-  // FIXME(TF-1008): Remove `expectCrash` when differentiation transform uses
-  // `Differentiable.zeroTangentVectorInitializer`.
-  expectCrash {
-    _ = pb([1, 1, 1])
-  }
+  _ = pb([1, 1, 1])
 }
 
 runAllTests()
