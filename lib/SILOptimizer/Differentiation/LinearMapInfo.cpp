@@ -38,6 +38,7 @@ static GenericParamList *cloneGenericParameters(ASTContext &ctx,
                                                 DeclContext *dc,
                                                 CanGenericSignature sig) {
   SmallVector<GenericTypeParamDecl *, 2> clonedParams;
+
   for (auto paramType : sig->getGenericParams()) {
     auto clonedParam = new (ctx)
         GenericTypeParamDecl(dc, paramType->getName(), SourceLoc(),
@@ -46,7 +47,42 @@ static GenericParamList *cloneGenericParameters(ASTContext &ctx,
     clonedParam->setImplicit(true);
     clonedParams.push_back(clonedParam);
   }
-  return GenericParamList::create(ctx, SourceLoc(), clonedParams, SourceLoc());
+  llvm::errs() << "BEFORE:\n";
+  GenericParamList::create(ctx, SourceLoc(), clonedParams, SourceLoc())->dump();
+  clonedParams.clear();
+
+  GenericParamList *genericParams = nullptr;
+  // unsigned lastDepth = -1;
+  unsigned lastDepth = sig->getGenericParams().front()->getDepth();
+  for (auto paramType : sig->getGenericParams()) {
+    if (paramType->getDepth() > lastDepth) {
+      auto *params = GenericParamList::create(ctx, SourceLoc(), clonedParams, SourceLoc());
+      params->setOuterParameters(genericParams);
+      genericParams = params;
+#if 0
+      auto *params = GenericParamList::create(ctx, SourceLoc(), clonedParams, SourceLoc());
+      if (!genericParams) {
+        genericParams = params;
+      } else {
+        params->setOuterParameters(genericParams);
+        genericParams = params;
+      }
+#endif
+      clonedParams.clear();
+    }
+    auto clonedParam = new (ctx)
+        GenericTypeParamDecl(dc, paramType->getName(), SourceLoc(),
+                             paramType->getDepth(), paramType->getIndex());
+    clonedParam->setDeclContext(dc);
+    clonedParam->setImplicit(true);
+    clonedParams.push_back(clonedParam);
+    lastDepth = clonedParam->getDepth();
+  }
+  genericParams = GenericParamList::create(ctx, SourceLoc(), clonedParams, SourceLoc());
+  assert(genericParams);
+  llvm::errs() << "AFTER:\n";
+  genericParams->dump();
+  return genericParams;
 }
 
 //===----------------------------------------------------------------------===//
