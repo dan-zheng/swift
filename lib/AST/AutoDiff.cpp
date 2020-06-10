@@ -421,3 +421,8 @@ void DerivativeFunctionTypeError::log(raw_ostream &OS) const {
   }
   }
 }
+
+llvm::Expected<VarDecl *>
+TangentStoredPropertyRequest::evaluate(Evaluator &evaluator, VarDecl *originalField) const {
+  return nullptr;
+}

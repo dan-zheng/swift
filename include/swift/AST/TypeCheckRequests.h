@@ -2193,6 +2193,25 @@ public:
   bool isCached() const { return true; }
 };
 
+/// Resolves the referenced original declaration for a `@derivative` attribute.
+class TangentStoredPropertyRequest
+    // : public SimpleRequest<TangentStoredPropertyRequest, VarDecl *(VarDecl *), RequestFlags::Cached> {
+    : public SimpleRequest<TangentStoredPropertyRequest, llvm::Expected<VarDecl *>(VarDecl *), RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  // VarDecl *evaluate(Evaluator &evaluator, VarDecl *originalField) const;
+  llvm::Expected<VarDecl *> evaluate(Evaluator &evaluator, VarDecl *originalField) const;
+
+public:
+  // Caching.
+  bool isCached() const { return true; }
+};
+
 /// Checks whether a type eraser has a viable initializer.
 class TypeEraserHasViableInitRequest
     : public SimpleRequest<TypeEraserHasViableInitRequest,
