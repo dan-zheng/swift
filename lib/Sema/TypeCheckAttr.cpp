@@ -3446,15 +3446,12 @@ IndexSubset *TypeChecker::inferDifferentiabilityParameters(
   };
 
   // Get all parameter types.
-  // NOTE: To be robust, result function type parameters should be added only if
-  // `functionType` comes from a static/instance method, and not a free function
-  // returning a function type. In practice, this code path should not be
-  // reachable for free functions returning a function type.
+  for (auto &param : functionType->getParams())
+    allParamTypes.push_back(param.getPlainType());
+  // Get all curried parameter types (for static and instance methods).
   if (auto resultFnType = functionType->getResult()->getAs<AnyFunctionType>())
     for (auto &param : resultFnType->getParams())
       allParamTypes.push_back(param.getPlainType());
-  for (auto &param : functionType->getParams())
-    allParamTypes.push_back(param.getPlainType());
 
   // Set differentiability parameters.
   for (unsigned i : range(parameterBits.size()))
@@ -3483,6 +3480,7 @@ static IndexSubset *computeDifferentiabilityParameters(
   auto &params = *function->getParameters();
   auto numParams = function->getParameters()->size();
   auto isInstanceMethod = function->isInstanceMember();
+  auto hasCurriedSelf = function->hasCurriedSelf();
 
   // Diagnose if function has no parameters.
   if (params.size() == 0) {
@@ -3531,23 +3529,24 @@ static IndexSubset *computeDifferentiabilityParameters(
     auto paramLoc = parsedDiffParams[i].getLoc();
     switch (parsedDiffParams[i].getKind()) {
     case ParsedAutoDiffParameter::Kind::Named: {
-      auto nameIter = llvm::find_if(params.getArray(), [&](ParamDecl *param) {
+      auto paramIter = llvm::find_if(params.getArray(), [&](ParamDecl *param) {
         return param->getName() == parsedDiffParams[i].getName();
       });
       // Parameter name must exist.
-      if (nameIter == params.end()) {
+      if (paramIter == params.end()) {
         diags.diagnose(paramLoc, diag::diff_params_clause_param_name_unknown,
                        parsedDiffParams[i].getName());
         return nullptr;
       }
       // Parameter names must be specified in the original order.
-      unsigned index = std::distance(params.begin(), nameIter);
+      unsigned index = std::distance(params.begin(), paramIter);
       if ((int)index <= lastIndex) {
         diags.diagnose(paramLoc,
                        diag::diff_params_clause_params_not_original_order);
         return nullptr;
       }
-      parameterBits.set(index);
+      llvm::errs() << "NAME: '" << (*paramIter)->getName() << ", 'INDEX: " << (index + hasCurriedSelf) << "\n";
+      parameterBits.set(index + hasCurriedSelf);
       lastIndex = index;
       break;
     }
@@ -3563,7 +3562,7 @@ static IndexSubset *computeDifferentiabilityParameters(
         diags.diagnose(paramLoc, diag::diff_params_clause_self_must_be_first);
         return nullptr;
       }
-      parameterBits.set(parameterBits.size() - 1);
+      parameterBits.set(0);
       break;
     }
     case ParsedAutoDiffParameter::Kind::Ordered: {
@@ -3579,7 +3578,7 @@ static IndexSubset *computeDifferentiabilityParameters(
                        diag::diff_params_clause_params_not_original_order);
         return nullptr;
       }
-      parameterBits.set(index);
+      parameterBits.set(index + hasCurriedSelf);
       lastIndex = index;
       break;
     }
@@ -3908,16 +3907,37 @@ getTransposeOriginalFunctionType(AnyFunctionType *transposeFnType,
   //   - This is the number of linearity parameters.
   unsigned originalParameterCount =
       transposeParams.size() - 1 + linearParamIndices->getNumIndices();
+      // transposeParams.size() - 1 + linearParamIndices->getNumIndices() + isCurried;
+
+  llvm::errs() << "getTransposeOriginalFunctionType\n";
+  transposeFnType->print(llvm::errs()); llvm::errs() << "\n";
+  linearParamIndices->dump();
+  llvm::errs() << "originalParameterCount: " << originalParameterCount << "\n";
+
+  llvm::errs() << "TRANSPOSE PARAM TYPES: "
+               << transposeParams.size() << "\n";
+  for (auto param : transposeParams)
+    param.getPlainType()->dump();
+
+  llvm::errs() << "TRANSPOSE RESULT TYPES: "
+               << transposeResultTypes.size() << "\n";
+  for (auto result : transposeResultTypes)
+    result.getType()->dump();
+
   // Iterate over all original parameter indices.
   for (auto i : range(originalParameterCount)) {
+// #if 0
     // Skip `self` parameter if `self` is a linearity parameter.
     // The `self` is handled specially later to form a curried function type.
-    bool isSelfParameterAndWrtSelf =
-        wrtSelf && i == linearParamIndices->getCapacity() - 1;
+    // bool isSelfParameterAndWrtSelf = wrtSelf && i == 0;
+    bool isSelfParameterAndWrtSelf = wrtSelf && i == linearParamIndices->getCapacity() - 1;
     if (isSelfParameterAndWrtSelf)
       continue;
+// #endif
+    i += isCurried;
     // If `i` is a linearity parameter index, the next original parameter is
     // the next transpose result.
+    llvm::errs() << "IS PARAM " << i << " LINEAR? " << linearParamIndices->contains(i) << "\n";
     if (linearParamIndices->contains(i)) {
       auto resultType =
           transposeResultTypes[transposeResultTypesIndex++].getType();
@@ -3946,6 +3966,8 @@ getTransposeOriginalFunctionType(AnyFunctionType *transposeFnType,
     originalType = makeFunctionType(originalParams, originalResult,
                                     transposeFnType->getOptGenericSignature());
   }
+  llvm::errs() << "ORIGINAL TYPE\n";
+  originalType->print(llvm::errs()); llvm::errs() << "\n";
   return originalType;
 }
 
@@ -4748,13 +4770,13 @@ computeLinearityParameters(ArrayRef<ParsedAutoDiffParameter> parsedLinearParams,
   // Get the transpose function type.
   auto *transposeFunctionType =
       transposeFunction->getInterfaceType()->castTo<AnyFunctionType>();
-  bool isCurried = transposeFunctionType->getResult()->is<AnyFunctionType>();
+  auto hasCurriedSelf = transposeFunction->hasCurriedSelf();
 
   // Get transposed result types.
   // The transpose function result type may be a singular type or a tuple type.
   ArrayRef<TupleTypeElt> transposeResultTypes;
   auto transposeResultType = transposeFunctionType->getResult();
-  if (isCurried)
+  if (hasCurriedSelf)
     transposeResultType =
         transposeResultType->castTo<AnyFunctionType>()->getResult();
   if (auto resultTupleType = transposeResultType->getAs<TupleType>()) {
@@ -4776,13 +4798,17 @@ computeLinearityParameters(ArrayRef<ParsedAutoDiffParameter> parsedLinearParams,
 
   // Build linearity parameter indices from parsed linearity parameters.
   auto numUncurriedParams = transposeFunctionType->getNumParams();
-  if (isCurried) {
+  if (hasCurriedSelf) {
     auto *resultFnType =
         transposeFunctionType->getResult()->castTo<AnyFunctionType>();
     numUncurriedParams += resultFnType->getNumParams();
   }
   auto numParams =
       numUncurriedParams + parsedLinearParams.size() - 1 - (unsigned)wrtSelf;
+  llvm::errs() << "computeLinearityParameters\n";
+  llvm::errs() << "parsed linear params: " << parsedLinearParams.size() << "\n";
+  llvm::errs() << "num params: " << numParams << "\n";
+
   SmallBitVector parameterBits(numParams);
   int lastIndex = -1;
   for (unsigned i : indices(parsedLinearParams)) {
@@ -4799,7 +4825,7 @@ computeLinearityParameters(ArrayRef<ParsedAutoDiffParameter> parsedLinearParams,
         diags.diagnose(paramLoc, diag::diff_params_clause_self_must_be_first);
         return nullptr;
       }
-      parameterBits.set(parameterBits.size() - 1);
+      parameterBits.set(0);
       break;
     }
     case ParsedAutoDiffParameter::Kind::Ordered: {
@@ -4815,7 +4841,8 @@ computeLinearityParameters(ArrayRef<ParsedAutoDiffParameter> parsedLinearParams,
                        diag::diff_params_clause_params_not_original_order);
         return nullptr;
       }
-      parameterBits.set(index);
+      llvm::errs() << "LIN ORDERED INDEX: " << (index + hasCurriedSelf) << "\n";
+      parameterBits.set(index + hasCurriedSelf);
       lastIndex = index;
       break;
     }
@@ -4901,7 +4928,7 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   auto originalName = attr->getOriginalFunctionName();
   auto *transposeInterfaceType =
       transpose->getInterfaceType()->castTo<AnyFunctionType>();
-  bool isCurried = transposeInterfaceType->getResult()->is<AnyFunctionType>();
+  bool hasCurriedSelf = transpose->hasCurriedSelf();
 
   // Get the linearity parameter indices.
   auto *linearParamIndices = attr->getParameterIndices();
@@ -4936,7 +4963,7 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   // If the transpose function is curried and `self` is a linearity parameter,
   // check that the instance and static `Self` types are equal.
   Type staticSelfType, instanceSelfType;
-  if (isCurried && wrtSelf) {
+  if (hasCurriedSelf && wrtSelf) {
     bool doSelfTypesMatch = doTransposeStaticAndInstanceSelfTypesMatch(
         transposeInterfaceType, staticSelfType, instanceSelfType);
     if (!doSelfTypesMatch) {
@@ -4956,7 +4983,7 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   // `R` result type must conform to `Differentiable` and satisfy
   // `Self == Self.TangentVector`.
   auto expectedOriginalResultType = expectedOriginalFnType->getResult();
-  if (isCurried)
+  if (hasCurriedSelf)
     expectedOriginalResultType =
         expectedOriginalResultType->castTo<AnyFunctionType>()->getResult();
   if (expectedOriginalResultType->hasTypeParameter())

@@ -13,6 +13,7 @@
 #include "swift/AST/IndexSubset.h"
 #include "TestContext.h"
 #include "gtest/gtest.h"
+#include <iostream>
 
 using namespace swift;
 using namespace swift::unittest;
@@ -253,6 +254,25 @@ TEST(IndexSubset, Lowering) {
             TupleType::get({C.TheAnyType, C.TheAnyType}, C))},
         C.TheEmptyTupleType)),
     IndexSubset::get(C, 3, {0, 1, 2}));
+  // (T, (T, T)) -> ()
+  std::cerr << "HELLO!\n";
+  autodiff::getLoweredParameterIndices(
+    IndexSubset::get(C, 2, {0}),
+    FunctionType::get({
+        FunctionType::Param(C.TheAnyType),
+        FunctionType::Param(
+          TupleType::get({C.TheAnyType, C.TheAnyType}, C))},
+      C.TheEmptyTupleType))->dump();
+  EXPECT_EQ(
+    autodiff::getLoweredParameterIndices(
+      IndexSubset::get(C, 2, {0}),
+      FunctionType::get({
+          FunctionType::Param(C.TheAnyType),
+          FunctionType::Param(
+            TupleType::get({C.TheAnyType, C.TheAnyType}, C))},
+        C.TheEmptyTupleType)),
+    IndexSubset::get(C, 3, {2}));
+  EXPECT_EQ(1, 2);
   // (T, ((T, T)), (T, T), T) -> ()
   EXPECT_EQ(
     autodiff::getLoweredParameterIndices(
@@ -271,7 +291,20 @@ TEST(IndexSubset, Lowering) {
   // TODO(TF-874): Fix this unit test.
   // The current actual result is:
   // `(autodiff_index_subset capacity=6 indices=(0, 1, 4))`.
-#if 0
+  std::cerr << "HELLO!\n";
+  autodiff::getLoweredParameterIndices(
+    IndexSubset::get(C, 4, {0, 1, 3}),
+    FunctionType::get(
+        {FunctionType::Param(C.TheAnyType)},
+        FunctionType::get({
+            FunctionType::Param(
+                TupleType::get({C.TheAnyType, C.TheAnyType}, C)),
+            FunctionType::Param(
+                TupleType::get({C.TheAnyType, C.TheAnyType}, C)),
+            FunctionType::Param(C.TheAnyType)},
+            C.TheEmptyTupleType)->withExtInfo(
+                FunctionType::ExtInfo().withSILRepresentation(
+                SILFunctionTypeRepresentation::Method))))->dump();
   EXPECT_EQ(
     autodiff::getLoweredParameterIndices(
       IndexSubset::get(C, 4, {0, 1, 3}),
@@ -287,7 +320,6 @@ TEST(IndexSubset, Lowering) {
                   FunctionType::ExtInfo().withSILRepresentation(
                   SILFunctionTypeRepresentation::Method)))),
     IndexSubset::get(C, 6, {0, 1, 4, 5}));
-#endif
 }
 
 TEST(IndexSubset, GetSubsetParameterTypes) {

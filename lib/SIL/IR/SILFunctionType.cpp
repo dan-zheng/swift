@@ -382,6 +382,16 @@ getAutoDiffDifferentialType(SILFunctionType *originalFnTy,
   SmallVector<SILParameterInfo, 4> diffParams;
   getDifferentiabilityParameters(originalFnTy, parameterIndices, diffParams);
   SmallVector<SILParameterInfo, 8> differentialParams;
+
+  llvm::errs() << "getAutoDiffDifferentialType\n";
+  llvm::errs() << "ORIGINAL FUNCTION TYPE:\n";
+  SILType::getPrimitiveObjectType(originalFnTy->getCanonicalType()).dump();
+  llvm::errs() << "PARAMETER INDICES:\n";
+  parameterIndices->dump();
+  llvm::errs() << "DIFF PARAMS: " << diffParams.size() << "\n";
+  for (auto param: diffParams)
+    param.dump();
+
   for (auto &param : diffParams) {
     auto paramTan =
         param.getInterfaceType()->getAutoDiffTangentSpace(lookupConformance);

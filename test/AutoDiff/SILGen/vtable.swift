@@ -110,49 +110,49 @@ class SubSub: Sub {}
 
 // CHECK-LABEL: sil_vtable Super {
 // CHECK:   #Super.method: (Super) -> (Float, Float) -> Float : @$s6vtable5SuperC6methodyS2f_SftF
-// CHECK:   #Super.method!jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk
-// CHECK:   #Super.method!vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk
+// CHECK:   #Super.method!jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk
+// CHECK:   #Super.method!vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk
 // CHECK:   #Super.genericMethod: <T> (Super) -> (T, T) -> T : @$s6vtable5SuperC13genericMethodyxx_xtlF
-// CHECK:   #Super.genericMethod!jvp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk
-// CHECK:   #Super.genericMethod!vjp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk
+// CHECK:   #Super.genericMethod!jvp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk
+// CHECK:   #Super.genericMethod!vjp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk
 // CHECK:   #Super.property!getter: (Super) -> () -> Float : @$s6vtable5SuperC8propertySfvg
 // CHECK:   #Super.property!getter.jvp.S: (Super) -> () -> Float : @AD__$s6vtable5SuperC8propertySfvg__jvp_src_0_wrt_0_vtable_entry_thunk
 // CHECK:   #Super.property!getter.vjp.S: (Super) -> () -> Float : @AD__$s6vtable5SuperC8propertySfvg__vjp_src_0_wrt_0_vtable_entry_thunk
 // CHECK:   #Super.subscript!getter: (Super) -> (Float, Float) -> Float : @$s6vtable5SuperCyS2f_Sftcig
-// CHECK:   #Super.subscript!getter.jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk
-// CHECK:   #Super.subscript!getter.vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk
+// CHECK:   #Super.subscript!getter.jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk
+// CHECK:   #Super.subscript!getter.vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable5SuperCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk
 // CHECK: }
 
 // CHECK-LABEL: sil_vtable Sub {
 // CHECK:   #Super.method: (Super) -> (Float, Float) -> Float : @$s6vtable3SubC6methodyS2f_SftF [override]
-// CHECK:   #Super.method!jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk [override]
-// CHECK:   #Super.method!vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk [override]
+// CHECK:   #Super.method!jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk [override]
+// CHECK:   #Super.method!vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk [override]
 // CHECK:   #Super.genericMethod: <T> (Super) -> (T, T) -> T : @$s6vtable5SuperC13genericMethodyxx_xtlF [inherited]
-// CHECK:   #Super.genericMethod!jvp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
-// CHECK:   #Super.genericMethod!vjp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
+// CHECK:   #Super.genericMethod!jvp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
+// CHECK:   #Super.genericMethod!vjp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
 // CHECK:   #Super.property!getter: (Super) -> () -> Float : @$s6vtable3SubC8propertySfvg [override]
 // CHECK:   #Super.property!getter.jvp.S: (Super) -> () -> Float : @AD__$s6vtable3SubC8propertySfvg__jvp_src_0_wrt_0_vtable_entry_thunk [override]
 // CHECK:   #Super.property!getter.vjp.S: (Super) -> () -> Float : @AD__$s6vtable3SubC8propertySfvg__vjp_src_0_wrt_0_vtable_entry_thunk [override]
 // CHECK:   #Super.subscript!getter: (Super) -> (Float, Float) -> Float : @$s6vtable3SubCyS2f_Sftcig [override]
-// CHECK:   #Super.subscript!getter.jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk [override]
-// CHECK:   #Super.subscript!getter.vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk [override]
-// CHECK:   #Sub.method!jvp.SSU: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_1_vtable_entry_thunk
-// CHECK:   #Sub.method!vjp.SSU: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_1_vtable_entry_thunk
+// CHECK:   #Super.subscript!getter.jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk [override]
+// CHECK:   #Super.subscript!getter.vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk [override]
+// CHECK:   #Sub.method!jvp.USS: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_1_vtable_entry_thunk
+// CHECK:   #Sub.method!vjp.USS: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_1_vtable_entry_thunk
 // CHECK: }
 
 // CHECK-LABEL: sil_vtable SubSub {
 // CHECK:   #Super.method: (Super) -> (Float, Float) -> Float : @$s6vtable3SubC6methodyS2f_SftF [inherited]
-// CHECK:   #Super.method!jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk [inherited]
-// CHECK:   #Super.method!vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk [inherited]
+// CHECK:   #Super.method!jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_vtable_entry_thunk [inherited]
+// CHECK:   #Super.method!vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_vtable_entry_thunk [inherited]
 // CHECK:   #Super.genericMethod: <T> (Super) -> (T, T) -> T : @$s6vtable5SuperC13genericMethodyxx_xtlF [inherited]
-// CHECK:   #Super.genericMethod!jvp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
-// CHECK:   #Super.genericMethod!vjp.SUU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
+// CHECK:   #Super.genericMethod!jvp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__jvp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
+// CHECK:   #Super.genericMethod!vjp.USU.<T where T : Differentiable>: <T> (Super) -> (T, T) -> T : @AD__$s6vtable5SuperC13genericMethodyxx_xtlF__vjp_src_0_wrt_0_{{s|16_Differentiation}}14DifferentiableRzl_vtable_entry_thunk [inherited]
 // CHECK:   #Super.property!getter: (Super) -> () -> Float : @$s6vtable3SubC8propertySfvg [inherited]
 // CHECK:   #Super.property!getter.jvp.S: (Super) -> () -> Float : @AD__$s6vtable3SubC8propertySfvg__jvp_src_0_wrt_0_vtable_entry_thunk [inherited]
 // CHECK:   #Super.property!getter.vjp.S: (Super) -> () -> Float : @AD__$s6vtable3SubC8propertySfvg__vjp_src_0_wrt_0_vtable_entry_thunk [inherited]
 // CHECK:   #Super.subscript!getter: (Super) -> (Float, Float) -> Float : @$s6vtable3SubCyS2f_Sftcig [inherited]
-// CHECK:   #Super.subscript!getter.jvp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk [inherited]
-// CHECK:   #Super.subscript!getter.vjp.SUU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk [inherited]
-// CHECK:   #Sub.method!jvp.SSU: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_1_vtable_entry_thunk [inherited]
-// CHECK:   #Sub.method!vjp.SSU: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_1_vtable_entry_thunk [inherited]
+// CHECK:   #Super.subscript!getter.jvp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__jvp_src_0_wrt_0_vtable_entry_thunk [inherited]
+// CHECK:   #Super.subscript!getter.vjp.USU: (Super) -> (Float, Float) -> Float : @AD__$s6vtable3SubCyS2f_Sftcig__vjp_src_0_wrt_0_vtable_entry_thunk [inherited]
+// CHECK:   #Sub.method!jvp.USS: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__jvp_src_0_wrt_0_1_vtable_entry_thunk [inherited]
+// CHECK:   #Sub.method!vjp.USS: (Sub) -> (Float, Float) -> Float : @AD__$s6vtable3SubC6methodyS2f_SftF__vjp_src_0_wrt_0_1_vtable_entry_thunk [inherited]
 // CHECK: }

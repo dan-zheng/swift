@@ -3761,6 +3761,14 @@ ManagedValue SILGenFunction::getThunkedAutoDiffLinearMap(
   for (unsigned resIdx : range(toType->getNumResults())) {
     auto fromRes = fromConv.getResults()[resIdx];
     auto toRes = toResults[resIdx];
+    if (fromRes.getInterfaceType() != toRes.getInterfaceType()) {
+      llvm::errs() << "FROM RES vs TO RES: " << resIdx << "\n";
+      fromRes.dump();
+      toRes.dump();
+      llvm::errs() << "FROM VS TO\n";
+      fromType->dump();
+      toType->dump();
+    }
     assert(fromRes.getInterfaceType() == toRes.getInterfaceType());
   }
 #endif // NDEBUG

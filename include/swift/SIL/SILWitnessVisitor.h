@@ -19,6 +19,7 @@
 #ifndef SWIFT_SIL_SILWITNESSVISITOR_H
 #define SWIFT_SIL_SILWITNESSVISITOR_H
 
+#include "swift/AST/AutoDiff.h"
 #include "swift/AST/ASTVisitor.h"
 #include "swift/AST/Decl.h"
 #include "swift/AST/ProtocolAssociations.h"
@@ -179,16 +180,18 @@ private:
                                               SILDeclRef::Kind kind) {
     SILDeclRef declRef(AFD, kind);
     for (auto *diffAttr : AFD->getAttrs().getAttributes<DifferentiableAttr>()) {
+      auto functionType = AFD->getInterfaceType()->castTo<AnyFunctionType>();
+      auto *silParameterIndices = autodiff::getLoweredParameterIndices(diffAttr->getParameterIndices(), functionType);
       asDerived().addMethod(declRef.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,
-              diffAttr->getParameterIndices(),
+              silParameterIndices,
               diffAttr->getDerivativeGenericSignature(),
               AFD->getASTContext())));
       asDerived().addMethod(declRef.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::VJP,
-              diffAttr->getParameterIndices(),
+              silParameterIndices,
               diffAttr->getDerivativeGenericSignature(),
               AFD->getASTContext())));
     }

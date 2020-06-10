@@ -670,6 +670,14 @@ emitDerivativeFunctionReference(
     auto minimalConfig = findMinimalDerivativeConfiguration(
         requirementDecl, desiredIndices.parameters, minimalASTParamIndices);
     if (!minimalConfig) {
+      for (auto *diffAttr : requirementDecl->getAttrs().getAttributes<DifferentiableAttr>()) {
+        diffAttr->print(llvm::errs(), requirementDecl);
+        llvm::errs() << "\n";
+      }
+      llvm::errs() << "WITNESS METHOD\n";
+      witnessMethod->dumpInContext();
+      llvm::errs() << "DESIRED INDICES\n";
+      desiredIndices.dump();
       context.emitNondifferentiabilityError(
           original, invoker,
           diag::autodiff_member_subset_indices_not_differentiable);

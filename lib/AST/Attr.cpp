@@ -464,6 +464,7 @@ static std::string getDifferentiationParametersClauseString(
   assert(function);
   bool isInstanceMethod = function->isInstanceMember();
   bool isStaticMethod = function->isStatic();
+  auto hasCurriedSelf = function->hasCurriedSelf();
   std::string result;
   llvm::raw_string_ostream printer(result);
 
@@ -475,23 +476,28 @@ static std::string getDifferentiationParametersClauseString(
     if (parameterCount > 1)
       printer << '(';
     // Check if differentiating wrt `self`. If so, manually print it first.
+#if 0
     bool isWrtSelf =
         (isInstanceMethod ||
          (isStaticMethod &&
           parameterKind == DifferentiationParameterKind::Linearity)) &&
-        parameters.test(parameters.size() - 1);
+        parameters.test(0);
+#endif
+    bool isWrtSelf = hasCurriedSelf && parameters.test(0);
     if (isWrtSelf) {
-      parameters.reset(parameters.size() - 1);
+      parameters.reset(0);
       printer << "self";
       if (parameters.any())
         printer << ", ";
     }
+    llvm::errs() << "ORIGINAL FUNCTION PARAMETER ARRAY:\n";
+    function->getParameters()->dump();
     // Print remaining differentiation parameters.
     interleave(parameters.set_bits(), [&](unsigned index) {
       switch (parameterKind) {
       // Print differentiability parameters by name.
       case DifferentiationParameterKind::Differentiability:
-        printer << function->getParameters()->get(index)->getName().str();
+        printer << function->getParameters()->get(index - hasCurriedSelf)->getName().str();
         break;
       // Print linearity parameters by index.
       case DifferentiationParameterKind::Linearity:

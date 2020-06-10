@@ -170,17 +170,20 @@ void AnyFunctionType::getSubsetParameters(
 
   SmallVector<unsigned, 2> curryLevelParameterIndexOffsets(curryLevels.size());
   unsigned currentOffset = 0;
-  for (unsigned curryLevelIndex : llvm::reverse(indices(curryLevels))) {
+  // for (unsigned curryLevelIndex : llvm::reverse(indices(curryLevels))) {
+  for (unsigned curryLevelIndex : indices(curryLevels)) {
     curryLevelParameterIndexOffsets[curryLevelIndex] = currentOffset;
     currentOffset += curryLevels[curryLevelIndex]->getNumParams();
   }
 
   // If `reverseCurryLevels` is true, reverse the curry levels and offsets.
+#if 0
   if (reverseCurryLevels) {
     std::reverse(curryLevels.begin(), curryLevels.end());
     std::reverse(curryLevelParameterIndexOffsets.begin(),
                  curryLevelParameterIndexOffsets.end());
   }
+#endif
 
   for (unsigned curryLevelIndex : indices(curryLevels)) {
     auto *curryLevel = curryLevels[curryLevelIndex];
@@ -189,6 +192,13 @@ void AnyFunctionType::getSubsetParameters(
     for (unsigned paramIndex : range(curryLevel->getNumParams()))
       if (parameterIndices->contains(parameterIndexOffset + paramIndex))
         results.push_back(curryLevel->getParams()[paramIndex]);
+  }
+  llvm::errs() << "AnyFunctionType::getSubsetParameters:\n";
+  print(llvm::errs()); llvm::errs() << "\n";
+  parameterIndices->dump();
+  llvm::errs() << "RESULTS:\n";
+  for (auto result : results) {
+    llvm::errs() << "'" << result.getLabel() << " " << result.getPlainType() << "'\n";
   }
 }
 
@@ -242,15 +252,24 @@ autodiff::getLoweredParameterIndices(IndexSubset *parameterIndices,
     paramLoweredSizes.push_back(paramLoweredSize);
     totalLoweredSize += paramLoweredSize;
   };
-  for (auto *curryLevel : llvm::reverse(curryLevels))
+  // for (auto *curryLevel : llvm::reverse(curryLevels))
+  for (auto *curryLevel : curryLevels)
     for (auto &param : curryLevel->getParams())
       addLoweredParamInfo(param.getPlainType());
+
+  auto isCurriedSelf = functionType->getResult()->is<AnyFunctionType>();
+  auto rotateIndex = [&](unsigned i) {
+    if (!isCurriedSelf)
+      return i;
+    return (i + 1) % parameterIndices->getCapacity();
+  };
 
   // Build lowered SIL parameter indices by setting the range of bits that
   // corresponds to each "set" AST parameter.
   llvm::SmallVector<unsigned, 8> loweredSILIndices;
   unsigned currentBitIndex = 0;
   for (unsigned i : range(parameterIndices->getCapacity())) {
+    i = rotateIndex(i);
     auto paramLoweredSize = paramLoweredSizes[i];
     if (parameterIndices->contains(i)) {
       auto indices = range(currentBitIndex, currentBitIndex + paramLoweredSize);
