@@ -35,6 +35,7 @@ class AnyFunctionType;
 class SourceFile;
 class SILFunctionType;
 class TupleType;
+class VarDecl;
 
 /// A function type differentiability kind.
 enum class DifferentiabilityKind : uint8_t {

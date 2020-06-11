@@ -1334,6 +1334,14 @@ void DifferentiableAttributeTypeCheckRequest::cacheResult(
 }
 
 //----------------------------------------------------------------------------//
+// TangentStoredPropertyRequest computation.
+//----------------------------------------------------------------------------//
+
+void swift::simple_display(llvm::raw_ostream &out, llvm::Expected<VarDecl *> tangentPropertyOrError) {
+  out << "while resolving type ";
+}
+
+//----------------------------------------------------------------------------//
 // CheckRedeclarationRequest computation.
 //----------------------------------------------------------------------------//
 

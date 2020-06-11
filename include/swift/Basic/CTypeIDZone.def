@@ -42,3 +42,4 @@ SWIFT_TYPEID_TEMPLATE1_NAMED(std::unique_ptr, UniquePtr, typename T, T)
 // LLVM ADT types.
 SWIFT_TYPEID_TEMPLATE1_NAMED(llvm::TinyPtrVector, TinyPtrVector, typename T, T)
 SWIFT_TYPEID_TEMPLATE1_NAMED(llvm::ArrayRef, ArrayRef, typename T, T)
+SWIFT_TYPEID_TEMPLATE1_NAMED(llvm::Expected, Expected, typename T, T)

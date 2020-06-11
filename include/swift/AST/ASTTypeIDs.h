@@ -17,8 +17,10 @@
 #ifndef SWIFT_AST_ASTTYPEIDS_H
 #define SWIFT_AST_ASTTYPEIDS_H
 
+#include "llvm/Support/Error.h"
 #include "swift/Basic/LLVM.h"
 #include "swift/Basic/TypeID.h"
+
 namespace swift {
 
 class AbstractFunctionDecl;

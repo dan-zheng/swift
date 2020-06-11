@@ -24,6 +24,7 @@
 
 #include "swift/AST/Expr.h"
 #include "swift/AST/PropertyWrappers.h"
+#include "swift/AST/TypeCheckRequests.h"
 #include "swift/SIL/InstructionUtils.h"
 #include "swift/SIL/Projection.h"
 #include "swift/SILOptimizer/PassManager/PrettyStackTrace.h"
@@ -1724,6 +1725,18 @@ void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
   // TODO(TF-970): Emit diagnostic when `TangentVector` is not a struct.
   assert(tangentVectorDecl);
   // Find the corresponding field in the tangent space.
+  // auto tanFieldOrError = evaluateOrDefault(getASTContext().evaluator, TangentStoredPropertyRequest{sei->getField()}, nullptr);
+  auto tanFieldOrError = llvm::cantFail(evaluateOrDefault(getASTContext().evaluator, TangentStoredPropertyRequest{sei->getField()}, nullptr));
+  if (!tanFieldOrError) {
+    auto error = tanFieldOrError.takeError();
+    // handleAllErrors(std::move(error), errorHandler);
+    handleAllErrors(std::move(error));
+    errorOccurred = true;
+    return;
+  }
+
+#if 0
+  // getASTContext().evaluator.
   VarDecl *tanField = nullptr;
   // If the tangent space is the original struct, then field is the same.
   if (tangentVectorDecl == sei->getStructDecl())
@@ -1742,6 +1755,7 @@ void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
     }
     tanField = cast<VarDecl>(tanFieldLookup.front());
   }
+#endif
   // Accumulate adjoint for the `struct_extract` operand.
   auto av = getAdjointValue(bb, sei);
   switch (av.getKind()) {

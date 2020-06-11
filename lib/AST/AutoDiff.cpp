@@ -422,7 +422,138 @@ void DerivativeFunctionTypeError::log(raw_ostream &OS) const {
   }
 }
 
+/// A tangent stored property calculation error.
+class TangentStoredPropertyError
+    : public llvm::ErrorInfo<TangentStoredPropertyError> {
+public:
+  enum class Kind {
+    /// Original function type has no semantic results.
+    NominalParentNotDifferentiable,
+    /// Original function type has no semantic results.
+    TangentVectorNotStruct,
+    /// Original function type has multiple semantic results.
+    // TODO(TF-1250): Support function types with multiple semantic results.
+    TangentPropertyNameNotFound,
+    TangentPropertyIncompatibleType
+  };
+
+  static const char ID;
+  /// The original stored property.
+  VarDecl *originalProperty;
+  /// The error kind.
+  Kind kind;
+
+  /// The type and index of a differentiability parameter or result.
+  using TypeAndIndex = std::pair<Type, unsigned>;
+
+private:
+  union Value {
+    TypeAndIndex typeAndIndex;
+    Value(TypeAndIndex typeAndIndex) : typeAndIndex(typeAndIndex) {}
+    Value() {}
+  } value;
+
+public:
+  explicit TangentStoredPropertyError(VarDecl *originalProperty, Kind kind)
+      : originalProperty(originalProperty), kind(kind), value(Value()) {
+/*
+    assert(kind == Kind::NoSemanticResults ||
+           kind == Kind::MultipleSemanticResults ||
+           kind == Kind::NoDifferentiabilityParameters);
+*/
+  };
+
+  explicit TangentStoredPropertyError(VarDecl *originalProperty, Kind kind,
+                                       TypeAndIndex nonDiffTypeAndIndex)
+      : originalProperty(originalProperty), kind(kind), value(nonDiffTypeAndIndex) {
+/*
+    assert(kind == Kind::NonDifferentiableDifferentiabilityParameter ||
+           kind == Kind::NonDifferentiableResult);
+*/
+  };
+
+  void log(raw_ostream &OS) const override;
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+const char TangentStoredPropertyError::ID = '\0';
+
+void TangentStoredPropertyError::log(raw_ostream &OS) const {
+  OS << "original property '";
+  originalProperty->print(OS);
+  OS << "' ";
+#if 0
+  switch (kind) {
+  case Kind::NoSemanticResults:
+    OS << "has no semantic results ('Void' result)";
+    break;
+  case Kind::MultipleSemanticResults:
+    OS << "has multiple semantic results";
+    break;
+  case Kind::NoDifferentiabilityParameters:
+    OS << "has no differentiability parameters";
+    break;
+  case Kind::NonDifferentiableDifferentiabilityParameter: {
+    auto nonDiffParam = getNonDifferentiableTypeAndIndex();
+    OS << "has non-differentiable differentiability parameter "
+       << nonDiffParam.second << ": " << nonDiffParam.first;
+    break;
+  }
+  case Kind::NonDifferentiableResult: {
+    auto nonDiffResult = getNonDifferentiableTypeAndIndex();
+    OS << "has non-differentiable result " << nonDiffResult.second << ": "
+       << nonDiffResult.first;
+    break;
+  }
+  }
+#endif
+}
+
 llvm::Expected<VarDecl *>
 TangentStoredPropertyRequest::evaluate(Evaluator &evaluator, VarDecl *originalField) const {
-  return nullptr;
+#if 0
+  auto &ctx = originalField->getASTContext();
+#endif
+  auto *typeContext = originalField->getDeclContext()->getInnermostTypeContext();
+  auto nominalType = typeContext->getDeclaredTypeInContext();
+  auto *moduleDecl = originalField->getModuleContext();
+  auto tanSpace = nominalType->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl));
+  if (!tanSpace) {
+    return llvm::make_error<TangentStoredPropertyError>(originalField, TangentStoredPropertyError::Kind::NominalParentNotDifferentiable);
+  }
+  assert(!originalField->getAttrs().hasAttribute<NoDerivativeAttr>() &&
+         "`@noDerivative` stored properties have no tangent property");
+  auto tangentVectorTy = tanSpace->getType();
+  auto *tangentVectorDecl = tangentVectorTy->getStructOrBoundGenericStruct();
+  // Diagnose when `TangentVector` is not a struct.
+  if (!tangentVectorDecl)
+    return llvm::make_error<TangentStoredPropertyError>(originalField, TangentStoredPropertyError::Kind::TangentVectorNotStruct);
+  // Find the corresponding field in the tangent space.
+  VarDecl *tanField = nullptr;
+  // If the tangent space is the original struct, then field is the same.
+  if (tangentVectorDecl == typeContext->getSelfStructDecl()) {
+    tanField = originalField;
+  }
+  // Otherwise, look up the field by name.
+  else {
+    auto tanFieldLookup =
+        tangentVectorDecl->lookupDirect(originalField->getName());
+    llvm::erase_if(tanFieldLookup, [](ValueDecl *v) {
+      return !isa<VarDecl>(v);
+    });
+    // Diagnose when no tangent property exists.
+    if (tanFieldLookup.empty())
+      return llvm::make_error<TangentStoredPropertyError>(originalField, TangentStoredPropertyError::Kind::TangentPropertyNameNotFound);
+    tanField = cast<VarDecl>(tanFieldLookup.front());
+    // Diagnose when tangent property has an inappropriate type.
+    auto tanSpace = originalField->getType()->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl));
+    assert(tanSpace);
+    auto tanType = tanSpace->getType();
+    if (!tanType->isEqual(tanField->getType()))
+      return llvm::make_error<TangentStoredPropertyError>(originalField, TangentStoredPropertyError::Kind::TangentPropertyIncompatibleType);
+  }
+  return tanField;
 }

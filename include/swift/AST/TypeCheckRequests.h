@@ -2212,6 +2212,8 @@ public:
   bool isCached() const { return true; }
 };
 
+void simple_display(llvm::raw_ostream &out, llvm::Expected<VarDecl *> tangentPropertyOrError);
+
 /// Checks whether a type eraser has a viable initializer.
 class TypeEraserHasViableInitRequest
     : public SimpleRequest<TypeEraserHasViableInitRequest,
@@ -2549,6 +2551,29 @@ AnyValue::Holder<GenericSignature>::equals(const HolderBase &other) const {
   return value.getPointer() ==
          static_cast<const Holder<GenericSignature> &>(other)
              .value.getPointer();
+}
+
+// Allow AnyValue to compare two llvm::Expected values.
+#if 0
+template<class T>
+inline bool AnyValue::Holder<llvm::Expected<T>>::equals(const HolderBase &other) const {
+  assert(typeID == other.typeID && "Caller should match type IDs");
+  return false;
+#if 0
+  return value.getPointer() ==
+      static_cast<const Holder<llvm::Expected<T>> &>(other).value.getPointer();
+#endif
+}
+#endif
+
+template<>
+inline bool AnyValue::Holder<llvm::Expected<VarDecl *>>::equals(const HolderBase &other) const {
+  assert(typeID == other.typeID && "Caller should match type IDs");
+  return false;
+#if 0
+  return value.getPointer() ==
+      static_cast<const Holder<llvm::Expected<T>> &>(other).value.getPointer();
+#endif
 }
 
 void simple_display(llvm::raw_ostream &out, Type value);
