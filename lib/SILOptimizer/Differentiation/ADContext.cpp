@@ -18,6 +18,7 @@
 
 #include "swift/SILOptimizer/Differentiation/ADContext.h"
 #include "swift/AST/DiagnosticsSIL.h"
+#include "swift/AST/ParameterList.h"
 #include "swift/SILOptimizer/PassManager/Transforms.h"
 
 using llvm::DenseMap;
@@ -92,6 +93,35 @@ FuncDecl *ADContext::getPlusEqualDecl() const {
     assert(cachedPlusEqualFn && "AdditiveArithmetic.+= not found");
   }
   return cachedPlusEqualFn;
+}
+
+FuncDecl *ADContext::getWithoutDerivativeAtDecl() const {
+  if (cachedWithoutDerivativeAtFn)
+    return cachedWithoutDerivativeAtFn;
+  // auto *module = astCtx.getLoadedModule(astCtx.Id_Differentiation);
+  auto *module = astCtx.getStdlibModule();
+  if (!module)
+    return nullptr;
+  SmallVector<ValueDecl *, 2> results;
+  module->lookupValue(astCtx.getIdentifier("withoutDerivative"), NLKind::UnqualifiedLookup, results);
+  llvm::erase_if(results, [](ValueDecl *decl) {
+    auto *fnDecl = dyn_cast<FuncDecl>(decl);
+    if (!fnDecl)
+      return true;
+    if (!fnDecl->getAttrs().hasSemanticsAttr("autodiff.without_derivative"))
+      return true;
+    if (fnDecl->getParameters()->size() != 1 ||
+        fnDecl->getGenericParams()->getParams().size() != 1)
+      return true;
+    auto *genericParam = fnDecl->getGenericParams()->getParams().front();
+    if (!fnDecl->getParameters()->get(0)->getValueInterfaceType()->isEqual(genericParam->getInterfaceType()) ||
+        !fnDecl->getResultInterfaceType()->isEqual(genericParam->getInterfaceType()))
+      return false;
+    return false;
+  });
+  cachedWithoutDerivativeAtFn = cast<FuncDecl>(results.front());
+  assert(cachedWithoutDerivativeAtFn && "withoutDerivative(at:) not found");
+  return cachedWithoutDerivativeAtFn;
 }
 
 void ADContext::cleanUp() {

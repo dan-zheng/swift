@@ -1140,21 +1140,46 @@ bool PullbackEmitter::run() {
   return errorOccurred;
 }
 
+static bool isWithoutDerivativeResult(SILValue v) {
+  // First: find the withoutDerivative SIL function and verify that it has an indirect argument?
+  if (v->getType().isObject()) {
+    auto *inst = dyn_cast<LoadInst>(v);
+    if (!inst)
+      return false;
+    v = inst->getOperand();
+  }
+  assert(v->getType().isAddress());
+  for (auto *ai : v->getUsersOfType<ApplyInst>()) {
+    auto *calleeFn = ai->getCalleeFunction();
+    if (!calleeFn)
+      continue;
+    if (calleeFn->getName() != "$ss17withoutDerivative2atxx_tlF")
+      continue;
+    assert(ai->getSubstCalleeType()->getNumParameters() == 1 &&
+           ai->getSubstCalleeType()->getNumResults() == 1);
+    assert(ai->getSubstCalleeType()->getParameters().front().isFormalIndirect());
+    if (v != ai->getOperand(1))
+      continue;
+    return true;
+  }
+  return false;
+}
+
 void PullbackEmitter::emitZeroDerivativesForNonvariedResult(
     SILValue origNonvariedResult) {
   auto &pullback = getPullback();
   auto pbLoc = getPullback().getLocation();
-  /*
-  // TODO(TF-788): Re-enable non-varied result warning.
-  // Emit fixit if original non-varied result has a valid source location.
+  // Warn non-varied result.
+  // Emit fix-it if original non-varied result has a valid source location.
   auto startLoc = origNonvariedResult.getLoc().getStartSourceLoc();
   auto endLoc = origNonvariedResult.getLoc().getEndSourceLoc();
-  if (startLoc.isValid() && endLoc.isValid()) {
+  if (!isWithoutDerivativeResult(origNonvariedResult) &&
+      startLoc.isValid() && endLoc.isValid()) {
+    getContext().getWithoutDerivativeAtDecl()->dump();
     getContext().diagnose(startLoc, diag::autodiff_nonvaried_result_fixit)
         .fixItInsert(startLoc, "withoutDerivative(at:")
         .fixItInsertAfter(endLoc, ")");
   }
-  */
   LLVM_DEBUG(getADDebugStream() << getOriginal().getName()
                                 << " has non-varied result, returning zero"
                                    " for all pullback results\n");
