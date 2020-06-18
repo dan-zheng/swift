@@ -549,7 +549,6 @@ CLONE_AND_EMIT_TANGENT(StructExtract, sei) {
          "differentiated; activity analysis should not marked as varied.");
 
   auto diffBuilder = getDifferentialBuilder();
-  ;
   auto tangentVectorTy = getRemappedTangentType(sei->getOperand()->getType());
   auto *tangentVectorDecl = tangentVectorTy.getStructOrBoundGenericStruct();
 

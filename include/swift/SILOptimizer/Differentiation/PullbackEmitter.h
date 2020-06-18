@@ -294,6 +294,10 @@ private:
       SILBasicBlock *origBB, SILValue originalValue,
       AdjointValue arrayAdjointValue, SILLocation loc);
 
+  /// Returns the tangent property of the original property referenced by
+  /// `inst`. On error, emits diagnostic and returns nullptr.
+  VarDecl *getTangentProperty(FieldIndexCacheBase *inst);
+
   //--------------------------------------------------------------------------//
   // CFG mapping
   //--------------------------------------------------------------------------//

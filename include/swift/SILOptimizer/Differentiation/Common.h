@@ -17,6 +17,8 @@
 #ifndef SWIFT_SILOPTIMIZER_UTILS_DIFFERENTIATION_COMMON_H
 #define SWIFT_SILOPTIMIZER_UTILS_DIFFERENTIATION_COMMON_H
 
+#include "swift/AST/DiagnosticsSIL.h"
+#include "swift/AST/Expr.h"
 #include "swift/AST/SemanticAttrs.h"
 #include "swift/SIL/SILDifferentiabilityWitness.h"
 #include "swift/SIL/SILFunction.h"
@@ -24,14 +26,15 @@
 #include "swift/SIL/TypeSubstCloner.h"
 #include "swift/SILOptimizer/Analysis/ArraySemantic.h"
 #include "swift/SILOptimizer/Analysis/DifferentiableActivityAnalysis.h"
+#include "swift/SILOptimizer/Differentiation/DifferentiationInvoker.h"
 
 namespace swift {
+
+namespace autodiff {
 
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
-
-namespace autodiff {
 
 /// Prints an "[AD] " prefix to `llvm::dbgs()` and returns the debug stream.
 /// This is being used to print short debug messages within the AD pass.
@@ -134,6 +137,174 @@ template <class Inst> Inst *peerThroughFunctionConversions(SILValue value) {
   if (auto *pai = dyn_cast<PartialApplyInst>(value))
     return peerThroughFunctionConversions<Inst>(pai->getCallee());
   return nullptr;
+}
+
+/// Returns the tangent stored property of the original stored property
+/// referenced by `inst`. On error, emits diagnostic and returns nullptr.
+VarDecl *getTangentStoredProperty(FieldIndexCacheBase *inst,
+                                  DifferentiationInvoker invoker);
+
+//===----------------------------------------------------------------------===//
+// Diagnostic utilities
+//===----------------------------------------------------------------------===//
+
+// Given an `differentiable_function` instruction, finds the corresponding
+// differential operator used in the AST. If no differential operator is
+// found, return nullptr.
+DifferentiableFunctionExpr *
+findDifferentialOperator(DifferentiableFunctionInst *inst);
+
+template <typename... T, typename... U>
+InFlightDiagnostic diagnose(DiagnosticEngine &diags, SourceLoc loc,
+                            Diag<T...> diag, U &&... args) {
+  return diags.diagnose(loc, diag, std::forward<U>(args)...);
+}
+
+/// Given an instruction and a differentiation task associated with the
+/// parent function, emits a "not differentiable" error based on the task. If
+/// the task is indirect, emits notes all the way up to the outermost task,
+/// and emits an error at the outer task. Otherwise, emits an error directly.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILInstruction *inst,
+                              DifferentiationInvoker invoker, Diag<T...> diag,
+                              U &&... args);
+
+/// Given a value and a differentiation task associated with the parent
+/// function, emits a "not differentiable" error based on the task. If the
+/// task is indirect, emits notes all the way up to the outermost task, and
+/// emits an error at the outer task. Otherwise, emits an error directly.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILValue value, DifferentiationInvoker invoker,
+                              Diag<T...> diag, U &&... args);
+
+/// Emit a "not differentiable" error based on the given differentiation task
+/// and diagnostic.
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(DiagnosticEngine &diags, SourceLoc loc, DifferentiationInvoker invoker,
+                              Diag<T...> diag, U &&... args);
+
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILValue value,
+                                         DifferentiationInvoker invoker,
+                                         Diag<T...> diag, U &&... args) {
+  LLVM_DEBUG({
+    getADDebugStream() << "Diagnosing non-differentiability.\n";
+    getADDebugStream() << "For value:\n" << value;
+    getADDebugStream() << "With invoker:\n" << invoker << '\n';
+  });
+  auto valueLoc = value.getLoc().getSourceLoc();
+  // If instruction does not have a valid location, use the function location
+  // as a fallback. Improves diagnostics in some cases.
+  if (valueLoc.isInvalid())
+    valueLoc = value->getFunction()->getLocation().getSourceLoc();
+  return emitNondifferentiabilityError(valueLoc, invoker, diag,
+                                       std::forward<U>(args)...);
+}
+
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(SILInstruction *inst,
+                                         DifferentiationInvoker invoker,
+                                         Diag<T...> diag, U &&... args) {
+  LLVM_DEBUG({
+    getADDebugStream() << "Diagnosing non-differentiability.\n";
+    getADDebugStream() << "For instruction:\n" << *inst;
+    getADDebugStream() << "With invoker:\n" << invoker << '\n';
+  });
+  auto instLoc = inst->getLoc().getSourceLoc();
+  // If instruction does not have a valid location, use the function location
+  // as a fallback. Improves diagnostics for `ref_element_addr` generated in
+  // synthesized stored property getters.
+  if (instLoc.isInvalid())
+    instLoc = inst->getFunction()->getLocation().getSourceLoc();
+  return emitNondifferentiabilityError(instLoc, invoker, diag,
+                                       std::forward<U>(args)...);
+}
+
+template <typename... T, typename... U>
+InFlightDiagnostic
+emitNondifferentiabilityError(DiagnosticEngine &diags, SourceLoc loc,
+                              DifferentiationInvoker invoker,
+                              Diag<T...> diag, U &&... args) {
+  switch (invoker.getKind()) {
+  // For `differentiable_function` instructions: if the
+  // `differentiable_function` instruction comes from a differential operator,
+  // emit an error on the expression and a note on the non-differentiable
+  // operation. Otherwise, emit both an error and note on the
+  // non-differentiation operation.
+  case DifferentiationInvoker::Kind::DifferentiableFunctionInst: {
+    auto *inst = invoker.getDifferentiableFunctionInst();
+    if (auto *expr = findDifferentialOperator(inst)) {
+      diagnose(diags, expr->getLoc(), diag::autodiff_function_not_differentiable_error)
+          .highlight(expr->getSubExpr()->getSourceRange());
+      return diagnose(loc, diag, std::forward<U>(args)...);
+    }
+    diagnose(diags, loc, diag::autodiff_expression_not_differentiable_error);
+    return diagnose(loc, diag, std::forward<U>(args)...);
+  }
+
+  // For differentiability witnesses: try to find a `@differentiable` or
+  // `@derivative` attribute. If an attribute is found, emit an error on it;
+  // otherwise, emit an error on the original function.
+  case DifferentiationInvoker::Kind::SILDifferentiabilityWitnessInvoker: {
+    auto *witness = invoker.getSILDifferentiabilityWitnessInvoker();
+    auto *original = witness->getOriginalFunction();
+    // If the witness has an associated attribute, emit an error at its
+    // location.
+    if (auto *attr = witness->getAttribute()) {
+      diagnose(diags, attr->getLocation(),
+               diag::autodiff_function_not_differentiable_error)
+          .highlight(attr->getRangeWithAt());
+      // Emit informative note.
+      bool emittedNote = false;
+      // If the witness comes from an implicit `@differentiable` attribute
+      // inherited from a protocol requirement's `@differentiable` attribute,
+      // emit a note on the inherited attribute.
+      if (auto *diffAttr = dyn_cast<DifferentiableAttr>(attr)) {
+        auto inheritedAttrLoc =
+            diffAttr->getImplicitlyInheritedDifferentiableAttrLocation();
+        if (inheritedAttrLoc.isValid()) {
+          diagnose(diags, inheritedAttrLoc,
+                   diag::autodiff_implicitly_inherited_differentiable_attr_here)
+              .highlight(inheritedAttrLoc);
+          emittedNote = true;
+        }
+      }
+      // Otherwise, emit a note on the original function.
+      if (!emittedNote) {
+        diagnose(diags, original->getLocation().getSourceLoc(),
+                 diag::autodiff_when_differentiating_function_definition);
+      }
+    }
+    // Otherwise, emit an error on the original function.
+    else {
+      diagnose(diags, original->getLocation().getSourceLoc(),
+               diag::autodiff_function_not_differentiable_error);
+    }
+    return diagnose(loc, diag, std::forward<U>(args)...);
+  }
+
+  // For indirect differentiation, emit a "not differentiable" note on the
+  // expression first. Then emit an error at the source invoker of
+  // differentiation, and a "when differentiating this" note at each indirect
+  // invoker.
+  case DifferentiationInvoker::Kind::IndirectDifferentiation: {
+    SILInstruction *inst;
+    SILDifferentiabilityWitness *witness;
+    std::tie(inst, witness) = invoker.getIndirectDifferentiation();
+    auto invokerLookup = invokers.find(witness);
+    assert(invokerLookup != invokers.end() && "Expected parent invoker");
+    emitNondifferentiabilityError(
+        inst, invokerLookup->second,
+        diag::autodiff_expression_not_differentiable_note);
+    return diagnose(loc, diag::autodiff_when_differentiating_function_call);
+  }
+  }
+  llvm_unreachable("invalid invoker");
 }
 
 //===----------------------------------------------------------------------===//

@@ -16,6 +16,7 @@
 
 #define DEBUG_TYPE "differentiation"
 
+#include "swift/AST/TypeCheckRequests.h"
 #include "swift/SILOptimizer/Differentiation/Common.h"
 
 namespace swift {
@@ -242,6 +243,60 @@ void collectMinimalIndicesForFunctionCall(
   assert(llvm::any_of(results, [&](SILValue result) {
     return activityInfo.isActive(result, parentIndices);
   }));
+}
+
+VarDecl *getTangentProperty(FieldIndexCacheBase *inst,
+                            DifferentiationInvoker invoker) {
+  auto &ctx = inst->getModule().getASTContext();
+  auto *field = inst->getField();
+  auto tanFieldInfo = evaluateOrDefault(ctx.evaluator,
+                                        TangentStoredPropertyRequest{field},
+                                        TangentPropertyInfo(nullptr));
+  if (tanFieldInfo)
+    return tanFieldInfo.tangentProperty;
+  assert(tanFieldInfo.error);
+  auto parentDeclName = inst->getParentDecl()->getNameStr();
+  auto fieldName = field->getNameStr();
+  switch (tanFieldInfo.error->kind) {
+  case TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty:
+    llvm_unreachable(
+        "`@noDerivative` stored property accesses should not be "
+        "differentiated; activity analysis should not mark as varied");
+  case TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(),
+        diag::autodiff_stored_property_parent_not_differentiable,
+        parentDeclName, fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::OriginalPropertyNotDifferentiable:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_stored_property_not_differentiable,
+        parentDeclName, fieldName, field->getInterfaceType());
+    break;
+  case TangentPropertyInfo::Error::Kind::ParentTangentVectorNotStruct:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_stored_property_tangent_not_struct,
+        parentDeclName, fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyNotFound:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(),
+        diag::autodiff_stored_property_no_corresponding_tangent, parentDeclName,
+        fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyIncompatibleType:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_tangent_property_wrong_type,
+        parentDeclName, fieldName, tanFieldInfo.error->getType());
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyNotStored:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_tangent_property_not_stored,
+        parentDeclName, fieldName);
+    break;
+  }
+  errorOccurred = true;
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
