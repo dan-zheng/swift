@@ -104,8 +104,12 @@ private:
 
   /// `AdditiveArithmetic.+` declaration.
   mutable FuncDecl *cachedPlusFn = nullptr;
+
   /// `AdditiveArithmetic.+=` declaration.
   mutable FuncDecl *cachedPlusEqualFn = nullptr;
+
+  /// `withoutDerivative<T>(at: T) -> T` declaration.
+  mutable FuncDecl *cachedWithoutDerivativeAtFn = nullptr;
 
 public:
   /// Construct an ADContext for the given module.
@@ -189,6 +193,7 @@ public:
 
   FuncDecl *getPlusDecl() const;
   FuncDecl *getPlusEqualDecl() const;
+  FuncDecl *getWithoutDerivativeAtDecl() const;
 
   /// Cleans up all the internal state.
   void cleanUp();

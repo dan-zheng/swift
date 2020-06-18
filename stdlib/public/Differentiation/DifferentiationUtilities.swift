@@ -82,6 +82,7 @@ public func differentiableFunction<T, U, V, R>(
 @inlinable
 @inline(__always)
 @_semantics("autodiff.nonvarying")
+@_semantics("autodiff.without_derivative")
 public func withoutDerivative<T>(at x: T) -> T {
   x
 }
@@ -93,6 +94,7 @@ public func withoutDerivative<T>(at x: T) -> T {
 @inlinable
 @inline(__always)
 @_semantics("autodiff.nonvarying")
+@_semantics("autodiff.without_derivative")
 public func withoutDerivative<T, R>(at x: T, in body: (T) -> R) -> R {
   body(x)
 }
