@@ -2193,6 +2193,48 @@ public:
   bool isCached() const { return true; }
 };
 
+/// Resolves the referenced original declaration for a `@derivative` attribute.
+class TangentSpaceRequest
+    : public SimpleRequest<TangentSpaceRequest,
+                           Optional<TangentSpace>(Type, ModuleDecl *),
+                           RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  Optional<TangentSpace> evaluate(Evaluator &evaluator, Type type,
+                                  ModuleDecl *) const;
+
+public:
+  // Caching.
+  bool isCached() const { return true; }
+};
+
+void simple_display(llvm::raw_ostream &out, TangentSpace tangentSpace);
+
+/// Resolves the referenced original declaration for a `@derivative` attribute.
+class TangentStoredPropertyRequest
+    : public SimpleRequest<TangentStoredPropertyRequest,
+                           TangentPropertyInfo(VarDecl *),
+                           RequestFlags::Cached> {
+public:
+  using SimpleRequest::SimpleRequest;
+
+private:
+  friend SimpleRequest;
+
+  // Evaluation.
+  TangentPropertyInfo evaluate(Evaluator &evaluator,
+                               VarDecl *originalField) const;
+
+public:
+  // Caching.
+  bool isCached() const { return true; }
+};
+
 /// Checks whether a type eraser has a viable initializer.
 class TypeEraserHasViableInitRequest
     : public SimpleRequest<TypeEraserHasViableInitRequest,

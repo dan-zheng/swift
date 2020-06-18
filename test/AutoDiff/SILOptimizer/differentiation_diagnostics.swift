@@ -172,6 +172,75 @@ let _: @differentiable (Float) -> TF_691<Float> = { x in identity(TF_691(x)) }
 let _: @differentiable (Float) -> TF_691<Float> = { x in id(TF_691(x)) }
 
 //===----------------------------------------------------------------------===//
+// Unsupported stored property accesses
+//===----------------------------------------------------------------------===//
+
+// Test differentiation of invalid stored property access instructions:
+// `struct_extract`, `struct_element_addr`, `ref_element_addr`.
+
+struct TangentVectorNotStruct: Differentiable {
+  var x: Float
+
+  enum TangentVector: Differentiable, AdditiveArithmetic {
+    case x(Float)
+    typealias TangentVector = Self
+    static func ==(_: Self, _: Self) -> Bool { fatalError() }
+    static var zero: Self { fatalError() }
+    static func +(_: Self, _: Self) -> Self { fatalError() }
+    static func -(_: Self, _: Self) -> Self { fatalError() }
+  }
+  mutating func move(along direction: TangentVector) {}
+}
+
+// expected-error @+2 {{function is not differentiable}}
+// expected-note @+2 {{when differentiating this function definition}}
+@differentiable
+func testTangentVectorNotStruct(_ s: TangentVectorNotStruct) -> Float {
+  // expected-warning @+1 {{variable 'tmp' was never mutated}}
+  var tmp = s
+  // expected-note @+1 {{cannot differentiate access to property 'TangentVectorNotStruct.x' because 'TangentVectorNotStruct.TangentVector' is not a struct}}
+  return tmp.x // `struct_element_addr`
+}
+
+struct TangentVectorPropertyNotFound: Differentiable {
+  var x: Float
+
+  struct TangentVector: Differentiable, AdditiveArithmetic {
+    var y: Float
+  }
+  mutating func move(along direction: TangentVector) {}
+}
+
+// expected-error @+2 {{function is not differentiable}}
+// expected-note @+2 {{when differentiating this function definition}}
+@differentiable
+func testTangentPropertyNotFound(_ s: TangentVectorPropertyNotFound) -> Float {
+  // expected-warning @+1 {{variable 'tmp' was never mutated}}
+  var tmp = s
+  // expected-note @+1 {{cannot differentiate access to property 'TangentVectorPropertyNotFound.x' because 'TangentVectorPropertyNotFound.TangentVector' does not have a stored property named 'x'}}
+  return tmp.x // `struct_element_addr`
+}
+
+struct OriginalPropertyNotDifferentiable: Differentiable {
+  struct Nondiff {
+    var x: Float
+  }
+  var nondiff: Nondiff
+
+  struct TangentVector: Differentiable & AdditiveArithmetic {
+    var nondiff: Float
+  }
+  mutating func move(along direction: TangentVector) {}
+}
+
+// expected-error @+2 {{function is not differentiable}}
+// expected-note @+2 {{when differentiating this function definition}}
+@differentiable
+func testOriginalPropertyNotDifferentiable(_ s: OriginalPropertyNotDifferentiable) -> Float {
+  return s.nondiff.x
+}
+
+//===----------------------------------------------------------------------===//
 // Property wrappers
 //===----------------------------------------------------------------------===//
 
@@ -209,7 +278,7 @@ extension DifferentiableWrapper: Differentiable where Value: Differentiable {}
 
 struct Struct: Differentiable {
   // expected-error @+2 {{expression is not differentiable}}
-  // expected-note @+1 {{property cannot be differentiated because 'Struct.TangentVector' does not have a member named '_x'}}
+  // expected-note @+1 {{cannot differentiate access to property 'Struct._x' because 'Struct.TangentVector' does not have a stored property named '_x'}}
   @DifferentiableWrapper @DifferentiableWrapper var x: Float = 10
 
   @Wrapper var y: Float = 20

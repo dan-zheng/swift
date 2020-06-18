@@ -24,6 +24,7 @@
 
 #include "swift/AST/Expr.h"
 #include "swift/AST/PropertyWrappers.h"
+#include "swift/AST/TypeCheckRequests.h"
 #include "swift/SIL/InstructionUtils.h"
 #include "swift/SIL/Projection.h"
 #include "swift/SILOptimizer/PassManager/PrettyStackTrace.h"
@@ -335,13 +336,8 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
     assert(!seai->getField()->getAttrs().hasAttribute<NoDerivativeAttr>() &&
            "`@noDerivative` struct projections should never be active");
     auto adjSource = getAdjointBuffer(origBB, seai->getOperand());
-    auto *tangentVectorDecl =
-        adjSource->getType().getStructOrBoundGenericStruct();
-    // TODO(TF-970): Emit diagnostic when `TangentVector` is not a struct.
-    auto tanFieldLookup =
-        tangentVectorDecl->lookupDirect(seai->getField()->getName());
-    assert(tanFieldLookup.size() == 1);
-    auto *tanField = cast<VarDecl>(tanFieldLookup.front());
+    auto *tanField = getTangentProperty(seai);
+    assert(tanField && "Invalid projections should have been diagnosed");
     return builder.createStructElementAddr(seai->getLoc(), adjSource, tanField);
   }
   // Handle `tuple_element_addr`.
@@ -373,15 +369,8 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
     // `TangentVector` struct.
     auto adjClass =
         materializeAdjointDirect(getAdjointValue(origBB, classOperand), loc);
-    auto *tangentVectorDecl =
-        adjClass->getType().getStructOrBoundGenericStruct();
-    // TODO(TF-970): Replace assertions below with diagnostics.
-    assert(tangentVectorDecl && "`TangentVector` of a class must be a struct");
-    auto tanFieldLookup =
-        tangentVectorDecl->lookupDirect(reai->getField()->getName());
-    assert(tanFieldLookup.size() == 1 &&
-           "Class `TangentVector` must have field of the same name");
-    auto *tanField = cast<VarDecl>(tanFieldLookup.front());
+    auto *tanField = getTangentProperty(reai);
+    assert(tanField && "Invalid projections should have been diagnosed");
     // Create a local allocation for the element adjoint buffer.
     auto eltTanType = tanField->getValueInterfaceType()->getCanonicalType();
     auto eltTanSILType =
@@ -829,14 +818,11 @@ bool PullbackEmitter::run() {
       auto &domBBActiveValues = activeValues[domNode->getBlock()];
       bbActiveValues.append(domBBActiveValues.begin(), domBBActiveValues.end());
     }
-    // Booleans tracking whether active-value-related errors have been emitted.
-    // This prevents duplicate diagnostics for the same active values.
-    bool diagnosedActiveEnumValue = false;
-    bool diagnosedActiveValueTangentValueCategoryIncompatible = false;
     // Mark the activity of a value if it has not yet been visited.
-    auto markValueActivity = [&](SILValue v) {
+    // Returns true on error.
+    auto markValueActivity = [&](SILValue v) -> bool {
       if (visited.count(v))
-        return;
+        return false;
       visited.insert(v);
       auto type = v->getType();
       // Diagnose active values whose value category is incompatible with their
@@ -851,56 +837,62 @@ bool PullbackEmitter::run() {
       // $*A           | $L           | Yes (can create $*L adjoint buffer)
       // $L            | $*A          | No (cannot create $A adjoint value)
       // $*A           | $*A          | Yes (no mismatch)
-      if (!diagnosedActiveValueTangentValueCategoryIncompatible) {
-        if (auto tanSpace = getTangentSpace(remapType(type).getASTType())) {
-          auto tanASTType = tanSpace->getCanonicalType();
-          auto &origTL = getTypeLowering(type.getASTType());
-          auto &tanTL = getTypeLowering(tanASTType);
-          if (!origTL.isAddressOnly() && tanTL.isAddressOnly()) {
-            getContext().emitNondifferentiabilityError(
-                v, getInvoker(),
-                diag::autodiff_loadable_value_addressonly_tangent_unsupported,
-                type.getASTType(), tanASTType);
-            diagnosedActiveValueTangentValueCategoryIncompatible = true;
-            errorOccurred = true;
-          }
+      if (auto tanSpace = getTangentSpace(remapType(type).getASTType())) {
+        auto tanASTType = tanSpace->getCanonicalType();
+        auto &origTL = getTypeLowering(type.getASTType());
+        auto &tanTL = getTypeLowering(tanASTType);
+        if (!origTL.isAddressOnly() && tanTL.isAddressOnly()) {
+          getContext().emitNondifferentiabilityError(
+              v, getInvoker(),
+              diag::autodiff_loadable_value_addressonly_tangent_unsupported,
+              type.getASTType(), tanASTType);
+          errorOccurred = true;
+          return true;
         }
       }
       // Do not emit remaining activity-related diagnostics for semantic member
       // accessors, which have special-case pullback generation.
       if (isSemanticMemberAccessor(&original))
-        return;
+        return false;
       // Diagnose active enum values. Differentiation of enum values requires
       // special adjoint value handling and is not yet supported. Diagnose
       // only the first active enum value to prevent too many diagnostics.
-      if (!diagnosedActiveEnumValue && type.getEnumOrBoundGenericEnum()) {
+      if (type.getEnumOrBoundGenericEnum()) {
         getContext().emitNondifferentiabilityError(
             v, getInvoker(), diag::autodiff_enums_unsupported);
         errorOccurred = true;
-        diagnosedActiveEnumValue = true;
+        return true;
+      }
+      if (auto *inst = dyn_cast<FieldIndexCacheBase>(v)) {
+        if (!getTangentProperty(inst)) {
+          errorOccurred = true;
+          return true;
+        }
       }
       // Skip address projections.
       // Address projections do not need their own adjoint buffers; they
       // become projections into their adjoint base buffer.
       if (Projection::isAddressProjection(v))
-        return;
+        return false;
       bbActiveValues.push_back(v);
+      return false;
     };
     // Visit bb arguments and all instruction operands/results.
     for (auto *arg : bb->getArguments())
       if (getActivityInfo().isActive(arg, getIndices()))
-        markValueActivity(arg);
+        if (markValueActivity(arg))
+          return true;
     for (auto &inst : *bb) {
       for (auto op : inst.getOperandValues())
         if (getActivityInfo().isActive(op, getIndices()))
-          markValueActivity(op);
+          if (markValueActivity(op))
+            return true;
       for (auto result : inst.getResults())
         if (getActivityInfo().isActive(result, getIndices()))
-          markValueActivity(result);
+          if (markValueActivity(result))
+            return true;
     }
     domOrder.pushChildren(bb);
-    if (errorOccurred)
-      return true;
   }
 
   // Create pullback blocks and arguments, visiting original blocks in
@@ -1711,37 +1703,69 @@ void PullbackEmitter::visitBeginApplyInst(BeginApplyInst *bai) {
   return;
 }
 
+VarDecl *PullbackEmitter::getTangentProperty(FieldIndexCacheBase *inst) {
+  auto *field = inst->getField();
+  auto tanFieldInfo = evaluateOrDefault(getASTContext().evaluator,
+                                        TangentStoredPropertyRequest{field},
+                                        TangentPropertyInfo(nullptr));
+  if (tanFieldInfo)
+    return tanFieldInfo.tangentProperty;
+  assert(tanFieldInfo.error);
+  auto parentDeclName = inst->getParentDecl()->getNameStr();
+  auto fieldName = field->getNameStr();
+  switch (tanFieldInfo.error->kind) {
+  case TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty:
+    llvm_unreachable(
+        "`@noDerivative` stored property accesses should not be "
+        "differentiated; activity analysis should not mark as varied");
+  case TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(),
+        diag::autodiff_stored_property_no_corresponding_tangent, parentDeclName,
+        fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::OriginalPropertyNotDifferentiable:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_stored_property_not_differentiable,
+        parentDeclName, fieldName, field->getInterfaceType());
+    break;
+  case TangentPropertyInfo::Error::Kind::ParentTangentVectorNotStruct:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_stored_property_tangent_not_struct,
+        parentDeclName, fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyNotFound:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(),
+        diag::autodiff_stored_property_no_corresponding_tangent, parentDeclName,
+        fieldName);
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyIncompatibleType:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_tangent_property_wrong_type,
+        parentDeclName, fieldName, tanFieldInfo.error->getType());
+    break;
+  case TangentPropertyInfo::Error::Kind::TangentPropertyNotStored:
+    getContext().emitNondifferentiabilityError(
+        inst, getInvoker(), diag::autodiff_tangent_property_not_stored,
+        parentDeclName, fieldName);
+    break;
+  }
+  errorOccurred = true;
+  return nullptr;
+}
+
 void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
-  assert(!sei->getField()->getAttrs().hasAttribute<NoDerivativeAttr>() &&
-         "`struct_extract` with `@noDerivative` field should not be "
-         "differentiated; activity analysis should not marked as varied");
   auto *bb = sei->getParent();
   auto structTy = remapType(sei->getOperand()->getType()).getASTType();
   auto tangentVectorTy = getTangentSpace(structTy)->getCanonicalType();
   assert(!getTypeLowering(tangentVectorTy).isAddressOnly());
   auto tangentVectorSILTy = SILType::getPrimitiveObjectType(tangentVectorTy);
   auto *tangentVectorDecl = tangentVectorTy->getStructOrBoundGenericStruct();
-  // TODO(TF-970): Emit diagnostic when `TangentVector` is not a struct.
   assert(tangentVectorDecl);
   // Find the corresponding field in the tangent space.
-  VarDecl *tanField = nullptr;
-  // If the tangent space is the original struct, then field is the same.
-  if (tangentVectorDecl == sei->getStructDecl())
-    tanField = sei->getField();
-  // Otherwise, look up the field by name.
-  else {
-    auto tanFieldLookup =
-        tangentVectorDecl->lookupDirect(sei->getField()->getName());
-    if (tanFieldLookup.empty()) {
-      getContext().emitNondifferentiabilityError(
-          sei, getInvoker(),
-          diag::autodiff_stored_property_no_corresponding_tangent,
-          sei->getStructDecl()->getNameStr(), sei->getField()->getNameStr());
-      errorOccurred = true;
-      return;
-    }
-    tanField = cast<VarDecl>(tanFieldLookup.front());
-  }
+  auto *tanField = getTangentProperty(sei);
+  assert(tanField && "Invalid projections should have been diagnosed");
   // Accumulate adjoint for the `struct_extract` operand.
   auto av = getAdjointValue(bb, sei);
   switch (av.getKind()) {
@@ -1779,21 +1803,8 @@ void PullbackEmitter::visitRefElementAddrInst(RefElementAddrInst *reai) {
   assert(!getTypeLowering(tangentVectorTy).isAddressOnly());
   auto tangentVectorSILTy = SILType::getPrimitiveObjectType(tangentVectorTy);
   auto *tangentVectorDecl = tangentVectorTy->getStructOrBoundGenericStruct();
-  // TODO(TF-970): Emit diagnostic when `TangentVector` is not a struct.
-  assert(tangentVectorDecl);
-  // Look up the corresponding field in the tangent space by name.
-  VarDecl *tanField = nullptr;
-  auto tanFieldLookup =
-      tangentVectorDecl->lookupDirect(reai->getField()->getName());
-  if (tanFieldLookup.empty()) {
-    getContext().emitNondifferentiabilityError(
-        reai, getInvoker(),
-        diag::autodiff_stored_property_no_corresponding_tangent,
-        reai->getClassDecl()->getNameStr(), reai->getField()->getNameStr());
-    errorOccurred = true;
-    return;
-  }
-  tanField = cast<VarDecl>(tanFieldLookup.front());
+  auto *tanField = getTangentProperty(reai);
+  assert(tanField && "Invalid projections should have been diagnosed");
   // Accumulate adjoint for the `ref_element_addr` operand.
   SmallVector<AdjointValue, 8> eltVals;
   for (auto *field : tangentVectorDecl->getStoredProperties()) {

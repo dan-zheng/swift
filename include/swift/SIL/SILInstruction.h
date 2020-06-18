@@ -5752,6 +5752,13 @@ public:
     return s;
   }
 
+  static bool classof(const SILNode *node) {
+    SILNodeKind kind = node->getKind();
+    return kind == SILNodeKind::StructExtractInst ||
+           kind == SILNodeKind::StructElementAddrInst ||
+           kind == SILNodeKind::RefElementAddrInst;
+  }
+
 private:
   unsigned cacheFieldIndex();
 };
