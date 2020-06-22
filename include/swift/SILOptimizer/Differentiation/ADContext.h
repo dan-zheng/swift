@@ -104,8 +104,12 @@ private:
 
   /// `AdditiveArithmetic.+` declaration.
   mutable FuncDecl *cachedPlusFn = nullptr;
+
   /// `AdditiveArithmetic.+=` declaration.
   mutable FuncDecl *cachedPlusEqualFn = nullptr;
+
+  /// `withoutDerivative<T>(at: T) -> T` declaration.
+  mutable FuncDecl *cachedWithoutDerivativeAtFn = nullptr;
 
 public:
   /// Construct an ADContext for the given module.
@@ -189,6 +193,7 @@ public:
 
   FuncDecl *getPlusDecl() const;
   FuncDecl *getPlusEqualDecl() const;
+  FuncDecl *getWithoutDerivativeAtDecl() const;
 
   /// Cleans up all the internal state.
   void cleanUp();
@@ -209,6 +214,10 @@ public:
   // found, return nullptr.
   DifferentiableFunctionExpr *
   findDifferentialOperator(DifferentiableFunctionInst *inst);
+
+  /// Returns `true` iff the given value is a result of a
+  /// `withoutDerivative<T>(at: T) -> T` function application.
+  bool isWithoutDerivativeAtApplyResult(SILValue v);
 
   template <typename... T, typename... U>
   InFlightDiagnostic diagnose(SourceLoc loc, Diag<T...> diag,

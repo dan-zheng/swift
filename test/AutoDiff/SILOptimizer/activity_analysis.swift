@@ -1,3 +1,4 @@
+// RUN: %target-swift-emit-sil -verify %s
 // RUN: %target-swift-emit-sil -verify -Xllvm -debug-only=differentiation 2>&1 %s | %FileCheck %s
 // REQUIRES: asserts
 
@@ -410,6 +411,7 @@ func testArrayUninitializedIntrinsicApplyIndirectResult<T>(_ x: T, _ y: T) -> [W
 struct Mut: Differentiable {}
 extension Mut {
   @differentiable(wrt: x)
+  // expected-warning @+1 {{result does not depend on differentiation arguments and will always have a zero derivative; do you want to add '.withoutDerivative()'?}}
   mutating func mutatingMethod(_ x: Mut) {}
 }
 

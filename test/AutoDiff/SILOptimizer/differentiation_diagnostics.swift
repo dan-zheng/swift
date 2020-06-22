@@ -324,8 +324,7 @@ func roundingGivesError(x: Float) -> Float {
 
 @differentiable
 func nonVariedResult(_ x: Float) -> Float {
-  // TODO(TF-788): Re-enable non-varied result warning.
-  // xpected-warning @+1 {{result does not depend on differentiation arguments and will always have a zero derivative; do you want to use 'withoutDerivative(at:)'?}} {{10-10=withoutDerivative(at:}} {{15-15=)}}
+  // expected-warning @+1 {{result does not depend on differentiation arguments and will always have a zero derivative; do you want to use 'withoutDerivative(at:)'?}} {{10-10=withoutDerivative(at:}} {{11-11=)}}
   return 0
 }
 
@@ -411,6 +410,7 @@ func activeInoutParamControlFlowComplex(_ array: [Float], _ bool: Bool) -> Float
 struct Mut: Differentiable {}
 extension Mut {
   @differentiable(wrt: x)
+  // expected-warning @+1 {{result does not depend on differentiation arguments and will always have a zero derivative; do you want to use 'withoutDerivative(at:)'?}}
   mutating func mutatingMethod(_ x: Mut) {}
 }
 

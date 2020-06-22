@@ -18,6 +18,7 @@
 
 #include "swift/SILOptimizer/Differentiation/ADContext.h"
 #include "swift/AST/DiagnosticsSIL.h"
+#include "swift/AST/ParameterList.h"
 #include "swift/SILOptimizer/PassManager/Transforms.h"
 
 using llvm::DenseMap;
@@ -94,6 +95,34 @@ FuncDecl *ADContext::getPlusEqualDecl() const {
   return cachedPlusEqualFn;
 }
 
+FuncDecl *ADContext::getWithoutDerivativeAtDecl() const {
+  if (cachedWithoutDerivativeAtFn)
+    return cachedWithoutDerivativeAtFn;
+  auto *module = astCtx.getLoadedModule(astCtx.Id_Differentiation);
+  if (!module)
+    return nullptr;
+  SmallVector<ValueDecl *, 2> results;
+  module->lookupValue(astCtx.getIdentifier("withoutDerivative"), NLKind::UnqualifiedLookup, results);
+  llvm::erase_if(results, [](ValueDecl *decl) {
+    auto *fnDecl = dyn_cast<FuncDecl>(decl);
+    if (!fnDecl)
+      return true;
+    if (!fnDecl->getAttrs().hasSemanticsAttr("autodiff.without_derivative"))
+      return true;
+    if (fnDecl->getParameters()->size() != 1 ||
+        fnDecl->getGenericParams()->getParams().size() != 1)
+      return true;
+    auto *genericParam = fnDecl->getGenericParams()->getParams().front();
+    if (!fnDecl->getParameters()->get(0)->getValueInterfaceType()->isEqual(genericParam->getInterfaceType()) ||
+        !fnDecl->getResultInterfaceType()->isEqual(genericParam->getInterfaceType()))
+      return false;
+    return false;
+  });
+  cachedWithoutDerivativeAtFn = cast<FuncDecl>(results.front());
+  assert(cachedWithoutDerivativeAtFn && "withoutDerivative(at:) not found");
+  return cachedWithoutDerivativeAtFn;
+}
+
 void ADContext::cleanUp() {
   // Delete all references to generated functions.
   for (auto fnRef : generatedFunctionReferences) {
@@ -126,6 +155,33 @@ DifferentiableFunctionInst *ADContext::createDifferentiableFunction(
 DifferentiableFunctionExpr *
 ADContext::findDifferentialOperator(DifferentiableFunctionInst *inst) {
   return inst->getLoc().getAsASTNode<DifferentiableFunctionExpr>();
+}
+
+bool ADContext::isWithoutDerivativeAtApplyResult(SILValue v) {
+  // First: find the withoutDerivative SIL function and verify that it has an indirect argument?
+  if (v->getType().isObject()) {
+    auto *inst = dyn_cast<LoadInst>(v);
+    if (!inst)
+      return false;
+    v = inst->getOperand();
+  }
+  assert(v->getType().isAddress());
+  for (auto *ai : v->getUsersOfType<ApplyInst>()) {
+    auto *calleeFn = ai->getCalleeFunction();
+    if (!calleeFn)
+      continue;
+#if 0
+    if (calleeFn->getName() != "$ss17withoutDerivative2atxx_tlF")
+      continue;
+#endif
+    assert(ai->getSubstCalleeType()->getNumParameters() == 1 &&
+           ai->getSubstCalleeType()->getNumResults() == 1);
+    assert(ai->getSubstCalleeType()->getParameters().front().isFormalIndirect());
+    if (v != ai->getOperand(1))
+      continue;
+    return true;
+  }
+  return false;
 }
 
 } // end namespace autodiff
