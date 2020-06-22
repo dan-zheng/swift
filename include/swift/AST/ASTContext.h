@@ -545,6 +545,9 @@ public:
   /// Retrieve the declaration of Swift._hashValue<H>(for: H) -> Int.
   FuncDecl *getHashValueForDecl() const;
 
+  /// Retrieve the declaration of Array.subscript(_: Int) -> Element.
+  SubscriptDecl *getArraySubscriptElementDecl() const;
+
   /// Retrieve the declaration of Array.append(element:)
   FuncDecl *getArrayAppendElementDecl() const;
 

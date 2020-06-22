@@ -50,6 +50,7 @@ ArrayCallKind swift::getArraySemanticsKind(SILFunction *f) {
                   ArrayCallKind::kWithUnsafeMutableBufferPointer)
             .Case("array.append_contentsOf", ArrayCallKind::kAppendContentsOf)
             .Case("array.append_element", ArrayCallKind::kAppendElement)
+            .Case("array.subscript_element", ArrayCallKind::kSubscriptElement)
             .Default(ArrayCallKind::kNone);
     if (Tmp != ArrayCallKind::kNone) {
       assert(Kind == ArrayCallKind::kNone && "Multiple array semantic "

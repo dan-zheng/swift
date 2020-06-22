@@ -232,6 +232,9 @@ struct ASTContext::Implementation {
   /// func _hashValue<H: Hashable>(for: H) -> Int
   FuncDecl *HashValueForDecl = nullptr;
 
+  /// func subscript(Index) -> Element
+  SubscriptDecl *ArraySubscriptPositionDecl = nullptr;
+
   /// func append(Element) -> void
   FuncDecl *ArrayAppendElementDecl = nullptr;
 
@@ -1138,6 +1141,48 @@ FuncDecl *ASTContext::getHashValueForDecl() const {
       continue;
     getImpl().HashValueForDecl = fd;
     return fd;
+  }
+  return nullptr;
+}
+
+SubscriptDecl *ASTContext::getArraySubscriptElementDecl() const {
+  if (getImpl().ArraySubscriptPositionDecl)
+    return getImpl().ArraySubscriptPositionDecl;
+
+  auto subscripts =
+      getArrayDecl()->lookupDirect(DeclBaseName::createSubscript());
+
+  for (auto *candidate : subscripts) {
+    auto *subscriptDecl = dyn_cast<SubscriptDecl>(candidate);
+    for (auto *attr :
+         subscriptDecl->getAttrs().getAttributes<SemanticsAttr, false>()) {
+      if (attr->Value != "array.subscript_element")
+        continue;
+
+      auto *getter = subscriptDecl->getAccessor(AccessorKind::Get);
+      if (!getter)
+        return nullptr;
+
+      auto *paramList = getter->getParameters();
+      if (paramList->size() != 1)
+        return nullptr;
+
+      auto indexType = paramList->get(0)->getInterfaceType();
+      if (!indexType)
+        return nullptr;
+      if (!indexType->isEqual(getIntDecl()->getDeclaredInterfaceType()))
+        return nullptr;
+
+      auto elementType = subscriptDecl->getElementInterfaceType()
+                             ->getAs<GenericTypeParamType>();
+      if (!elementType)
+        return nullptr;
+      if (elementType->getName() != getIdentifier("Element"))
+        return nullptr;
+
+      getImpl().ArraySubscriptPositionDecl = subscriptDecl;
+      return subscriptDecl;
+    }
   }
   return nullptr;
 }

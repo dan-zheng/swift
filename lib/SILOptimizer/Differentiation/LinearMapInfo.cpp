@@ -362,7 +362,49 @@ void LinearMapInfo::addLinearMapToStruct(ADContext &context, ApplyInst *ai) {
     linearMapSILType = SILType::getPrimitiveObjectType(
         fnTy->getUnsubstitutedType(original->getModule()));
   }
+  LLVM_DEBUG(getADDebugStream()
+             << "Adding linear map struct field for " << *ai);
   addLinearMapDecl(ai, linearMapSILType);
+}
+
+VarDecl *LinearMapInfo::addCoroutineDataDecl(BeginApplyInst *bai,
+                                             CanType dataType) {
+  auto *origBB = bai->getParent();
+  auto *linMapStruct = getLinearMapStruct(origBB);
+  std::string linearMapName;
+  switch (kind) {
+  case AutoDiffLinearMapKind::Differential:
+    linearMapName = "differential_subscript_modify_index_" +
+                    llvm::itostr(coroutineDataMap.size());
+    break;
+  case AutoDiffLinearMapKind::Pullback:
+    linearMapName = "pullback_subscript_modify_index_" +
+                    llvm::itostr(coroutineDataMap.size());
+    break;
+  }
+  auto *linearMapDecl = addVarDecl(linMapStruct, linearMapName, dataType);
+  coroutineDataMap.insert({bai, linearMapDecl});
+  return linearMapDecl;
+}
+
+void LinearMapInfo::addCoroutineDataToStruct(ADContext &context,
+                                             BeginApplyInst *bai) {
+  // Skip non-active `begin_apply` applications.
+  if (!shouldDifferentiateApplySite(bai))
+    return;
+  // Handle active `Array.subscript(_: Int).modify` applications: add a field to
+  // store the index argument.
+  auto *callee = bai->getCalleeFunction();
+  if (!callee)
+    return;
+  auto *accessor = isArraySubscriptElementModifyAccessor(callee);
+  if (!accessor)
+    return;
+  auto indexArg = bai->getArgument(0);
+  auto indexArgType = indexArg->getType().getASTType();
+  LLVM_DEBUG(getADDebugStream()
+             << "Adding linear map struct field for " << *bai);
+  addCoroutineDataDecl(bai, indexArgType);
 }
 
 void LinearMapInfo::generateDifferentiationDataStructures(
@@ -422,9 +464,13 @@ void LinearMapInfo::generateDifferentiationDataStructures(
         // initialization is linear and handled separately.
         if (!shouldDifferentiateApplySite(ai) || isArrayLiteralIntrinsic(ai))
           continue;
-        LLVM_DEBUG(getADDebugStream()
-                   << "Adding linear map struct field for " << *ai);
         addLinearMapToStruct(context, ai);
+      }
+      if (auto *bai = dyn_cast<BeginApplyInst>(&inst)) {
+        // Add linear map field to struct for active `begin_apply` instructions.
+        // Currently, only annotated `Collection.subscript(_:).modify` accessors
+        // are supported.
+        addCoroutineDataToStruct(context, bai);
       }
     }
   }

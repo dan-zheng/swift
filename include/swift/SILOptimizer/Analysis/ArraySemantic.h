@@ -37,6 +37,7 @@ enum class ArrayCallKind {
   kWithUnsafeMutableBufferPointer,
   kAppendContentsOf,
   kAppendElement,
+  kSubscriptElement,
   // The following two semantic function kinds return the result @owned
   // instead of operating on self passed as parameter. If you are adding
   // a function, and it has a self parameter, make sure that it is defined
