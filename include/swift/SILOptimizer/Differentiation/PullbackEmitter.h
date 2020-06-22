@@ -60,9 +60,11 @@ private:
   /// adjoint values.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, AdjointValue> valueMap;
 
+// #if 0
   /// Mapping from original basic blocks and original buffers to corresponding
   /// adjoint buffers.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, SILValue> bufferMap;
+// #endif
 
   /// Mapping from pullback basic blocks to pullback struct arguments.
   llvm::DenseMap<SILBasicBlock *, SILArgument *> pullbackStructArguments;
@@ -258,11 +260,15 @@ private:
   // Buffer mapping
   //--------------------------------------------------------------------------//
 
+// #if 0
   void setAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
                         SILValue adjointBuffer);
 
   SILValue getAdjointProjection(SILBasicBlock *origBB,
                                 SILValue originalProjection);
+
+  SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
+// #endif
 
   SILBasicBlock::iterator getNextFunctionLocalAllocationInsertionPoint();
 
@@ -272,8 +278,6 @@ private:
   /// deallocated in the pullback exit. All local allocations not in
   /// `destroyedLocalAllocations` are also destroyed in the pullback exit.
   AllocStackInst *createFunctionLocalAllocation(SILType type, SILLocation loc);
-
-  SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
 
   /// Accumulates `rhsBufferAccess` into the adjoint buffer corresponding to
   /// `originalBuffer`.

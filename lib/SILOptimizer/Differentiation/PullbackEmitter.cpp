@@ -536,6 +536,7 @@ void PullbackEmitter::printAdjointValueMapping() {
 }
 
 void PullbackEmitter::printAdjointBufferMapping() {
+#if 0
   // Group original/adjoint buffers by basic block.
   llvm::DenseMap<SILBasicBlock *, llvm::DenseMap<SILValue, SILValue>> tmp;
   for (auto pair : bufferMap) {
@@ -561,6 +562,7 @@ void PullbackEmitter::printAdjointBufferMapping() {
     }
     s << '\n';
   }
+#endif
 }
 
 //--------------------------------------------------------------------------//
@@ -659,6 +661,7 @@ bool PullbackEmitter::runForSemanticMemberGetter() {
     auto pbIndRes = pullback.getIndirectResults().front();
     auto *adjSelf = createFunctionLocalAllocation(
         pbIndRes->getType().getObjectType(), pbLoc);
+    // setAdjointBuffer(origEntry, origSelf, adjSelf);
     setAdjointBuffer(origEntry, origSelf, adjSelf);
     for (auto *field : tangentVectorDecl->getStoredProperties()) {
       auto *adjSelfElt = builder.createStructElementAddr(pbLoc, adjSelf, field);
@@ -816,6 +819,7 @@ bool PullbackEmitter::run() {
 
       // Diagnose unsupported active values.
       auto type = v->getType();
+#if 0
       // Diagnose active values whose value category is incompatible with their
       // tangent types's value category.
       //
@@ -841,6 +845,7 @@ bool PullbackEmitter::run() {
           return true;
         }
       }
+#endif
       // Do not emit remaining activity-related diagnostics for semantic member
       // accessors, which have special-case pullback generation.
       if (isSemanticMemberAccessor(&original))
@@ -1115,6 +1120,9 @@ bool PullbackEmitter::run() {
   }
   assert(!leakFound && "Leaks found!");
 #endif
+
+  printAdjointValueMapping();
+  printAdjointBufferMapping();
 
   LLVM_DEBUG(getADDebugStream()
              << "Generated pullback for " << original.getName() << ":\n"
@@ -1686,7 +1694,6 @@ void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
   auto *bb = sei->getParent();
   auto structTy = remapType(sei->getOperand()->getType()).getASTType();
   auto tangentVectorTy = getTangentSpace(structTy)->getCanonicalType();
-  assert(!getTypeLowering(tangentVectorTy).isAddressOnly());
   auto tangentVectorSILTy = SILType::getPrimitiveObjectType(tangentVectorTy);
   auto *tangentVectorDecl = tangentVectorTy->getStructOrBoundGenericStruct();
   assert(tangentVectorDecl);
@@ -1727,7 +1734,6 @@ void PullbackEmitter::visitRefElementAddrInst(RefElementAddrInst *reai) {
   auto adjBuf = getAdjointBuffer(bb, reai);
   auto classTy = remapType(reai->getOperand()->getType()).getASTType();
   auto tangentVectorTy = getTangentSpace(classTy)->getCanonicalType();
-  assert(!getTypeLowering(tangentVectorTy).isAddressOnly());
   auto tangentVectorSILTy = SILType::getPrimitiveObjectType(tangentVectorTy);
   auto *tangentVectorDecl = tangentVectorTy->getStructOrBoundGenericStruct();
   auto *tanField = getTangentStoredProperty(getContext(), reai, getInvoker());

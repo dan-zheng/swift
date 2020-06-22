@@ -104,6 +104,7 @@ public:
 
   AdjointValueKind getKind() const { return base->kind; }
   SILType getType() const { return base->type; }
+  SILValueCategory getCategory() const { return getType().getCategory(); }
   CanType getSwiftType() const { return getType().getASTType(); }
 
   NominalTypeDecl *getAnyNominal() const {
