@@ -736,4 +736,51 @@ ControlFlowTests.test("BranchingCastInstructions") {
   expectEqual((3, 1), valueWithGradient(at: Float(3), in: conditionalCast))
 }
 
+ControlFlowTests.test("ThrowingCalls") {
+  // TF-433: Test non-active `try_apply` differentiation.
+
+  func rethrowing(_ body: () throws -> Void) rethrows -> Void {}
+
+  @differentiable
+  func testRethrowingIdentity(_ x: Float) -> Float {
+    rethrowing({}) // non-active `try_apply`
+    return x
+  }
+  expectEqual(10, pullback(at: 3, in: testRethrowingIdentity)(10))
+
+  @differentiable
+  func testComplexControlFlow(_ x: Float) -> Float {
+    for _ in 0..<Int(x) {
+      rethrowing({}) // non-active `try_apply`
+    }
+    return x
+  }
+  expectEqual(10, pullback(at: 3, in: testComplexControlFlow)(10))
+
+  // Test `Collection.map(_:)`, which is rethrowing.
+  func testCollectionMapNonactiveArgument(_ x: Float, ints: [Int]) -> Float {
+    let max = ints.map { $0 }.max()! // non-active `try_apply`
+    _blackHole(max)
+    return x
+  }
+  print(gradient(at: 3, in: { x in testCollectionMapNonactiveArgument(x, ints: [2, 3]) }))
+
+  // Test `Collection.map(_:)`, which is rethrowing.
+  func testCollectionMap(_ x: [Float]) -> [Float] {
+    let max = x.map { $0 }.max()! // non-active `try_apply`
+    _blackHole(max)
+    return x
+  }
+  print(pullback(at: 3, in: { x in testCollectionMap([2, 3]) })([10, 10]))
+
+  // Test `Bool.&&(_:)`, which is rethrowing.
+  func testBooleanAnd(_ x: Float, bool: Bool) -> Float {
+    if bool && bool { // non-active `try_apply`
+      return x * x
+    }
+    return x + x
+  }
+  print(gradient(at: 3, in: { x in testBooleanAnd(x, bool: true) }))
+}
+
 runAllTests()

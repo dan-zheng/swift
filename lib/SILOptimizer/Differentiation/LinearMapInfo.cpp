@@ -137,7 +137,7 @@ LinearMapInfo::createBranchingTraceDecl(SILBasicBlock *originalBB,
       /*Inherited*/ {}, /*GenericParams*/ genericParams, /*DC*/ &file);
   // Note: must mark enum as implicit to satisfy assertion in
   // `Parser::parseDeclListDelayed`.
-  branchingTraceDecl->setImplicit();
+  // branchingTraceDecl->setImplicit();
   if (genericSig)
     branchingTraceDecl->setGenericSignature(genericSig);
   computeAccessLevel(branchingTraceDecl, original->getEffectiveSymbolLinkage());
@@ -203,7 +203,7 @@ LinearMapInfo::createLinearMapStruct(SILBasicBlock *originalBB,
       /*Inherited*/ {}, /*GenericParams*/ genericParams, /*DC*/ &file);
   // Note: must mark struct as implicit to satisfy assertion in
   // `Parser::parseDeclListDelayed`.
-  linearMapStruct->setImplicit();
+  // linearMapStruct->setImplicit();
   if (genericSig)
     linearMapStruct->setGenericSignature(genericSig);
   computeAccessLevel(linearMapStruct, original->getEffectiveSymbolLinkage());

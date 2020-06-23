@@ -507,6 +507,8 @@ NOTE(autodiff_enums_unsupported,none,
 NOTE(autodiff_stored_property_no_corresponding_tangent,none,
      "property cannot be differentiated because '%0.TangentVector' does not "
      "have a member named '%1'", (StringRef, StringRef))
+NOTE(autodiff_active_try_apply_unsupported,none,
+     "cannot yet differentiate throwing expressions", ())
 NOTE(autodiff_coroutines_not_supported,none,
      "differentiation of coroutine calls is not yet supported", ())
 NOTE(autodiff_cannot_differentiate_writes_to_global_variables,none,

@@ -276,11 +276,13 @@ public:
     SmallVector<DominanceInfoNode *, 4> children;
     for (auto *child : *node)
       children.push_back(child);
+#if 0
     llvm::sort(children.begin(), children.end(),
                [&](DominanceInfoNode *n1, DominanceInfoNode *n2) {
                  return postOrderInfo->getPONumber(n1->getBlock()) <
                         postOrderInfo->getPONumber(n2->getBlock());
                });
+#endif
     for (auto *child : children) {
       SILBasicBlock *childBB = child->getBlock();
       if (pred(childBB))

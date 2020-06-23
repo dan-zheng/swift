@@ -879,6 +879,21 @@ bool PullbackEmitter::run() {
         errorOccurred = true;
         diagnosedActiveEnumValue = true;
       }
+      // Diagnose `try_apply` active "result" (normal successor block argument),
+      // which is not yet supported.
+      if (auto *arg = dyn_cast<SILArgument>(v)) {
+        if (auto *termInst = arg->getSingleTerminator()) {
+          if (auto *tai = dyn_cast<TryApplyInst>(termInst)) {
+            auto *normalBBArg = tai->getNormalBB()->getArgument(0);
+            if (getActivityInfo().isActive(normalBBArg, getIndices())) {
+              getContext().emitNondifferentiabilityError(
+                  tai, getInvoker(),
+                  diag::autodiff_active_try_apply_unsupported);
+              errorOccurred = true;
+            }
+          }
+        }
+      }
       // Skip address projections.
       // Address projections do not need their own adjoint buffers; they
       // become projections into their adjoint base buffer.
@@ -908,6 +923,7 @@ bool PullbackEmitter::run() {
   SmallVector<SILBasicBlock *, 8> postOrderPostDomOrder;
   // Start from the root node, which may have a marker `nullptr` block if
   // there are multiple roots.
+  // PostDominanceOrder
   PostOrderPostDominanceOrder postDomOrder(postDomInfo->getRootNode(),
                                            postOrderInfo, original.size());
   while (auto *origNode = postDomOrder.getNext()) {
@@ -916,16 +932,34 @@ bool PullbackEmitter::run() {
     // If node is the `nullptr` marker basic block, do not push it.
     if (!origBB)
       continue;
+    // #if 0
+    if (isa<UnreachableInst>(origBB->getTerminator()))
+      continue;
+    // #endif
     postOrderPostDomOrder.push_back(origBB);
   }
+  llvm::errs() << "POST DOM INFO\n";
+  postDomInfo->print(llvm::errs());
+  auto *tmp = postOrderPostDomOrder[2];
+  postOrderPostDomOrder[2] = postOrderPostDomOrder[3];
+  postOrderPostDomOrder[3] = tmp;
+  llvm::errs() << "POST ORDER POST DOM ORDER\n";
+  for (auto *origBB : postOrderPostDomOrder) {
+    llvm::errs() << "BB " << origBB->getDebugID() << "\n";
+  }
+  llvm::errs() << "\nPOST ORDER POST DOM ORDER\n";
   for (auto *origBB : postOrderPostDomOrder) {
     auto *pullbackBB = pullback.createBasicBlock();
     pullbackBBMap.insert({origBB, pullbackBB});
     auto pbStructLoweredType =
         remapType(getPullbackInfo().getLinearMapStructLoweredType(origBB));
+    llvm::errs() << "ORIG BB: " << origBB->getDebugID() << "\n";
     // If the BB is the original exit, then the pullback block that we just
     // created must be the pullback function's entry. For the pullback entry,
     // create entry arguments and continue to the next block.
+    if (pullbackBB->isEntry()) {
+      assert(origBB == origExit);
+    }
     if (origBB == origExit) {
       assert(pullbackBB->isEntry());
       createEntryArguments(&pullback);
@@ -949,6 +983,7 @@ bool PullbackEmitter::run() {
     //   the pullback entry and deallocated in the pullback exit.)
     // - For each active value in the original block, add adjoint value
     //   arguments to the pullback block.
+    llvm::errs() << "PB BB: " << pullbackBB->getDebugID() << "\n";
     for (auto activeValue : bbActiveValues) {
       if (activeValue->getType().isAddress()) {
         // Allocate and zero initialize a new local buffer using
@@ -978,6 +1013,9 @@ bool PullbackEmitter::run() {
     //   struct argument. They branch from a pullback successor block to the
     //   pullback original block, passing adjoint values of active values.
     for (auto *succBB : origBB->getSuccessorBlocks()) {
+      if (isa<UnreachableInst>(succBB->getTerminator()))
+        continue;
+
       auto *pullbackTrampolineBB = pullback.createBasicBlockBefore(pullbackBB);
       pullbackTrampolineBBMap.insert({{origBB, succBB}, pullbackTrampolineBB});
       // Get the enum element type (i.e. the pullback struct type). The enum
@@ -1133,6 +1171,9 @@ bool PullbackEmitter::run() {
   }
   assert(!leakFound && "Leaks found!");
 #endif
+
+  debugAdjointValueMapping();
+  debugAdjointBufferMapping();
 
   LLVM_DEBUG(getADDebugStream()
              << "Generated pullback for " << original.getName() << ":\n"
