@@ -1,6 +1,6 @@
 // RUN: %target-run-simple-swift
 // NOTE(TF-813): verify that enabling forward-mode does not affect reverse-mode.
-// RUN: %target-run-simple-swift(-Xfrontend -enable-experimental-forward-mode-differentiation)
+// UN: %target-run-simple-swift(-Xfrontend -enable-experimental-forward-mode-differentiation)
 // RUN: %target-swift-frontend -Xllvm -sil-print-after=differentiation %s -emit-sil -o /dev/null -module-name null 2>&1 | %FileCheck %s
 // REQUIRES: executable_test
 
@@ -400,5 +400,35 @@ SimpleMathTests.test("Adjoint value accumulation for aggregate lhs and concrete 
 // CHECK:   [[RES_STRUCT:%.*]] = struct $SmallTestModel.TangentVector ([[RES]] : $Float)
 // CHECK:   return [[RES_STRUCT]] : $SmallTestModel.TangentVector
 // CHECK: }
+
+// TF-1149: Test loadable type with an address-only `TangentVector` type.
+SimpleMathTests.test("LoadableTypeAddressOnlyTangentVector") {
+  final class LoadableClass<T: Differentiable>: Differentiable {
+    @differentiable
+    var stored: T
+
+    @differentiable
+    init(_ stored: T) {
+      self.stored = stored
+    }
+
+    @differentiable
+    func method(_ x: T) -> T {
+      stored
+    }
+  }
+
+  func projection<T: Differentiable>(_ s: LoadableClass<T>) -> T {
+    var x = s.stored
+    return x
+  }
+  expectEqual(.init(stored: 1.0), gradient(at: LoadableClass<Float>(10), in: projection))
+
+  func tuple<T: Differentiable>(_ s: LoadableClass<T>) -> T {
+    var tuple = (s, (s, s))
+    return tuple.1.0.stored
+  }
+  expectEqual(.init(stored: 1.0), gradient(at: LoadableClass<Float>(10), in: tuple))
+}
 
 runAllTests()

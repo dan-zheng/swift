@@ -136,20 +136,14 @@ func testMultipleDiffAttrsClass<C: ClassMethodMultipleDifferentiableAttribute>(
 
 // TF-1149: Test class with loadable type but address-only `TangentVector` type.
 class C<T: Differentiable>: Differentiable {
-  // expected-error @+1 {{function is not differentiable}}
   @differentiable
-  // expected-note @+2 {{when differentiating this function definition}}
-  // expected-note @+1 {{cannot yet differentiate value whose type 'C<T>' has a compile-time known size, but whose 'TangentVector' contains stored properties of unknown size; consider modifying 'C<τ_0_0>.TangentVector' to use fewer generic parameters in stored properties}}
   var stored: T
 
   init(_ stored: T) {
     self.stored = stored
   }
 
-  // expected-error @+1 {{function is not differentiable}}
   @differentiable
-  // expected-note @+2 {{when differentiating this function definition}}
-  // expected-note @+1 {{cannot yet differentiate value whose type 'C<T>' has a compile-time known size, but whose 'TangentVector' contains stored properties of unknown size; consider modifying 'C<τ_0_0>.TangentVector' to use fewer generic parameters in stored properties}}
   func method(_ x: T) -> T {
     stored
   }
@@ -710,6 +704,19 @@ func modify(_ s: Struct, _ x: Float) -> Float {
   // expected-note @+1 {{differentiation of coroutine calls is not yet supported}}
   s.x *= x * s.z
   return s.x
+}
+
+// Test `@differentiable` wrapped properties.
+
+class Class2: Differentiable {
+  @differentiable
+  @Wrapper @Wrapper var x: Float = 10
+
+  @differentiable
+  @Wrapper var y: Float = 20
+
+  @differentiable
+  var z: Float = 30
 }
 
 //===----------------------------------------------------------------------===//

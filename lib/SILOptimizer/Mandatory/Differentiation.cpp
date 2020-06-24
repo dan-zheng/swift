@@ -1170,6 +1170,35 @@ SILValue DifferentiationTransformer::promoteToDifferentiableFunction(
           loc, derivativeFn,
           SILType::getPrimitiveObjectType(expectedDerivativeFnTy));
     }
+    // If derivative function value's type is not ABI-compatible with the
+    // expected derivative function type, perform reabstraction.
+    // TODO: CHECK EQUALITY?
+#if 0
+    llvm::errs() << "DERIVATIVE FN\n";
+    SILType::getPrimitiveObjectType(expectedDerivativeFnTy).dump();
+    derivativeFn->getType().dump();
+#endif
+    auto compatibility = expectedDerivativeFnTy->isABICompatibleWith(
+        derivativeFn->getType().castTo<SILFunctionType>(), *dfi->getFunction());
+    if (!compatibility.isCompatible()) {
+      // if (SILType::getPrimitiveObjectType(expectedDerivativeFnTy) !=
+      // derivativeFn->getType()) {
+      SILOptFunctionBuilder fb(context.getTransform());
+      auto newDerivativeFn = reabstractFunction(
+          builder, fb, loc, derivativeFn, expectedDerivativeFnTy,
+          [](SubstitutionMap substMap) { return substMap; });
+#if 0
+      llvm::errs() << "NEW DERIVATIVE FN\n";
+      newDerivativeFn->dump();
+      newDerivativeFn->getType().dump();
+#endif
+      derivativeFn = newDerivativeFn;
+      assert(expectedDerivativeFnTy
+                 ->isABICompatibleWith(
+                     derivativeFn->getType().castTo<SILFunctionType>(),
+                     *dfi->getFunction())
+                 .isCompatible());
+    }
 
     derivativeFns.push_back(derivativeFn);
   }
@@ -1181,6 +1210,10 @@ SILValue DifferentiationTransformer::promoteToDifferentiableFunction(
   auto *newDiffFn = context.createDifferentiableFunction(
       builder, loc, parameterIndices, resultIndices, origFnCopy,
       std::make_pair(derivativeFns[0], derivativeFns[1]));
+#if 0
+  llvm::errs() << "NEW DIFF FN\n";
+  newDiffFn->dumpInContext();
+#endif
   context.addDifferentiableFunctionInstToWorklist(dfi);
   return newDiffFn;
 }

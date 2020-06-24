@@ -270,6 +270,15 @@ JVPEmitter::remapSubstitutionMapInDifferential(SubstitutionMap substMap) {
   return substMap.subst(getDifferential().getForwardingSubstitutionMap());
 }
 
+const Lowering::TypeLowering &
+JVPEmitter::getTypeLoweringInDifferential(Type type) {
+  auto dfGenSig =
+      getDifferential().getLoweredFunctionType()->getSubstGenericSignature();
+  Lowering::AbstractionPattern pattern(dfGenSig,
+                                       type->getCanonicalType(dfGenSig));
+  return getDifferential().getTypeLowering(pattern, type);
+}
+
 Type JVPEmitter::remapTypeInDifferential(Type ty) {
   if (ty->hasArchetype())
     return getDifferential().mapTypeIntoContext(ty->mapTypeOutOfContext());
@@ -288,6 +297,22 @@ Optional<TangentSpace> JVPEmitter::getTangentSpace(CanType type) {
     type = witnessGenSig->getCanonicalTypeInContext(type);
   return type->getAutoDiffTangentSpace(
       LookUpConformanceInModule(getModule().getSwiftModule()));
+}
+
+SILValueCategory JVPEmitter::getTangentValueCategory(SILValue v) {
+  // Quick check: if the value has an address type, the tangent value category
+  // is always "address".
+  if (v->getType().isAddress())
+    return SILValueCategory::Address;
+  // If the value has an object type and the tangent type is not address-only,
+  // then the tangent value category is "object".
+  auto tanSpace = getTangentSpace(remapType(v->getType()).getASTType());
+  auto tanASTType = tanSpace->getCanonicalType();
+  if (v->getType().isObject() &&
+      !getTypeLoweringInDifferential(tanASTType).isAddressOnly())
+    return SILValueCategory::Object;
+  // Otherwise, the tangent value category is "address".
+  return SILValueCategory::Address;
 }
 
 SILType JVPEmitter::getRemappedTangentType(SILType type) {

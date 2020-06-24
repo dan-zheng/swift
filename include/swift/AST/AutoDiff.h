@@ -470,8 +470,6 @@ public:
 struct TangentPropertyInfo {
   struct Error {
     enum class Kind {
-      /// The original property is `@noDerivative`.
-      NoDerivativeOriginalProperty,
       /// The nominal parent type does not conform to `Differentiable`.
       NominalParentNotDifferentiable,
       /// The original property's type does not conform to `Differentiable`.
@@ -500,8 +498,7 @@ struct TangentPropertyInfo {
 
   public:
     Error(Kind kind) : kind(kind), value() {
-      assert(kind == Kind::NoDerivativeOriginalProperty ||
-             kind == Kind::NominalParentNotDifferentiable ||
+      assert(kind == Kind::NominalParentNotDifferentiable ||
              kind == Kind::OriginalPropertyNotDifferentiable ||
              kind == Kind::ParentTangentVectorNotStruct ||
              kind == Kind::TangentPropertyNotFound ||

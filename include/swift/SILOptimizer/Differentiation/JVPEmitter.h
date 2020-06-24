@@ -201,6 +201,9 @@ private:
   /// tangent function's substitution map.
   SubstitutionMap remapSubstitutionMapInDifferential(SubstitutionMap substMap);
 
+  /// Get the type lowering for the given AST type.
+  const Lowering::TypeLowering &getTypeLoweringInDifferential(Type type);
+
   /// Remap any archetypes into the differential function's context.
   Type remapTypeInDifferential(Type ty);
 
@@ -209,6 +212,9 @@ private:
 
   /// Find the tangent space of a given canonical type.
   Optional<TangentSpace> getTangentSpace(CanType type);
+
+  /// Returns the tangent value category of the given value.
+  SILValueCategory getTangentValueCategory(SILValue v);
 
   /// Assuming the given type conforms to `Differentiable` after remapping,
   /// returns the associated tangent space SIL type.

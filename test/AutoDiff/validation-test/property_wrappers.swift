@@ -101,15 +101,11 @@ PropertyWrapperTests.test("GenericStruct") {
 // FIXME(TF-1149): Cannot differentiate active value with loadable type but
 // address-only tangent type. Triggered by marking properties with
 // `@differentiable`, which triggers derivative vtable thunk entries.
-/*
-class Class: Differentiable {
-  @differentiable
+final class Class: Differentiable {
   @Wrapper @Wrapper var x: Tracked<Float> = 10
 
-  @differentiable
   @Wrapper var y: Tracked<Float> = 20
 
-  @differentiable
   var z: Tracked<Float> = 30
 }
 
@@ -138,7 +134,6 @@ PropertyWrapperTests.test("SimpleClass") {
               gradient(at: Class(), 2, in: modify))
   */
 }
-*/
 
 // From: https://github.com/apple/swift-evolution/blob/master/proposals/0258-property-wrappers.md#proposed-solution
 // Tests the following functionality:

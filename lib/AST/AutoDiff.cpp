@@ -427,7 +427,9 @@ bool swift::operator==(const TangentPropertyInfo::Error &lhs,
   if (lhs.kind != rhs.kind)
     return false;
   switch (lhs.kind) {
+#if 0
   case TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty:
+#endif
   case TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable:
   case TangentPropertyInfo::Error::Kind::OriginalPropertyNotDifferentiable:
   case TangentPropertyInfo::Error::Kind::ParentTangentVectorNotStruct:
@@ -446,9 +448,11 @@ void swift::simple_display(llvm::raw_ostream &os, TangentPropertyInfo info) {
   if (info.error) {
     os << ", error: ";
     switch (info.error->kind) {
+#if 0
     case TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty:
       os << "'@noDerivative' original property has no tangent property";
       break;
+#endif
     case TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable:
       os << "nominal parent does not conform to 'Differentiable'";
       break;
@@ -478,8 +482,10 @@ void swift::simple_display(llvm::raw_ostream &os, TangentPropertyInfo info) {
 TangentPropertyInfo
 TangentStoredPropertyRequest::evaluate(Evaluator &evaluator,
                                        VarDecl *originalField) const {
+  /*
   assert(originalField->hasStorage() && originalField->isInstanceMember() &&
          "Expected stored property");
+  */
   auto *parentDC = originalField->getDeclContext();
   assert(parentDC->isTypeContext());
   auto parentType = parentDC->getDeclaredTypeInContext();
@@ -491,11 +497,13 @@ TangentStoredPropertyRequest::evaluate(Evaluator &evaluator,
     return TangentPropertyInfo(
         TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable);
   }
+#if 0
   // Error if original stored property is `@noDerivative`.
   if (originalField->getAttrs().hasAttribute<NoDerivativeAttr>()) {
     return TangentPropertyInfo(
         TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty);
   }
+#endif
   // Error if original property's type does not conform to `Differentiable`.
   auto originalFieldTan = originalField->getType()->getAutoDiffTangentSpace(
       LookUpConformanceInModule(moduleDecl));

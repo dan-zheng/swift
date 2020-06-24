@@ -286,10 +286,6 @@ VarDecl *getTangentStoredProperty(ADContext &context, VarDecl *originalField,
   auto fieldName = originalField->getNameStr();
   auto sourceLoc = loc.getSourceLoc();
   switch (tanFieldInfo.error->kind) {
-  case TangentPropertyInfo::Error::Kind::NoDerivativeOriginalProperty:
-    llvm_unreachable(
-        "`@noDerivative` stored property accesses should not be "
-        "differentiated; activity analysis should not mark as varied");
   case TangentPropertyInfo::Error::Kind::NominalParentNotDifferentiable:
     context.emitNondifferentiabilityError(
         sourceLoc, invoker,
