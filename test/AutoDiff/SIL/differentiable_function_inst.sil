@@ -32,14 +32,14 @@ sil @function : $@convention(thin) (Float) -> Float
 sil @function_vjp : $@convention(thin) (Float) -> (Float, @owned @callee_guaranteed (Float) -> Float)
 
 sil @foo : $@convention(thin) (Float, Float, Float) -> (Float, Float)
-sil @foo_vjp : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> Float)
+sil @foo_vjp : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> (Float, Float))
 
 sil @make_differentiable_func : $@convention(thin) () -> @differentiable @convention(thin) (Float, Float, @noDerivative Float) -> (Float, @noDerivative Float) {
 // sil @make_differentiable_func : $@convention(thin) () -> () {
 bb0:
   %orig_fn = function_ref @foo : $@convention(thin) (Float, Float, Float) -> (Float, Float)
-  %vjp_fn = function_ref @foo_vjp : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> Float)
-  %diff_fn = differentiable_function [parameters 0 1] [results 0] %orig_fn : $@convention(thin) (Float, Float, Float) -> (Float, Float) with_derivative {undef : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> Float), %vjp_fn : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> Float)}
+  %vjp_fn = function_ref @foo_vjp : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> (Float, Float))
+  %diff_fn = differentiable_function [parameters 0 1] [results 0] %orig_fn : $@convention(thin) (Float, Float, Float) -> (Float, Float) with_derivative {undef : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float, Float) -> Float), %vjp_fn : $@convention(thin) (Float, Float, Float) -> (Float, Float, @owned @callee_guaranteed (Float) -> (Float, Float))}
   %extracted_vjp = differentiable_function_extract [vjp] %diff_fn : $@differentiable @convention(thin) (Float, Float, @noDerivative Float) -> (Float, @noDerivative Float)
   return %diff_fn : $@differentiable @convention(thin) (Float, Float, @noDerivative Float) -> (Float, @noDerivative Float)
 }

@@ -129,7 +129,7 @@ public:
     return base->value.aggregate;
   }
 
-  SILValue getConcreteValue() const {
+  SILValue &getConcreteValue() const {
     assert(isConcrete());
     return base->value.concrete;
   }

@@ -4640,13 +4640,16 @@ public:
   void checkDifferentiableFunctionInst(DifferentiableFunctionInst *dfi) {
     // FIXME(TF-1197): Re-enable verification after substituted SIL function
     // types.
-    return;
-#if 0
     auto origTy =
         dfi->getOriginalFunction()->getType().getAs<SILFunctionType>();
     require(origTy, "The original function must have a function type");
     require(!origTy->isDifferentiable(),
             "The original function must not be @differentiable");
+    auto origUnsubstTy = dyn_cast<SILFunctionType>(origTy->replaceSubstitutedSILFunctionTypesWithUnsubstituted(F.getModule())->getCanonicalType());
+    llvm::errs() << "ORIG TY\n";
+    SILType::getPrimitiveObjectType(origTy).dump();
+    llvm::errs() << "ORIG UNSUBST TY\n";
+    SILType::getPrimitiveObjectType(origUnsubstTy).dump();
     // Skip verification in lowered SIL: LoadableByAddress changes
     // parameter/result conventions.
     // TODO: Check that derivative function types match excluding
@@ -4656,6 +4659,13 @@ public:
     if (dfi->hasDerivativeFunctions()) {
       auto jvp = dfi->getJVPFunction();
       auto jvpType = jvp->getType().getAs<SILFunctionType>();
+      auto jvpUnsubstType = dyn_cast<SILFunctionType>(jvpType->replaceSubstitutedSILFunctionTypesWithUnsubstituted(F.getModule())->getCanonicalType());
+
+      llvm::errs() << "ACTUAL JVP TYPE\n";
+      SILType::getPrimitiveObjectType(jvpType).dump();
+      llvm::errs() << "ACTUAL JVP UNSUBST TYPE\n";
+      SILType::getPrimitiveObjectType(jvpUnsubstType).dump();
+
       require(jvpType, "The JVP function must have a function type");
       require(!jvpType->isDifferentiable(),
               "The JVP function must not be @differentiable");
@@ -4663,11 +4673,33 @@ public:
           dfi->getParameterIndices(), dfi->getResultIndices(),
           AutoDiffDerivativeFunctionKind::JVP, TC,
           LookUpConformanceInModule(M));
+      auto expectedJVPUnsubstType = dyn_cast<SILFunctionType>(expectedJVPType->replaceSubstitutedSILFunctionTypesWithUnsubstituted(F.getModule())->getCanonicalType());
+
+      llvm::errs() << "EXPECTED JVP TYPE\n";
+      SILType::getPrimitiveObjectType(expectedJVPType).dump();
+      llvm::errs() << "EXPECTED JVP UNSUBST TYPE\n";
+      SILType::getPrimitiveObjectType(expectedJVPUnsubstType).dump();
+
+      auto jvpTypeCompatibility = jvpType->isABICompatibleWith(expectedJVPType, const_cast<SILFunction &>(F));
+      llvm::errs() << "JVP COMPATIBLE? " << jvpTypeCompatibility.isCompatible() << ", MSG: " << jvpTypeCompatibility.getMessage() << "\n";
+
+      requireABICompatibleFunctionTypes(jvpType, expectedJVPType,
+                                        "JVP type must be ABI-compatible with expected JVP type",
+                                        *dfi->getFunction());
+#if 0
       requireSameType(SILType::getPrimitiveObjectType(jvpType),
                       SILType::getPrimitiveObjectType(expectedJVPType),
                       "JVP type does not match expected JVP type");
+#endif
       auto vjp = dfi->getVJPFunction();
       auto vjpType = vjp->getType().getAs<SILFunctionType>();
+      auto vjpUnsubstType = dyn_cast<SILFunctionType>(vjpType->replaceSubstitutedSILFunctionTypesWithUnsubstituted(F.getModule())->getCanonicalType());
+
+      llvm::errs() << "ACTUAL VJP TYPE\n";
+      SILType::getPrimitiveObjectType(vjpType).dump();
+      llvm::errs() << "ACTUAL VJP UNSUBST TYPE\n";
+      SILType::getPrimitiveObjectType(vjpUnsubstType).dump();
+
       require(vjpType, "The VJP function must have a function type");
       require(!vjpType->isDifferentiable(),
               "The VJP function must not be @differentiable");
@@ -4675,11 +4707,27 @@ public:
           dfi->getParameterIndices(), dfi->getResultIndices(),
           AutoDiffDerivativeFunctionKind::VJP, TC,
           LookUpConformanceInModule(M));
+      auto expectedVJPUnsubstType = dyn_cast<SILFunctionType>(expectedVJPType->replaceSubstitutedSILFunctionTypesWithUnsubstituted(F.getModule())->getCanonicalType());
+
+      llvm::errs() << "EXPECTED VJP TYPE\n";
+      SILType::getPrimitiveObjectType(expectedVJPType).dump();
+      llvm::errs() << "EXPECTED VJP UNSUBST TYPE\n";
+      SILType::getPrimitiveObjectType(expectedVJPUnsubstType).dump();
+
+      auto vjpTypeCompatibility = vjpType->isABICompatibleWith(expectedVJPType, const_cast<SILFunction &>(F));
+      llvm::errs() << "VJP COMPATIBLE? " << vjpTypeCompatibility.isCompatible() << ", MSG: " << vjpTypeCompatibility.getMessage() << "\n";
+
+      // requireABICompatibleFunctionTypes(vjpType, expectedVJPType,
+      requireABICompatibleFunctionTypes(vjpUnsubstType, expectedVJPUnsubstType,
+                                        "VJP type must be ABI-compatible with expected VJP type",
+                                        *dfi->getFunction());
+#if 0
       requireSameType(SILType::getPrimitiveObjectType(vjpType),
                       SILType::getPrimitiveObjectType(expectedVJPType),
                       "VJP type does not match expected VJP type");
-    }
 #endif
+    }
+    llvm::errs() << "\n";
   }
 
   void checkLinearFunctionInst(LinearFunctionInst *lfi) {

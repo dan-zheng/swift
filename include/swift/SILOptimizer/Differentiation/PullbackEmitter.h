@@ -60,11 +60,11 @@ private:
   /// adjoint values.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, AdjointValue> valueMap;
 
-// #if 0
+#if 0
   /// Mapping from original basic blocks and original buffers to corresponding
   /// adjoint buffers.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, SILValue> bufferMap;
-// #endif
+#endif
 
   /// Mapping from pullback basic blocks to pullback struct arguments.
   llvm::DenseMap<SILBasicBlock *, SILArgument *> pullbackStructArguments;
@@ -220,6 +220,9 @@ private:
 
   Optional<TangentSpace> getTangentSpace(CanType type);
 
+  /// Returns the tangent value category of the given value.
+  SILValueCategory getTangentValueCategory(SILValue v);
+
   /// Assuming the given type conforms to `Differentiable` after remapping,
   /// returns the associated tangent space type.
   SILType getRemappedTangentType(SILType type);
@@ -264,8 +267,8 @@ private:
   void setAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
                         SILValue adjointBuffer);
 
-  SILValue getAdjointProjection(SILBasicBlock *origBB,
-                                SILValue originalProjection);
+  Optional<AdjointValue>
+  getAdjointProjection(SILBasicBlock *origBB, SILValue originalProjection);
 
   SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
 // #endif
