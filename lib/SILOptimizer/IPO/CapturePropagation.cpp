@@ -408,6 +408,17 @@ static SILFunction *getSpecializedWithDeadParams(
       return nullptr;
   }
 
+#if 0
+  // Disable specialization for instructions that are operands of
+  // `differentiable_function` instructions. `differentiable_function`
+  // requires derivative function operand types to match expected derivative
+  // function types computed from the original function operand's type, so
+  // operands cannot be specialized individually without specializing the
+  // others.
+  if (!PAI->getUsersOfType<DifferentiableFunctionInst>().empty())
+    return nullptr;
+#endif
+
   auto Rep = Specialized->getLoweredFunctionType()->getRepresentation();
   if (getSILFunctionLanguage(Rep) != SILFunctionLanguage::Swift)
     return nullptr;

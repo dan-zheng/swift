@@ -345,6 +345,10 @@ static CanSILFunctionType getAutoDiffDifferentialType(
     SILFunctionType *originalFnTy, IndexSubset *parameterIndices,
     IndexSubset *resultIndices, LookupConformanceFn lookupConformance,
     TypeConverter &TC) {
+#if 0
+  llvm::errs() << "getAutoDiffDerivativeFunctionType\n";
+#endif
+  SILType::getPrimitiveObjectType(originalFnTy->getCanonicalType()).dump();
   // Given the tangent type and the corresponding original parameter's
   // convention, returns the tangent parameter's convention.
   auto getTangentParameterConvention =
@@ -354,11 +358,19 @@ static CanSILFunctionType getAutoDiffDifferentialType(
         tanType->getCanonicalType(originalFnTy->getSubstGenericSignature());
     AbstractionPattern pattern(originalFnTy->getSubstGenericSignature(),
                                tanType);
+        // MINIMAL EXPANSION COULD BE THE ISSUE
     auto &tl =
         TC.getTypeLowering(pattern, tanType, TypeExpansionContext::minimal());
+#if 0
+    llvm::errs() << "getTangentParameterConvention, ADDRESS ONLY? " << tl.isAddressOnly() << "\n";
+    tanType->dump();
+#endif
     // When the tangent type is address only, we must ensure that the tangent
     // parameter's convention is indirect.
     if (tl.isAddressOnly() && !isIndirectFormalParameter(origParamConv)) {
+#if 0
+      llvm::errs() << "ADDRESS ONLY\n";
+#endif
       switch (origParamConv) {
       case ParameterConvention::Direct_Guaranteed:
         return ParameterConvention::Indirect_In_Guaranteed;

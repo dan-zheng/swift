@@ -255,6 +255,9 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
                                            CanSILFunctionType toType) {
   assert(!fromType->getCombinedSubstitutions());
   assert(!toType->getCombinedSubstitutions());
+  llvm::errs() << "getOrCreateReabstractionThunk\n";
+  SILType::getPrimitiveObjectType(fromType).dump();
+  SILType::getPrimitiveObjectType(toType).dump();
 
   SubstitutionMap interfaceSubs;
   GenericEnvironment *genericEnv = nullptr;
@@ -380,6 +383,29 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
   for (unsigned resIdx : range(toType->getNumResults())) {
     auto fromRes = fromConv.getResults()[resIdx];
     auto toRes = toConv.getResults()[resIdx];
+    // Check function-typed results.
+    if (isa<SILFunctionType>(fromRes.getInterfaceType()) &&
+        isa<SILFunctionType>(toRes.getInterfaceType())) {
+      auto fromFnType = dyn_cast<SILFunctionType>(fromRes.getInterfaceType());
+      auto toFnType = dyn_cast<SILFunctionType>(toRes.getInterfaceType());
+      auto fromUnsubstFnType = fromFnType->getUnsubstitutedType(module);
+      auto toUnsubstFnType = toFnType->getUnsubstitutedType(module);
+      if (fromUnsubstFnType != toUnsubstFnType) {
+
+      }
+      llvm::errs() << "FROM AND TO FN TYPES\n";
+      SILType::getPrimitiveObjectType(fromFnType).dump();
+      SILType::getPrimitiveObjectType(toFnType).dump();
+      auto fromFn = *fromDirResultsIter++;
+      auto newFromFn = reabstractFunction(builder, fb, loc, fromFn, toFnType, [](SubstitutionMap substMap) {
+        return substMap;
+      });
+      llvm::errs() << "NEW FROM FN\n";
+      newFromFn->dump();
+      newFromFn->getType().dump();
+      results.push_back(newFromFn);
+      continue;
+    }
     // No abstraction mismatch.
     if (fromRes.isFormalIndirect() == toRes.isFormalIndirect()) {
       // If result types are direct, add call result as direct thunk result.
