@@ -522,8 +522,7 @@ extension Struct where T: Differentiable & AdditiveArithmetic {
   }
 
   // Error: original subscript has no setter.
-  // FIXME: Improve diagnostic. The current one makes no sense.
-  // expected-error @+1 {{'subscript(_:)' is not a 'func', 'init', 'subscript', or 'var' computed property declaration}}
+  // expected-error @+1 {{'subscript(_:)' does not have a setter}}
   @derivative(of: subscript(_:).set, wrt: self)
   mutating func vjpSubscriptGeneric_NoSetter<T: Differentiable>(x: T) -> (
     value: T, pullback: (T.TangentVector) -> TangentVector
@@ -572,7 +571,7 @@ func jvpDuplicate2(_ x: Float) -> (value: Float, differential: (Float) -> Float)
 // Test invalid original declaration kind.
 
 var globalVariable: Float
-// expected-error @+1 {{'globalVariable' is not a 'func', 'init', 'subscript', or 'var' computed property declaration}}
+// expected-error @+1 {{'globalVariable' does not have a getter}}
 @derivative(of: globalVariable)
 func invalidOriginalDeclaration(x: Float) -> (
   value: Float, differential: (Float) -> (Float)
@@ -658,10 +657,7 @@ protocol ProtocolRequirementDerivative {
   func requirement(_ x: Float) -> Float
 }
 extension ProtocolRequirementDerivative {
-  // NOTE: the error is misleading because `findAbstractFunctionDecl` in
-  // TypeCheckAttr.cpp is not setup to show customized error messages for
-  // invalid original function candidates.
-  // expected-error @+1 {{could not find function 'requirement' with expected type '<Self where Self : ProtocolRequirementDerivative> (Self) -> (Float) -> Float'}}
+  // expected-error @+1 {{cannot yet register derivative default implementation for protocol requirements}}
   @derivative(of: requirement)
   func vjpRequirement(_ x: Float) -> (value: Float, pullback: (Float) -> Float) {
     fatalError()
@@ -858,7 +854,7 @@ extension FloatingPoint where Self: Differentiable {
 }
 
 extension Differentiable where Self: AdditiveArithmetic {
-  // expected-error @+1 {{'+' is not defined in the current type context}}
+  // expected-error @+1 {{cannot yet register derivative default implementation for protocol requirements}}
   @derivative(of: +)
   static func vjpPlus(x: Self, y: Self) -> (
     value: Self,
@@ -870,7 +866,7 @@ extension Differentiable where Self: AdditiveArithmetic {
 
 extension AdditiveArithmetic
 where Self: Differentiable, Self == Self.TangentVector {
-  // expected-error @+1 {{could not find function '+' with expected type '<Self where Self : Differentiable, Self == Self.TangentVector> (Self) -> (Self, Self) -> Self'}}
+  // expected-error @+1 {{cannot yet register derivative default implementation for protocol requirements}}
   @derivative(of: +)
   func vjpPlusInstanceMethod(x: Self, y: Self) -> (
     value: Self, pullback: (Self) -> (Self, Self)
@@ -897,10 +893,10 @@ protocol HasADefaultDerivative {
   func req(_ x: Float) -> Float
 }
 extension HasADefaultDerivative {
-  // TODO(TF-982): Make this ok.
-  // expected-error @+1 {{could not find function 'req'}}
+  // TODO(TF-982): Support default derivatives for protocol requirements.
+  // expected-error @+1 {{cannot yet register derivative default implementation for protocol requirements}}
   @derivative(of: req)
-  func req(_ x: Float) -> (value: Float, pullback: (Float) -> Float) {
+  func vjpReq(_ x: Float) -> (value: Float, pullback: (Float) -> Float) {
     (x, { 10 * $0 })
   }
 }
