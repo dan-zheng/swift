@@ -46,6 +46,10 @@ template <class T> class SILVTableVisitor {
     maybeAddEntry(constant);
 
     for (auto *diffAttr : fd->getAttrs().getAttributes<DifferentiableAttr>()) {
+      llvm::errs() << "SILVtableVisitor: " << diffAttr << ", implicit? " << diffAttr->isImplicit() << "\n";
+      diffAttr->print(llvm::errs(), fd);
+      llvm::errs() << "\n";
+      diffAttr->getDerivativeGenericSignature().dump();
       auto jvpConstant = constant.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,

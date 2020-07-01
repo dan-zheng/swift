@@ -179,6 +179,11 @@ private:
                                               SILDeclRef::Kind kind) {
     SILDeclRef declRef(AFD, kind);
     for (auto *diffAttr : AFD->getAttrs().getAttributes<DifferentiableAttr>()) {
+      llvm::errs() << "SILWitnessVisitor: " << diffAttr << ", implicit? " << diffAttr->isImplicit() << "\n";
+      diffAttr->print(llvm::errs(), AFD);
+      llvm::errs() << "\n";
+      diffAttr->getDerivativeGenericSignature().dump();
+
       asDerived().addMethod(declRef.asAutoDiffDerivativeFunction(
           AutoDiffDerivativeFunctionIdentifier::get(
               AutoDiffDerivativeFunctionKind::JVP,

@@ -4604,6 +4604,20 @@ getWitnessFunctionRef(SILGenFunction &SGF,
   }
   case WitnessDispatchKind::Class: {
     SILValue selfPtr = witnessParams.back().getValue();
+    if (auto *derivativeId = witness.derivativeFunctionIdentifier) {
+      // Remove the `Self : Protocol` requirement from
+      llvm::errs() << "WITNESS DECL REF: " << witness << "\n";
+      llvm::errs() << "WITNESS SUBS: " << witnessSubs << "\n";
+      llvm::errs() << "WITNESS SUBS: ";
+      // witnessSubs.dump(); llvm::errs() << "\n";
+      witnessSubs.getGenericSignature().dump();
+      llvm::errs() << "ORIGINAL GEN SIG: ";
+      derivativeId->getDerivativeGenericSignature().dump();
+      auto *newDerivativeId =
+          // AutoDiffDerivativeFunctionIdentifier::get(derivativeId->getKind(), derivativeId->getParameterIndices(), derivativeId->getDerivativeGenericSignature(), SGF.getASTContext());
+      AutoDiffDerivativeFunctionIdentifier::get(derivativeId->getKind(), derivativeId->getParameterIndices(), witnessSubs.getGenericSignature(), SGF.getASTContext());
+      return SGF.emitClassMethodRef(loc, selfPtr, witness.asAutoDiffDerivativeFunction(newDerivativeId), witnessFTy);
+    }
     return SGF.emitClassMethodRef(loc, selfPtr, witness, witnessFTy);
   }
   }
