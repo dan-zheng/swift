@@ -111,7 +111,7 @@ deriveBodyTensorArrayProtocol_unpackTensorHandles(
       tensorArrayProto, C.Id_tensorHandleCount);
 
   Type intType = C.getIntDecl()->getDeclaredType();
-  TypeExpr *intTE = TypeExpr::createImplicit(intType, C);
+  TypeExpr *intTypeExpr = TypeExpr::createImplicit(intType, C);
 
   // Iterate through the `TensorArrayProtocol`-conforming members and call
   // `member._unpackTensorHandles(into:)`.
@@ -144,11 +144,14 @@ deriveBodyTensorArrayProtocol_unpackTensorHandles(
     // Obtain the method call argument.
     auto *addressDRE = new (C) DeclRefExpr(
         currAddressDecl, DeclNameLoc(), /*implicit*/ true);
+#if 0
     auto *loadExpr = new (C) LoadExpr(addressDRE, baseAddressType);
     auto *injectExpr = new (C) InjectIntoOptionalExpr(loadExpr, addressType);
+#endif
 
     auto *callExpr = CallExpr::createImplicit(
-        C, memberMethodExpr, {injectExpr}, {C.getIdentifier("into")});
+        // C, memberMethodExpr, {injectExpr}, {C.getIdentifier("into")});
+        C, memberMethodExpr, {addressDRE}, {C.getIdentifier("into")});
 
     // Advance the current address.
     DeclName advancedName(C, C.getIdentifier("advanced"),
@@ -170,9 +173,9 @@ deriveBodyTensorArrayProtocol_unpackTensorHandles(
     // Cast the tensor handle count to Int.
     auto intInitName = DeclName(C, DeclBaseName::createConstructor(),
                                 {Identifier()});
-    auto *intInitExpr =
-        new (C) UnresolvedDotExpr(intTE, SourceLoc(), DeclNameRef(intInitName),
-                                  DeclNameLoc(), /*Implicit*/ true);
+    auto *intInitExpr = new (C)
+        UnresolvedDotExpr(intTypeExpr, SourceLoc(), DeclNameRef(intInitName),
+                          DeclNameLoc(), /*Implicit*/ true);
     auto *intInitCallExpr = CallExpr::createImplicit(
         C, intInitExpr, {memberCountMRE}, {Identifier()});
 
@@ -276,16 +279,15 @@ deriveBodyTensorArrayProtocol_tensorHandleCount(AbstractFunctionDecl *funcDecl,
 
   // Concatenate all member `_tensorHandleCount`s.
   Type intType = C.getInt32Decl()->getDeclaredType();
-  TypeExpr *intTE = TypeExpr::createImplicit(intType, C);
+  TypeExpr *intTypeExpr = TypeExpr::createImplicit(intType, C);
   auto plusOpLookup = C.getInt32Decl()->lookupDirect(C.getIdentifier("+"));
   assert(plusOpLookup.size() == 1 && "Ambiguous 'Int32.+' operator.");
   ValueDecl *plusOpDecl = plusOpLookup.front();
-  auto plusOpDRE = new (C)
-      DeclRefExpr(plusOpDecl, DeclNameLoc(), /*Implicit*/ true);
-  auto plusOpExpr = new (C) DotSyntaxCallExpr(plusOpDRE, SourceLoc(), intTE);
   Expr *tensorHandleCountExpr = new (C)
       IntegerLiteralExpr("0", SourceLoc(), /*implicit*/ true);
   for (auto member : nominal->getStoredProperties()) {
+    auto plusOpExpr = new (C) MemberRefExpr(intTypeExpr, SourceLoc(), plusOpDecl,
+                                            DeclNameLoc(), /*Implicit*/ true);
     auto *memberDRE = new (C) MemberRefExpr(
       selfDRE, SourceLoc(), member, DeclNameLoc(), /*Implicit*/ true);
     auto *memberTensorHandleCountExpr = new (C)
@@ -360,12 +362,16 @@ deriveBodyTensorArrayProtocol_typeList(AbstractFunctionDecl *funcDecl, void *) {
   auto plusOpLookup = C.getArrayDecl()->lookupDirect(C.getIdentifier("+"));
   assert(plusOpLookup.size() == 1 && "Ambiguous 'Array.+' operator.");
   ValueDecl *plusOpDecl = plusOpLookup.front();
-  auto plusOpDRE = new (C)
-      DeclRefExpr(plusOpDecl, DeclNameLoc(), /*Implicit*/ true);
-  auto plusOpExpr = new (C)
-      DotSyntaxCallExpr(plusOpDRE, SourceLoc(), arrayTypeExpr);
+#if 0
+  auto plusOpExpr =
+      new (C) MemberRefExpr(arrayTypeExpr, SourceLoc(), plusOpDecl,
+                            DeclNameLoc(), /*Implicit*/ true);
+#endif
   Expr *typeListExpr = ArrayExpr::create(C, SourceLoc(), {}, {}, SourceLoc());
   for (auto member : nominal->getStoredProperties()) {
+    auto *plusOpExpr =
+        new (C) MemberRefExpr(arrayTypeExpr, SourceLoc(), plusOpDecl,
+                              DeclNameLoc(), /*Implicit*/ true);
     auto memberType =
         parentDC->mapTypeIntoContext(member->getValueInterfaceType());
     auto *memberTypeExpr = TypeExpr::createImplicit(memberType, C);
@@ -436,7 +442,7 @@ deriveBodyTensorArrayProtocol_init(AbstractFunctionDecl *funcDecl, void *) {
       C.getUnsafePointerDecl(), Type(), {cTensorHandleType});
   auto addressType = BoundGenericType::get(
       C.getOptionalDecl(), Type(), {baseAddressType});
-  auto *addressTE = TypeExpr::createImplicit(addressType, C);
+  auto *addressTypeExpr = TypeExpr::createImplicit(addressType, C);
 
   // Get references to `self` and parameter declarations.
   auto *selfDecl = funcDecl->getImplicitSelfDecl();
@@ -474,7 +480,7 @@ deriveBodyTensorArrayProtocol_init(AbstractFunctionDecl *funcDecl, void *) {
       tensorArrayProto, C.Id_tensorHandleCount);
 
   Type intType = C.getIntDecl()->getDeclaredType();
-  TypeExpr *intTE = TypeExpr::createImplicit(intType, C);
+  TypeExpr *intTypeExpr = TypeExpr::createImplicit(intType, C);
 
   // Iterate over members and call `self.member = MemberType(_owning:)`.
   llvm::SmallVector<ASTNode, 2> thenMemberExprs;
@@ -507,22 +513,23 @@ deriveBodyTensorArrayProtocol_init(AbstractFunctionDecl *funcDecl, void *) {
 
     auto *addressDRE = new (C) DeclRefExpr(
         currAddressDecl, DeclNameLoc(), /*implicit*/ true);
+#if 0
     auto *loadExpr = new (C) LoadExpr(addressDRE, baseAddressType);
 
     // Initialize the member using its `TensorGroup` constructor.
     // Note that, initialization is dependent on the branch of the
     // if-statement taken.
     auto *thenInitExpr = new (C) InjectIntoOptionalExpr(loadExpr, addressType);
+#endif
     auto *thenInitCallExpr = CallExpr::createImplicit(
-        C, memberInitExpr, {thenInitExpr}, {C.getIdentifier("_owning")});
+        C, memberInitExpr, {addressDRE}, {C.getIdentifier("_owning")});
 
     // Create a nil expression with type `UnsafePointer<CTensorHandle>?` for the
     // `else` branch.
     auto *nilDecl = C.getOptionalNoneDecl();
-    auto *nilDRE = new (C) DeclRefExpr(
-        nilDecl, DeclNameLoc(), /*implicit*/ true);
-    auto *elseInitExpr = new (C) DotSyntaxCallExpr(
-        nilDRE, SourceLoc(), addressTE);
+    auto *elseInitExpr =
+        new (C) MemberRefExpr(addressTypeExpr, SourceLoc(), nilDecl,
+                              DeclNameLoc(), /*Implicit*/ true);
     auto *elseInitCallExpr = CallExpr::createImplicit(
         C, memberInitExpr, {elseInitExpr}, {C.getIdentifier("_owning")});
 
@@ -558,9 +565,9 @@ deriveBodyTensorArrayProtocol_init(AbstractFunctionDecl *funcDecl, void *) {
     // Cast the tensor handle count to Int.
     auto intInitName = DeclName(C, DeclBaseName::createConstructor(),
                                 {Identifier()});
-    auto *intInitExpr =
-        new (C) UnresolvedDotExpr(intTE, SourceLoc(), DeclNameRef(intInitName),
-                                  DeclNameLoc(), /*Implicit*/ true);
+    auto *intInitExpr = new (C)
+        UnresolvedDotExpr(intTypeExpr, SourceLoc(), DeclNameRef(intInitName),
+                          DeclNameLoc(), /*Implicit*/ true);
     auto *intInitCallExpr = CallExpr::createImplicit(
         C, intInitExpr, {memberCountMRE}, {Identifier()});
 

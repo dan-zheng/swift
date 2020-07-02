@@ -507,7 +507,14 @@ TangentPropertyInfo TangentStoredPropertyRequest::evaluate(
   // Get the parent `TangentVector` type.
   auto memberSubs = baseType->getMemberSubstitutionMap(
       originalField->getModuleContext(), originalField);
-  auto parentTanType = parentTan->getType().subst(memberSubs);
+  auto parentTanType2 = parentTan->getType().subst(memberSubs);
+  auto parentTanType =
+      baseType->getAutoDiffTangentSpace(LookUpConformanceInModule(moduleDecl))
+          ->getType();
+  llvm::errs() << "PARENT TAN TYPE: " << parentTanType->getCanonicalType()
+               << "\n";
+  llvm::errs() << "PARENT TAN TYPE (bad): "
+               << parentTanType2->getCanonicalType() << "\n";
   auto *parentTanStruct = parentTanType->getStructOrBoundGenericStruct();
   // Error if parent `TangentVector` is not a struct.
   if (!parentTanStruct) {
@@ -540,6 +547,17 @@ TangentPropertyInfo TangentStoredPropertyRequest::evaluate(
   auto tanFieldType =
       parentTanType->getTypeOfMember(tanField->getModuleContext(), tanField);
   if (!originalFieldTanType->isEqual(tanFieldType)) {
+    auto a = originalFieldTanType->getCanonicalType();
+    auto b = tanFieldType->getCanonicalType();
+    llvm::errs() << "ORIG FIELD: " << originalField->printRef() << "\n";
+    llvm::errs() << "TAN FIELD: " << tanField->printRef() << "\n";
+    llvm::errs() << "PARENT TYPE: " << baseType << "\n";
+    llvm::errs() << "PARENT TAN TYPE: " << parentTanType << "\n";
+    llvm::errs() << "HELLO: " << a.getPointer() << ", " << b.getPointer()
+                 << "\n";
+    llvm::errs() << "HELLO: " << a << ", " << b << "\n";
+    a->dump();
+    b->dump();
     return TangentPropertyInfo(
         TangentPropertyInfo::Error::Kind::TangentPropertyWrongType,
         originalFieldTanType);
