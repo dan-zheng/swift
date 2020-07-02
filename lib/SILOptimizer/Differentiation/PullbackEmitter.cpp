@@ -363,8 +363,9 @@ void PullbackEmitter::setAdjointBuffer(SILBasicBlock *origBB,
   (void)insertion;
 }
 
-SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
-                                               SILValue originalProjection) {
+Optional<AdjointValue>
+PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
+                                      SILValue originalProjection) {
   // Handle `struct_element_addr`.
   // Adjoint projection: a `struct_element_addr` into the base adjoint buffer.
   if (auto *seai = dyn_cast<StructElementAddrInst>(originalProjection)) {
@@ -375,7 +376,8 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
     auto *tanField =
         getTangentStoredProperty(getContext(), seai, structType, getInvoker());
     assert(tanField && "Invalid projections should have been diagnosed");
-    return builder.createStructElementAddr(seai->getLoc(), adjSource, tanField);
+    auto *adjProj = builder.createStructElementAddr(seai->getLoc(), adjSource, tanField);
+    return makeConcreteAdjointValue(adjProj);
   }
   // Handle `tuple_element_addr`.
   // Adjoint projection: a `tuple_element_addr` into the base adjoint buffer.
@@ -383,7 +385,7 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
     auto source = teai->getOperand();
     auto adjSource = getAdjointBuffer(origBB, source);
     if (!adjSource->getType().is<TupleType>())
-      return adjSource;
+      return makeConcreteAdjointValue(adjSource);
     auto origTupleTy = source->getType().castTo<TupleType>();
     unsigned adjIndex = 0;
     for (unsigned i : range(teai->getFieldNo())) {
@@ -391,7 +393,8 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
               origTupleTy->getElement(i).getType()->getCanonicalType()))
         ++adjIndex;
     }
-    return builder.createTupleElementAddr(teai->getLoc(), adjSource, adjIndex);
+    auto *adjProj = builder.createTupleElementAddr(teai->getLoc(), adjSource, adjIndex);
+    return makeConcreteAdjointValue(adjProj);
   }
   // Handle `ref_element_addr`.
   // Adjoint projection: a local allocation initialized with the corresponding
@@ -429,7 +432,7 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
             builder.emitStoreValueOperation(loc, adjEltCopy, eltAdjBuffer,
                                             StoreOwnershipQualifier::Init);
           });
-      return eltAdjBuffer;
+      return makeConcreteAdjointValue(eltAdjBuffer);
     }
     case SILValueCategory::Address: {
       // Get the class operand's adjoint buffer. Currently, it must be a
@@ -439,7 +442,7 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
       auto *adjElt = builder.createStructElementAddr(loc, adjClass, tanField);
       builder.createCopyAddr(loc, adjElt, eltAdjBuffer, IsNotTake,
                              IsInitialization);
-      return eltAdjBuffer;
+      return makeConcreteAdjointValue(eltAdjBuffer);
     }
     }
   }
@@ -450,7 +453,7 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
     if (errorOccurred)
       return (bufferMap[{origBB, originalProjection}] = SILValue());
     // Return the base buffer's adjoint buffer.
-    return adjBase;
+      return adjBase;
   }
   // Handle `array.uninitialized_intrinsic` application element addresses.
   // Adjoint projection: a local allocation initialized by applying
@@ -489,37 +492,11 @@ SILValue PullbackEmitter::getAdjointProjection(SILBasicBlock *origBB,
         getArrayAdjointElementBuffer(arrayAdjoint, eltIndex, ai->getLoc());
     return eltAdjBuffer;
   }
-  return SILValue();
+  return None;
 }
 
-SILBasicBlock::iterator
-PullbackEmitter::getNextFunctionLocalAllocationInsertionPoint() {
-  // If there are no local allocations, insert at the pullback entry start.
-  if (functionLocalAllocations.empty())
-    return getPullback().getEntryBlock()->begin();
-  // Otherwise, insert before the last local allocation. Inserting before
-  // rather than after ensures that allocation and zero initialization
-  // instructions are grouped together.
-  auto lastLocalAlloc = functionLocalAllocations.back();
-  return lastLocalAlloc->getDefiningInstruction()->getIterator();
-}
-
-AllocStackInst *
-PullbackEmitter::createFunctionLocalAllocation(SILType type, SILLocation loc) {
-  // Set insertion point for local allocation builder: before the last local
-  // allocation, or at the start of the pullback function's entry if no local
-  // allocations exist yet.
-  localAllocBuilder.setInsertionPoint(
-      getPullback().getEntryBlock(),
-      getNextFunctionLocalAllocationInsertionPoint());
-  // Create and return local allocation.
-  auto *alloc = localAllocBuilder.createAllocStack(loc, type);
-  functionLocalAllocations.push_back(alloc);
-  return alloc;
-}
-
-SILValue &PullbackEmitter::getAdjointBuffer(SILBasicBlock *origBB,
-                                            SILValue originalBuffer) {
+AdjointValue &PullbackEmitter::getAdjointBuffer(SILBasicBlock *origBB,
+                                                SILValue originalBuffer) {
   assert(getTangentValueCategory(originalBuffer) == SILValueCategory::Address);
   assert(originalBuffer->getFunction() == &getOriginal());
   auto insertion = bufferMap.try_emplace({origBB, originalBuffer}, SILValue());
@@ -557,6 +534,32 @@ void PullbackEmitter::addToAdjointBuffer(SILBasicBlock *origBB,
   assert(rhsBufferAccess->getFunction() == &getPullback());
   auto adjointBuffer = getAdjointBuffer(origBB, originalBuffer);
   accumulateIndirect(adjointBuffer, rhsBufferAccess, loc);
+}
+
+SILBasicBlock::iterator
+PullbackEmitter::getNextFunctionLocalAllocationInsertionPoint() {
+  // If there are no local allocations, insert at the pullback entry start.
+  if (functionLocalAllocations.empty())
+    return getPullback().getEntryBlock()->begin();
+  // Otherwise, insert before the last local allocation. Inserting before
+  // rather than after ensures that allocation and zero initialization
+  // instructions are grouped together.
+  auto lastLocalAlloc = functionLocalAllocations.back();
+  return lastLocalAlloc->getDefiningInstruction()->getIterator();
+}
+
+AllocStackInst *
+PullbackEmitter::createFunctionLocalAllocation(SILType type, SILLocation loc) {
+  // Set insertion point for local allocation builder: before the last local
+  // allocation, or at the start of the pullback function's entry if no local
+  // allocations exist yet.
+  localAllocBuilder.setInsertionPoint(
+      getPullback().getEntryBlock(),
+      getNextFunctionLocalAllocationInsertionPoint());
+  // Create and return local allocation.
+  auto *alloc = localAllocBuilder.createAllocStack(loc, type);
+  functionLocalAllocations.push_back(alloc);
+  return alloc;
 }
 
 //--------------------------------------------------------------------------//
@@ -1754,12 +1757,17 @@ void PullbackEmitter::visitStructExtractInst(StructExtractInst *sei) {
       getTangentStoredProperty(getContext(), sei, structTy, getInvoker());
   assert(tanField && "Invalid projections should have been diagnosed");
   // Accumulate adjoint for the `struct_extract` operand.
+  // y = struct_extract x, #field
   auto av = getAdjointValue(bb, sei);
   switch (av.getKind()) {
+  // if adj[y] is 0:
+  //   adj[x] += 0
   case AdjointValueKind::Zero:
     addAdjointValue(bb, sei->getOperand(),
                     makeZeroAdjointValue(tangentVectorSILTy), loc);
     break;
+  // if adj[y] is concrete (%adj_y) or symbolic aggregate:
+  // adj[x] += (0, 0, ..., #field', 0)
   case AdjointValueKind::Concrete:
   case AdjointValueKind::Aggregate: {
     SmallVector<AdjointValue, 8> eltVals;

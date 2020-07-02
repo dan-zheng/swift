@@ -62,7 +62,7 @@ private:
 
   /// Mapping from original basic blocks and original buffers to corresponding
   /// adjoint buffers.
-  llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, SILValue> bufferMap;
+  llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, AdjointValue> bufferMap;
 
   /// Mapping from pullback basic blocks to pullback struct arguments.
   llvm::DenseMap<SILBasicBlock *, SILArgument *> pullbackStructArguments;
@@ -241,11 +241,10 @@ private:
   void setAdjointValue(SILBasicBlock *origBB, SILValue originalValue,
                        AdjointValue adjointValue);
 
-  /// Get the adjoint for an original value. The given value must be in the
-  /// original function.
+  /// Returns the adjoint value for a value in the original function.
   ///
-  /// This method first tries to find an entry in `adjointMap`. If an adjoint
-  /// doesn't exist, create a zero adjoint.
+  /// This method first tries to find an existing entry in the adjoint value
+  /// mapping. If no entry exists, creates a zero adjoint.
   AdjointValue getAdjointValue(SILBasicBlock *origBB, SILValue originalValue);
 
   /// Add an adjoint value for the given original value.
@@ -264,10 +263,12 @@ private:
   void setAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
                         SILValue adjointBuffer);
 
-  SILValue getAdjointProjection(SILBasicBlock *origBB,
-                                SILValue originalProjection);
+  /// Helper function for `getAdjointBuffer`.
+  Optional<AdjointValue>
+  getAdjointProjection(SILBasicBlock *origBB, SILValue originalProjection);
 
-  SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
+  /// Returns the adjoint buffer for a value in the original function.
+  AdjointValue getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
 
   SILBasicBlock::iterator getNextFunctionLocalAllocationInsertionPoint();
 
