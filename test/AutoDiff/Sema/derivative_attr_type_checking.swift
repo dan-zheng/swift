@@ -706,12 +706,11 @@ extension ProtocolRequirementDerivative {
 func multipleSemanticResults(_ x: inout Float) -> Float {
   return x
 }
-// expected-error @+1 {{cannot differentiate functions with both an 'inout' parameter and a result}}
 @derivative(of: multipleSemanticResults)
-func vjpMultipleSemanticResults(x: inout Float) -> (
-  value: Float, pullback: (Float) -> Float
+func vjpMultipleSemanticResults(_ x: inout Float) -> (
+  value: Float, pullback: (inout Float, Float) -> Void
 ) {
-  return (multipleSemanticResults(&x), { $0 })
+  fatalError()
 }
 
 struct InoutParameters: Differentiable {

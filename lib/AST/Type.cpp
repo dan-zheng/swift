@@ -5206,16 +5206,12 @@ AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType(
 
   // Get the original semantic result type.
   SmallVector<AutoDiffSemanticFunctionResultType, 1> originalResults;
-  autodiff::getFunctionSemanticResultTypes(this, originalResults);
+  IndexSubset *inoutParamIndices;
+  autodiff::getFunctionSemanticResultTypes(this, originalResults, inoutParamIndices);
   // Error if no original semantic results.
   if (originalResults.empty())
     return llvm::make_error<DerivativeFunctionTypeError>(
         this, DerivativeFunctionTypeError::Kind::NoSemanticResults);
-  // Error if multiple original semantic results.
-  // TODO(TF-1250): Support functions with multiple semantic results.
-  if (originalResults.size() > 1)
-    return llvm::make_error<DerivativeFunctionTypeError>(
-        this, DerivativeFunctionTypeError::Kind::MultipleSemanticResults);
   auto originalResult = originalResults.front();
   auto originalResultType = originalResult.type;
 

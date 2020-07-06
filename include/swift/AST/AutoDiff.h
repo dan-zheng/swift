@@ -405,9 +405,6 @@ public:
   enum class Kind {
     /// Original function type has no semantic results.
     NoSemanticResults,
-    /// Original function type has multiple semantic results.
-    // TODO(TF-1250): Support function types with multiple semantic results.
-    MultipleSemanticResults,
     /// Differentiability parmeter indices are empty.
     NoDifferentiabilityParameters,
     /// A differentiability parameter does not conform to `Differentiable`.
@@ -436,7 +433,6 @@ public:
   explicit DerivativeFunctionTypeError(AnyFunctionType *functionType, Kind kind)
       : functionType(functionType), kind(kind), value(Value()) {
     assert(kind == Kind::NoSemanticResults ||
-           kind == Kind::MultipleSemanticResults ||
            kind == Kind::NoDifferentiabilityParameters);
   };
 
@@ -574,6 +570,7 @@ namespace autodiff {
 void getFunctionSemanticResultTypes(
     AnyFunctionType *functionType,
     SmallVectorImpl<AutoDiffSemanticFunctionResultType> &result,
+                                    IndexSubset *&inoutParameterIndices,
     GenericEnvironment *genericEnv = nullptr);
 
 /// Returns the lowered SIL parameter indices for the given AST parameter

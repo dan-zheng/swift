@@ -199,8 +199,10 @@ void AnyFunctionType::getSubsetParameters(
 void autodiff::getFunctionSemanticResultTypes(
     AnyFunctionType *functionType,
     SmallVectorImpl<AutoDiffSemanticFunctionResultType> &result,
+                                              IndexSubset *&inoutParameterIndices,
     GenericEnvironment *genericEnv) {
   auto &ctx = functionType->getASTContext();
+  SmallVector<unsigned, 4> inoutParamIndices;
 
   // Remap type in `genericEnv`, if specified.
   auto remap = [&](Type type) {
@@ -220,15 +222,33 @@ void autodiff::getFunctionSemanticResultTypes(
     result.push_back({remap(formalResultType), /*isInout*/ false});
 
   // Collect `inout` parameters as semantic results.
-  for (auto param : functionType->getParams())
-    if (param.isInOut())
+  for (unsigned i : range(functionType->getNumParams())) {
+    auto param = functionType->getParams()[i];
+    if (param.isInOut()) {
       result.push_back({remap(param.getPlainType()), /*isInout*/ true});
-  if (auto *resultFunctionType =
-          functionType->getResult()->getAs<AnyFunctionType>()) {
-    for (auto param : resultFunctionType->getParams())
-      if (param.isInOut())
-        result.push_back({remap(param.getPlainType()), /*isInout*/ true});
+      inoutParamIndices.push_back(i);
+    }
   }
+  auto *resultFunctionType = functionType->getResult()->getAs<AnyFunctionType>();
+  if (resultFunctionType) {
+    for (unsigned i : range(resultFunctionType->getNumParams())) {
+      auto param = resultFunctionType->getParams()[i];
+      if (param.isInOut()) {
+        result.push_back({remap(param.getPlainType()), /*isInout*/ true});
+        inoutParamIndices.push_back(i + functionType->getNumParams());
+      }
+    }
+  }
+
+
+  // Set `inout` parameter indices.
+  llvm::errs() << "FUNCTION TYPE\n";
+  functionType->dump();
+  unsigned totalParamCount = functionType->getNumParams() + (resultFunctionType ? resultFunctionType->getNumParams() : 0);
+  inoutParameterIndices =
+      IndexSubset::get(ctx, totalParamCount, inoutParamIndices);
+  llvm::errs() << "inout PARAM INDICES\n";
+  inoutParameterIndices->dump();
 }
 
 // TODO(TF-874): Simplify this helper. See TF-874 for WIP.
@@ -400,9 +420,6 @@ void DerivativeFunctionTypeError::log(raw_ostream &OS) const {
   switch (kind) {
   case Kind::NoSemanticResults:
     OS << "has no semantic results ('Void' result)";
-    break;
-  case Kind::MultipleSemanticResults:
-    OS << "has multiple semantic results";
     break;
   case Kind::NoDifferentiabilityParameters:
     OS << "has no differentiability parameters";
