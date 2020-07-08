@@ -59,10 +59,12 @@ public:
     return finalize();
   }
 
-  std::string mangleMethodDescriptor(const FuncDecl *func) {
+  std::string mangleMethodDescriptor(const FuncDecl *func, AutoDiffDerivativeFunctionIdentifier *derivativeId) {
     beginMangling();
     appendEntity(func);
     appendOperator("Tq");
+    // TODO: Append more stuff here?
+    // Need to look up what method descriptors and dispatch thunks do
     return finalize();
   }
 

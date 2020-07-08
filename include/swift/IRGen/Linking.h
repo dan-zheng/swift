@@ -424,6 +424,13 @@ class LinkEntity {
     Data = LINKENTITY_SET_FIELD(Kind, unsigned(kind));
   }
 
+  void setForDecl(Kind kind, const ValueDecl *decl, const AutoDiffDerivativeFunctionIdentifier *derivativeId) {
+    assert(isDeclKind(kind));
+    Pointer = const_cast<void*>(static_cast<const void*>(decl));
+    SecondaryPointer = const_cast<void*>(static_cast<const void*>(derivativeId));
+    Data = LINKENTITY_SET_FIELD(Kind, unsigned(kind));
+  }
+
   void setForProtocolAndAssociatedConformance(Kind kind,
                                               const ProtocolDecl *proto,
                                               CanType associatedType,
@@ -614,7 +621,7 @@ public:
     }
 
     LinkEntity entity;
-    entity.setForDecl(kind, declRef.getDecl());
+    entity.setForDecl(kind, declRef.getDecl(), declRef.derivativeFunctionIdentifier);
     return entity;
   }
 
@@ -1053,6 +1060,12 @@ public:
   const ValueDecl *getDecl() const {
     assert(isDeclKind(getKind()));
     return reinterpret_cast<ValueDecl*>(Pointer);
+  }
+
+  const AutoDiffDerivativeFunctionIdentifier *
+  getDerivativeFunctionIdentifer() const {
+    assert(isDeclKind(getKind()));
+    return reinterpret_cast<AutoDiffDerivativeFunctionIdentifier *>(SecondaryPointer);
   }
   
   const ExtensionDecl *getExtension() const {

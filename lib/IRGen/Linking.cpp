@@ -118,7 +118,8 @@ std::string LinkEntity::mangleAsString() const {
 
   case Kind::MethodDescriptor: {
     auto *func = cast<FuncDecl>(getDecl());
-    return mangler.mangleMethodDescriptor(func);
+    auto *derivativeId = getDerivativeFunctionIdentifer();
+    return mangler.mangleMethodDescriptor(func, derivativeId);
   }
 
   case Kind::MethodDescriptorInitializer: {
