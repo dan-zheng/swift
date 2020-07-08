@@ -61,7 +61,7 @@ ApplyInst *getAllocateUninitializedArrayIntrinsicElementAddress(SILValue v);
 /// tuple-typed and such a user exists.
 DestructureTupleInst *getSingleDestructureTupleUser(SILValue value);
 
-/// Returns true if the given original function is a "semantic member accessor".
+/// Returns true iff `function` is a "semantic member accessor".
 ///
 /// "Semantic member accessors" are attached to member properties that have a
 /// corresponding tangent stored property in the parent `TangentVector` type.
@@ -72,11 +72,15 @@ DestructureTupleInst *getSingleDestructureTupleUser(SILValue value);
 /// - Stored property accessors. These are implicitly generated.
 /// - Property wrapper wrapped value accessors. These are implicitly generated
 ///   and internally call `var wrappedValue`.
-bool isSemanticMemberAccessor(SILFunction *original);
+bool isSemanticMemberAccessor(SILFunction *function);
 
 /// Returns true if the given apply site has a "semantic member accessor"
 /// callee.
 bool hasSemanticMemberAccessorCallee(ApplySite applySite);
+
+/// If `function` is the modify accessor for `Array.subscript(_: Int)`, returns
+/// the modify accessor.
+AccessorDecl *isArraySubscriptElementModifyAccessor(SILFunction *function);
 
 /// Given a full apply site, apply the given callback to each of its
 /// "direct results".
