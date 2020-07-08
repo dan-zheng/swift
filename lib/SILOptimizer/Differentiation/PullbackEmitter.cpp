@@ -359,7 +359,7 @@ void PullbackEmitter::setAdjointBuffer(SILBasicBlock *origBB,
   assert(getTangentValueCategory(originalValue) == SILValueCategory::Address);
   auto insertion =
       bufferMap.try_emplace({origBB, originalValue}, adjointBuffer);
-  assert(insertion.second);
+  assert(insertion.second && "Adjoint buffer already exists");
   (void)insertion;
 }
 

@@ -60,7 +60,7 @@ private:
   /// adjoint values.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, AdjointValue> valueMap;
 
-  /// Mapping from original basic blocks and original buffers to corresponding
+  /// Mapping from original basic blocks and original values to corresponding
   /// adjoint buffers.
   llvm::DenseMap<std::pair<SILBasicBlock *, SILValue>, SILValue> bufferMap;
 
@@ -175,7 +175,7 @@ private:
 
   /// Emit a zero value by calling `AdditiveArithmetic.zero`. The given type
   /// must conform to `AdditiveArithmetic`.
-  void emitZeroIndirect(CanType type, SILValue bufferAccess, SILLocation loc);
+  void emitZeroIndirect(CanType type, SILValue address, SILLocation loc);
 
   /// Emit a zero value by calling `AdditiveArithmetic.zero`. The given type
   /// must conform to `AdditiveArithmetic` and be loadable in SIL.
@@ -186,7 +186,7 @@ private:
   //--------------------------------------------------------------------------//
 
   /// Materialize an adjoint value in the most efficient way.
-  SILValue materializeAdjoint(AdjointValue val, SILLocation loc);
+  SILValue materializeAdjoint(AdjointValue value, SILLocation loc);
 
   /// Given two adjoint values, accumulate them.
   AdjointValue accumulateAdjointsDirect(AdjointValue lhs, AdjointValue rhs,
@@ -233,19 +233,19 @@ private:
   // Managed value mapping
   //--------------------------------------------------------------------------//
 
-  /// Returns true if the original value has a corresponding adjoint value.
+  /// Returns true if the given value in the original function has a
+  /// corresponding adjoint value.
   bool hasAdjointValue(SILBasicBlock *origBB, SILValue originalValue) const;
 
-  /// Initializes an original value's corresponding adjoint value. It must not
-  /// have an adjoint value before this function is called.
+  /// Initializes the adjoint value for the original value. Asserts that the
+  /// original value does not already have an adjoint value.
   void setAdjointValue(SILBasicBlock *origBB, SILValue originalValue,
                        AdjointValue adjointValue);
 
-  /// Get the adjoint for an original value. The given value must be in the
-  /// original function.
+  /// Returns the adjoint value for a value in the original function.
   ///
-  /// This method first tries to find an entry in `adjointMap`. If an adjoint
-  /// doesn't exist, create a zero adjoint.
+  /// This method first tries to find an existing entry in the adjoint value
+  /// mapping. If no entry exists, creates a zero adjoint value.
   AdjointValue getAdjointValue(SILBasicBlock *origBB, SILValue originalValue);
 
   /// Add an adjoint value for the given original value.
@@ -261,27 +261,27 @@ private:
   // Buffer mapping
   //--------------------------------------------------------------------------//
 
-  void setAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
+  /// If the given original value is an address projection, returns a
+  /// corresponding adjoint projection to be used as its adjoint buffer.
+  ///
+  /// Helper function for `getAdjointBuffer`.
+  SILValue getAdjointProjection(SILBasicBlock *origBB, SILValue originalValue);
+
+  /// Returns the adjoint buffer for the original value.
+  ///
+  /// This method first tries to find an existing entry in the adjoint buffer
+  /// mapping. If no entry exists, creates a zero adjoint buffer.
+  SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalValue);
+
+  /// Initializes the adjoint buffer for the original value. Asserts that the
+  /// original value does not already have an adjoint buffer.
+  void setAdjointBuffer(SILBasicBlock *origBB, SILValue originalValue,
                         SILValue adjointBuffer);
 
-  SILValue getAdjointProjection(SILBasicBlock *origBB,
-                                SILValue originalProjection);
-
-  SILValue &getAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer);
-
-  SILBasicBlock::iterator getNextFunctionLocalAllocationInsertionPoint();
-
-  /// Creates and returns a local allocation with the given type.
-  ///
-  /// Local allocations are created uninitialized in the pullback entry and
-  /// deallocated in the pullback exit. All local allocations not in
-  /// `destroyedLocalAllocations` are also destroyed in the pullback exit.
-  AllocStackInst *createFunctionLocalAllocation(SILType type, SILLocation loc);
-
-  /// Accumulates `rhsBufferAccess` into the adjoint buffer corresponding to
-  /// `originalBuffer`.
-  void addToAdjointBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
-                          SILValue rhsBufferAccess, SILLocation loc);
+  /// Accumulates `rhsAddress` into the adjoint buffer corresponding to
+  /// the original value.
+  void addToAdjointBuffer(SILBasicBlock *origBB, SILValue originalValue,
+                          SILValue rhsAddress, SILLocation loc);
 
   /// Given the adjoint value of an array initialized from an
   /// `array.uninitialized_intrinsic` application and an array element index,
@@ -296,6 +296,18 @@ private:
   void accumulateArrayLiteralElementAddressAdjoints(
       SILBasicBlock *origBB, SILValue originalValue,
       AdjointValue arrayAdjointValue, SILLocation loc);
+
+  /// Helper for `createFunctionLocalAllocation`.
+  SILBasicBlock::iterator getNextFunctionLocalAllocationInsertionPoint();
+
+  /// Creates and returns a local allocation with the given type.
+  ///
+  /// Local allocations are created uninitialized in the pullback entry and
+  /// deallocated in the pullback exit. All local allocations not in
+  /// `destroyedLocalAllocations` are also destroyed in the pullback exit.
+  ///
+  /// Helper for `getAdjointBuffer`.
+  AllocStackInst *createFunctionLocalAllocation(SILType type, SILLocation loc);
 
   //--------------------------------------------------------------------------//
   // CFG mapping
