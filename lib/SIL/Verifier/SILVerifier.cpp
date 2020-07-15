@@ -4647,8 +4647,6 @@ public:
   void checkDifferentiableFunctionInst(DifferentiableFunctionInst *dfi) {
     // FIXME(TF-1197): Re-enable verification after substituted SIL function
     // types.
-    return;
-#if 0
     auto origTy =
         dfi->getOriginalFunction()->getType().getAs<SILFunctionType>();
     require(origTy, "The original function must have a function type");
@@ -4670,9 +4668,10 @@ public:
           dfi->getParameterIndices(), dfi->getResultIndices(),
           AutoDiffDerivativeFunctionKind::JVP, TC,
           LookUpConformanceInModule(M));
-      requireSameType(SILType::getPrimitiveObjectType(jvpType),
-                      SILType::getPrimitiveObjectType(expectedJVPType),
-                      "JVP type does not match expected JVP type");
+      requireABICompatibleFunctionTypes(
+          jvpType, expectedJVPType,
+          "JVP type is not ABI-compatible with expected JVP type",
+          *dfi->getFunction());
       auto vjp = dfi->getVJPFunction();
       auto vjpType = vjp->getType().getAs<SILFunctionType>();
       require(vjpType, "The VJP function must have a function type");
@@ -4682,11 +4681,11 @@ public:
           dfi->getParameterIndices(), dfi->getResultIndices(),
           AutoDiffDerivativeFunctionKind::VJP, TC,
           LookUpConformanceInModule(M));
-      requireSameType(SILType::getPrimitiveObjectType(vjpType),
-                      SILType::getPrimitiveObjectType(expectedVJPType),
-                      "VJP type does not match expected VJP type");
+      requireABICompatibleFunctionTypes(
+          vjpType, expectedVJPType,
+          "VJP type is not ABI-compatible with expected VJP type",
+          *dfi->getFunction());
     }
-#endif
   }
 
   void checkLinearFunctionInst(LinearFunctionInst *lfi) {
