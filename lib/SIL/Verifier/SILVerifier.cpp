@@ -706,8 +706,10 @@ public:
     }
     llvm::dbgs() << "In function:\n";
     F.print(llvm::dbgs());
+#if 0
     llvm::dbgs() << "In module:\n";
     F.getModule().print(llvm::dbgs());
+#endif
 
     // We abort by default because we want to always crash in
     // the debugger.

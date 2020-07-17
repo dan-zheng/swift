@@ -2757,6 +2757,11 @@ void ResultPlanner::execute(ArrayRef<SILValue> innerDirectResults,
   // A helper function to claim an inner direct result.
   auto claimNextInnerDirectResult = [&](SILResultInfo result) -> ManagedValue {
     auto resultValue = claimNext(innerDirectResults);
+    if (resultValue->getType() != SGF.getSILType(result, CanSILFunctionType())) {
+      llvm::errs() << "MISMATCH!\n";
+      resultValue->getType().dump();
+      SGF.getSILType(result, CanSILFunctionType()).dump();
+    }
     assert(resultValue->getType() == SGF.getSILType(result, CanSILFunctionType()));
     auto &resultTL = SGF.getTypeLowering(result.getInterfaceType());
     switch (result.getConvention()) {
@@ -4752,21 +4757,60 @@ void SILGenFunction::emitProtocolWitness(AbstractionPattern reqtOrigTy,
   // Perform the call.
   SILType witnessSILTy = SILType::getPrimitiveObjectType(witnessFTy);
 
+#if 0
   // If `witness` is a derivative function and the witness substitution map's
   // generic signature is not equal to the witness callee's generic signature,
   // update the witness substitution map's generic signature.
   if (witness.derivativeFunctionIdentifier) {
     auto fnTy = witnessFnRef->getType().castTo<SILFunctionType>();
-    auto invocationGenSig = fnTy->getInvocationGenericSignature();
+
+    llvm::errs() << "WITNESS: " << witness << "\n";
+    // witnessSubs.
+    llvm::errs() << "OLD WITNESS SUBS\n";
+    witnessSubs.dump(llvm::errs(), SubstitutionMap::DumpStyle::Full);
+    llvm::errs() << "\n";
+    // witnessSubs = SubstitutionMap::get(witnessFTy->getInvocationGenericSignature(), witnessSubs);
+    // fnTy->getInvocationGenericSignature().getS
+    // SubstitutionMap::get(<#GenericSignature genericSig#>, <#ArrayRef<Type> replacementTypes#>, <#ArrayRef<ProtocolConformanceRef> conformances#>)
+    // witnessSubs = SubstitutionMap::get(fnTy->getInvocationGenericSignature(), witnessSubs);
+
     if (fnTy->getInvocationGenericSignature() &&
         fnTy->getInvocationGenericSignature() !=
             witnessSubs.getGenericSignature().getCanonicalSignature()) {
+
+      // witnessSubs = SubstitutionMap::get(fnTy->getInvocationGenericSignature(), witnessSubs);
+      // witnessSubs = SubstitutionMap::get(fnTy->getInvocationGenericSignature(), witnessSubs.getReplacementTypes(), witnessSubs.getConformances());
+      // witnessSubs = SubstitutionMap::get(fnTy->getInvocationSubstitutions(), <#TypeSubstitutionFn subs#>, <#LookupConformanceFn lookupConformance#>)
+      // witnessSubs = fnTy->getInvocationGenericSignature()->getIdentitySubstitutionMap();
+      // witnessSubs = SubstitutionMap::get(fnTy->getInvocationGenericSignature(), [](SubstitutableType *type) -> Type { return type; }, LookUpConformanceInSignature(fnTy->getInvocationGenericSignature()));
+      // witnessSubs = fnTy->getInvocationSubstitutions();
+      // witnessSubs = SubstitutionMap();
+      // witnessSubs = getForwardingSubstitutionMap();
+      // witnessSubs = SubstitutionMap::get(fnTy->getInvocationGenericSignature(), QuerySubstitutionMap{getForwardingSubstitutionMap()}, LookUpConformanceInSubstitutionMap(getForwardingSubstitutionMap()));
+      auto invocationGenSig = fnTy->getInvocationGenericSignature();
+      llvm::errs() << "FORWARDING SUBST MAP\n";
+      getForwardingSubstitutionMap().dump();
+      llvm::errs() << "FN TY INVOCATION SUBS\n";
+      fnTy->getInvocationGenericSignature().dump();
+      // fnTy->getInvocationGenericSignature().get
+      llvm::errs() << "REPLACEMENT TYPES\n";
+      for (auto type : witnessSubs.getReplacementTypes())
+        type->dump();
+      fnTy->getInvocationSubstitutions().dump();
+      llvm::errs() << "NEW WITNESS SUBS\n";
+      witnessSubs.dump(llvm::errs(), SubstitutionMap::DumpStyle::Full);
+      llvm::errs() << "\n";
+    // witnessFTy->getInvocationGenericSignature();
+    // witnessFRef
+    // auto *diffFnExtract = cast<DifferentiableFunctionExtract>(witnessFnRef));
+
       witnessSubs = SubstitutionMap::get(
           invocationGenSig,
           QuerySubstitutionMap{getForwardingSubstitutionMap()},
           LookUpConformanceInSignature(invocationGenSig.getPointer()));
     }
   }
+#endif
 
   SILValue reqtResultValue;
   switch (coroutineKind) {

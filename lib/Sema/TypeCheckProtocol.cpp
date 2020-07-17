@@ -376,6 +376,21 @@ matchWitnessDifferentiableAttr(DeclContext *dc, ValueDecl *req,
       if (witnessConfig.parameterIndices ==
           reqDiffAttr->getParameterIndices()) {
         foundExactConfig = true;
+        llvm::errs() << "RESULT WITNESS SUBS\n";
+        result.WitnessSubstitutions.dump();
+        llvm::errs() << "REQUIRED DERIVATIVE GEN SIG\n";
+        reqDiffAttr->getDerivativeGenericSignature().dump();
+        llvm::errs() << "WITNESS CONFIG DERIVATIVE GEN SIG\n";
+        witnessConfig.derivativeGenericSignature.dump();
+        // result.WitnessSubstitutions = result.WitnessSubstitutions;
+        result.WitnessSubstitutions = result.WitnessSubstitutions;
+        result.WitnessSubstitutions = SubstitutionMap::get(
+            witnessConfig.derivativeGenericSignature,
+            result.WitnessSubstitutions);
+#if 0
+            QuerySubstitutionMap{getForwardingSubstitutionMap()},
+            LookUpConformanceInSignature(invocationGenSig.getPointer()));
+#endif
         break;
       }
       if (witnessConfig.parameterIndices->isSupersetOf(
