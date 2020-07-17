@@ -448,6 +448,10 @@ private:
     assert(adjointValue.getType().isObject());
     assert(originalValue->getFunction() == &getOriginal());
     // The adjoint value must be in the tangent space.
+    if (adjointValue.getType() != getRemappedTangentType(originalValue->getType())) {
+      adjointValue.dump();
+      getRemappedTangentType(originalValue->getType()).dump();
+    }
     assert(adjointValue.getType() ==
            getRemappedTangentType(originalValue->getType()));
     auto insertion =
@@ -986,6 +990,15 @@ public:
         bai, getInvoker(), diag::autodiff_coroutines_not_supported);
     errorOccurred = true;
     return;
+  }
+
+  /// Handle `enum` instruction.
+  ///   Original: y = $Optional<T>, #Optional.some!enumelt, %3 : $T
+  ///    Adjoint: adj[x0] += struct_extract adj[y], #x0
+  ///             adj[x1] += struct_extract adj[y], #x1
+  ///             adj[x2] += struct_extract adj[y], #x2
+  ///             ...
+  void visitEnumInst(EnumInst *ei) {
   }
 
   /// Handle `struct` instruction.
@@ -1605,20 +1618,10 @@ bool PullbackCloner::Implementation::run() {
       visited.insert(v);
 
       // Diagnose unsupported active values.
-      auto type = v->getType();
       // Do not emit remaining activity-related diagnostics for semantic member
       // accessors, which have special-case pullback generation.
       if (isSemanticMemberAccessor(&original))
         return false;
-      // Diagnose active enum values. Differentiation of enum values requires
-      // special adjoint value handling and is not yet supported. Diagnose
-      // only the first active enum value to prevent too many diagnostics.
-      if (type.getEnumOrBoundGenericEnum()) {
-        getContext().emitNondifferentiabilityError(
-            v, getInvoker(), diag::autodiff_enums_unsupported);
-        errorOccurred = true;
-        return true;
-      }
       // Diagnose unsupported stored property projections.
       if (auto *inst = dyn_cast<FieldIndexCacheBase>(v)) {
         assert(inst->getNumOperands() == 1);
@@ -2084,6 +2087,7 @@ void PullbackCloner::Implementation::visitSILBasicBlock(SILBasicBlock *bb) {
     // Get predecessor terminator operands.
     SmallVector<std::pair<SILBasicBlock *, SILValue>, 4> incomingValues;
     bbArg->getSingleTerminatorOperands(incomingValues);
+    auto *termInst = bbArg->getSingleTerminator();
     // Materialize adjoint value of active basic block argument, create a
     // copy, and set copy as adjoint value of incoming values.
     auto bbArgAdj = getAdjointValue(bb, bbArg);
@@ -2094,6 +2098,15 @@ void PullbackCloner::Implementation::visitSILBasicBlock(SILBasicBlock *bb) {
       auto *predBB = std::get<0>(pair);
       auto incomingValue = std::get<1>(pair);
       blockTemporaries[getPullbackBlock(predBB)].insert(concreteBBArgAdjCopy);
+      llvm::errs() << "INCOMING VALUE\n";
+      incomingValue->dump();
+      llvm::errs() << "INCOMING ARGUMENT\n";
+      bbArg->dump();
+      // auto op = bbArg->getSingleTerminatorOperand();
+      // termInst = cast<TermInst>(op->getDefiningInstruction());
+      llvm::errs() << "TERM INST\n";
+      assert(termInst);
+      termInst->dump();
       setAdjointValue(predBB, incomingValue,
                       makeConcreteAdjointValue(concreteBBArgAdjCopy));
     }
