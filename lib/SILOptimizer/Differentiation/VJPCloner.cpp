@@ -878,10 +878,39 @@ SILFunction *VJPCloner::Implementation::createEmptyPullback() {
       origTy->getPatternSubstitutions(), origTy->getInvocationSubstitutions(),
       original->getASTContext());
 
+  llvm::errs() << "ORIGINAL TYPE\n";
+  origTy->dump();
+  llvm::errs() << "KNOWN PB TYPE\n";
+  pbType->dump();
+  auto derivTy = origTy->getAutoDiffDerivativeFunctionType(
+      indices.parameters, indices.results, AutoDiffDerivativeFunctionKind::VJP,
+      module.Types, lookupConformance, witnessCanGenSig);
+  auto pbType2 = derivTy->getResults().back().getSILStorageInterfaceType().castTo<SILFunctionType>();
+// #if 0
+  llvm::errs() << "PB TYPE 2\n";
+  pbType2.dump();
+  llvm::errs() << "PB TYPE 2 UNSUBST\n";
+  // pbType2->getUnsubstitutedType(getModule()).dump();
+  pbType2 = pbType2->getUnsubstitutedType(getModule());
+  pbType2.dump();
+// #endif
+
+  SmallVector<SILParameterInfo, 4> newPbParams(pbType2->getParameters().begin(), pbType2->getParameters().end());
+  newPbParams.push_back({pbStructType, ParameterConvention::Direct_Owned});
+  auto pbType3 = SILFunctionType::get(
+      pbGenericSig, origTy->getExtInfo(), pbType2->getCoroutineKind(), origTy->getCalleeConvention(),
+      newPbParams, pbType2->getYields(), pbType2->getResults(), pbType2->getOptionalErrorResult(),
+      // pbType2->getPatternSubstitutions(), pbType2->getInvocationSubstitutions(),
+      origTy->getPatternSubstitutions(), origTy->getInvocationSubstitutions(),
+      original->getASTContext());
+  llvm::errs() << "FINAL NEW PB TYPE\n";
+  pbType3->dump();
+  llvm::errs() << "EQUAL? " << (pbType3 == pbType) << "\n";
+
   SILOptFunctionBuilder fb(context.getTransform());
   auto linkage = vjp->isSerialized() ? SILLinkage::Public : SILLinkage::Private;
   auto *pullback = fb.createFunction(
-      linkage, pbName, pbType, pbGenericEnv, original->getLocation(),
+      linkage, pbName, pbType3, pbGenericEnv, original->getLocation(),
       original->isBare(), IsNotTransparent, vjp->isSerialized(),
       original->isDynamicallyReplaceable());
   pullback->setDebugScope(new (module)

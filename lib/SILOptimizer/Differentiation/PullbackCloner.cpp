@@ -1680,6 +1680,10 @@ bool PullbackCloner::Implementation::run() {
       assert(pullbackBB->isEntry());
       createEntryArguments(&pullback);
       auto *mainPullbackStruct = pullbackBB->getArguments().back();
+      if (mainPullbackStruct->getType() != pbStructLoweredType) {
+        mainPullbackStruct->getType().dump();
+        pbStructLoweredType.dump();
+      }
       assert(mainPullbackStruct->getType() == pbStructLoweredType);
       pullbackStructArguments[origBB] = mainPullbackStruct;
       // Destructure the pullback struct to get the elements.
