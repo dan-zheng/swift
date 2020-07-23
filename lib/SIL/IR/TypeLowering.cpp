@@ -2223,9 +2223,12 @@ CanAnyFunctionType TypeConverter::makeConstantInterfaceType(SILDeclRef c) {
   if (auto *derivativeId = c.derivativeFunctionIdentifier) {
     auto originalFnTy =
         makeConstantInterfaceType(c.asAutoDiffOriginalFunction());
-    auto *derivativeFnTy = originalFnTy->getAutoDiffDerivativeFunctionType(
-        derivativeId->getParameterIndices(), derivativeId->getKind(),
-        LookUpConformanceInModule(&M));
+    auto derivativeFnTyExpected =
+        originalFnTy->getAutoDiffDerivativeFunctionType(
+            derivativeId->getParameterIndices(), derivativeId->getKind(),
+            LookUpConformanceInModule(&M));
+    assert(derivativeFnTyExpected && "Expected derivative function type");
+    auto *derivativeFnTy = derivativeFnTyExpected.get();
     return cast<AnyFunctionType>(derivativeFnTy->getCanonicalType());
   }
 

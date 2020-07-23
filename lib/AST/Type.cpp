@@ -5134,7 +5134,8 @@ makeFunctionType(ArrayRef<AnyFunctionType::Param> parameters, Type resultType,
   return FunctionType::get(parameters, resultType, extInfo);
 }
 
-AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
+llvm::Expected<AnyFunctionType *>
+AnyFunctionType::getAutoDiffDerivativeFunctionType(
     IndexSubset *parameterIndices, AutoDiffDerivativeFunctionKind kind,
     LookupConformanceFn lookupConformance, GenericSignature derivativeGenSig,
     bool makeSelfParamFirst) {
@@ -5165,7 +5166,8 @@ AnyFunctionType *AnyFunctionType::getAutoDiffDerivativeFunctionType(
   auto linearMapTypeExpected = getAutoDiffDerivativeFunctionLinearMapType(
       parameterIndices, kind.getLinearMapKind(), lookupConformance,
       makeSelfParamFirst);
-  assert(linearMapTypeExpected && "Linear map type is invalid");
+  if (!linearMapTypeExpected)
+    return linearMapTypeExpected.takeError();
   Type linearMapType = linearMapTypeExpected.get();
 
   // Build the full derivative function type: `(T...) -> (R, LinearMapType)`.

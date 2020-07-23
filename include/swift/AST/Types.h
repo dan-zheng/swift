@@ -3320,7 +3320,7 @@ public:
   /// first. `makeSelfParamFirst` should be true when working with user-facing
   /// derivative function types, e.g. when type-checking `@differentiable` and
   /// `@derivative` attributes.
-  AnyFunctionType *getAutoDiffDerivativeFunctionType(
+  llvm::Expected<AnyFunctionType *> getAutoDiffDerivativeFunctionType(
       IndexSubset *parameterIndices, AutoDiffDerivativeFunctionKind kind,
       LookupConformanceFn lookupConformance,
       GenericSignature derivativeGenericSignature = GenericSignature(),

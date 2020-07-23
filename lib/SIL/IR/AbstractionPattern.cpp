@@ -1017,10 +1017,11 @@ AbstractionPattern AbstractionPattern::getAutoDiffDerivativeFunctionType(
     auto fnTy = dyn_cast<AnyFunctionType>(getType());
     if (!fnTy)
       return getOpaqueDerivativeFunction();
-    auto derivativeFnTy = fnTy->getAutoDiffDerivativeFunctionType(
+    auto derivativeFnTyExpected = fnTy->getAutoDiffDerivativeFunctionType(
         parameterIndices, kind, lookupConformance, derivativeGenericSignature,
         makeSelfParamFirst);
-    assert(derivativeFnTy);
+    assert(derivativeFnTyExpected && "Expected derivative function type");
+    auto *derivativeFnTy = derivativeFnTyExpected.get();
     return AbstractionPattern(
         getGenericSignature(),
         derivativeFnTy->getCanonicalType(getGenericSignature()));

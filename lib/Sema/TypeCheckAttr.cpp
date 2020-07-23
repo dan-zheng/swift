@@ -3613,6 +3613,23 @@ enum class AbstractFunctionDeclLookupErrorKind {
   CandidateNotFunctionDeclaration
 };
 
+/// The result of abstract function declaration lookup.
+struct AbstractFunctionDeclLookupResult {
+  /// The invalid lookup candidates and their error kinds.
+  SmallVector<std::pair<ValueDecl *, AbstractFunctionDeclLookupErrorKind>, 2>
+      invalidCandidates;
+  /// The valid lookup candidates.
+  SmallVector<AbstractFunctionDecl *, 2> validCandidates;
+
+  /// Returns the single valid lookup candidate, if it exists. Otherwise,
+  /// returns `nullptr`.
+  AbstractFunctionDecl *getValidCandidate() const {
+    if (validCandidates.size() != 1)
+      return nullptr;
+    return validCandidates.front();
+  }
+};
+
 /// Returns the function declaration corresponding to the given base type
 /// (optional), function name, and lookup context.
 ///
@@ -3624,8 +3641,9 @@ enum class AbstractFunctionDeclLookupErrorKind {
 ///
 /// Used for resolving the referenced declaration in `@derivative` and
 /// `@transpose` attributes.
-static AbstractFunctionDecl *findAbstractFunctionDecl(
-    DeclAttribute *attr, Type baseType, DeclNameRefWithLoc funcNameWithLoc,
+static AbstractFunctionDeclLookupResult findAbstractFunctionDecl(
+    DeclAttribute *attr, FuncDecl *attributedDecl,
+    Type baseType, DeclNameRefWithLoc funcNameWithLoc,
     DeclContext *lookupContext, NameLookupOptions lookupOptions,
     const llvm::function_ref<Optional<AbstractFunctionDeclLookupErrorKind>(
         AbstractFunctionDecl *)> &isValidCandidate,
@@ -3638,33 +3656,32 @@ static AbstractFunctionDecl *findAbstractFunctionDecl(
   auto funcNameLoc = funcNameWithLoc.Loc;
   auto maybeAccessorKind = funcNameWithLoc.AccessorKind;
 
+  AbstractFunctionDeclLookupResult result;
+
   // Perform lookup.
-  LookupResult results;
+  LookupResult lookupResults;
   // If `baseType` is not null but `lookupContext` is a type context, set
   // `baseType` to the `self` type of `lookupContext` to perform member lookup.
   if (!baseType && lookupContext->isTypeContext())
     baseType = lookupContext->getSelfTypeInContext();
   if (baseType) {
-    results = TypeChecker::lookupMember(lookupContext, baseType, funcName);
+    lookupResults =
+        TypeChecker::lookupMember(lookupContext, baseType, funcName);
   } else {
-    results = TypeChecker::lookupUnqualified(
+    lookupResults = TypeChecker::lookupUnqualified(
         lookupContext, funcName, funcNameLoc.getBaseNameLoc(), lookupOptions);
   }
 
   // Error if no candidates were found.
-  if (results.empty()) {
+  if (lookupResults.empty()) {
     diags.diagnose(funcNameLoc, diag::cannot_find_in_scope, funcName,
                    funcName.isOperator());
-    return nullptr;
+    return result;
   }
 
-  // Track invalid and valid candidates.
-  using LookupErrorKind = AbstractFunctionDeclLookupErrorKind;
-  SmallVector<std::pair<ValueDecl *, LookupErrorKind>, 2> invalidCandidates;
-  SmallVector<AbstractFunctionDecl *, 2> validCandidates;
-
   // Filter lookup results.
-  for (auto choice : results) {
+  using LookupErrorKind = AbstractFunctionDeclLookupErrorKind;
+  for (auto choice : lookupResults) {
     auto *decl = choice.getValueDecl();
     // Cast the candidate to an `AbstractFunctionDecl`.
     auto *candidate = dyn_cast<AbstractFunctionDecl>(decl);
@@ -3677,7 +3694,7 @@ static AbstractFunctionDecl *findAbstractFunctionDecl(
       candidate = asd->getOpaqueAccessor(accessorKind);
       // Error if candidate is missing the requested accessor.
       if (!candidate) {
-        invalidCandidates.push_back(
+        result.invalidCandidates.push_back(
             {decl, LookupErrorKind::CandidateMissingAccessor});
         continue;
       }
@@ -3685,31 +3702,31 @@ static AbstractFunctionDecl *findAbstractFunctionDecl(
     // Error if the candidate is not an `AbstractStorageDecl` but an accessor is
     // requested.
     else if (maybeAccessorKind.hasValue()) {
-      invalidCandidates.push_back(
+      result.invalidCandidates.push_back(
           {decl, LookupErrorKind::CandidateMissingAccessor});
       continue;
     }
     // Error if candidate is not a `AbstractFunctionDecl`.
     if (!candidate) {
-      invalidCandidates.push_back(
+      result.invalidCandidates.push_back(
           {decl, LookupErrorKind::CandidateNotFunctionDeclaration});
       continue;
     }
     // Error if candidate is not valid.
     auto invalidCandidateKind = isValidCandidate(candidate);
     if (invalidCandidateKind.hasValue()) {
-      invalidCandidates.push_back({candidate, *invalidCandidateKind});
+      result.invalidCandidates.push_back({candidate, *invalidCandidateKind});
       continue;
     }
     // Otherwise, record valid candidate.
-    validCandidates.push_back(candidate);
+    result.validCandidates.push_back(candidate);
   }
   // If there are no valid candidates, emit diagnostics for invalid candidates.
-  if (validCandidates.empty()) {
-    assert(!invalidCandidates.empty());
+  if (result.validCandidates.empty()) {
+    assert(!result.invalidCandidates.empty());
     diags.diagnose(funcNameLoc, diag::autodiff_attr_original_decl_none_valid,
                    funcName);
-    for (auto invalidCandidatePair : invalidCandidates) {
+    for (auto invalidCandidatePair : result.invalidCandidates) {
       auto *invalidCandidate = invalidCandidatePair.first;
       auto invalidCandidateKind = invalidCandidatePair.second;
       auto declKind = invalidCandidate->getDescriptiveKind();
@@ -3723,6 +3740,20 @@ static AbstractFunctionDecl *findAbstractFunctionDecl(
                        funcName, attr->getAttrName());
         break;
       case AbstractFunctionDeclLookupErrorKind::CandidateTypeMismatch: {
+        // Diagnose static-ness mismatch for `@derivative` attribute.
+        if (isa<DerivativeAttr>(attr) &&
+            invalidCandidate->isStatic() != attributedDecl->isStatic()) {
+          auto diag = diags.diagnose(attributedDecl,
+                         diag::autodiff_attr_original_decl_static_mismatch,
+                         attributedDecl->getName(), funcName,
+                         attributedDecl->isStatic());
+          if (attributedDecl->isInstanceMember()) {
+            diag.fixItInsert(attributedDecl->getAttributeInsertionLoc(/*forModifier*/ true), "static ");
+          } else {
+            diag.fixItRemove(attributedDecl->getStaticLoc());
+          }
+          break;
+        }
         // If the expected original function type has a generic signature, emit
         // "candidate does not have type equal to or less constrained than ..."
         // diagnostic.
@@ -3768,22 +3799,22 @@ static AbstractFunctionDecl *findAbstractFunctionDecl(
         break;
       }
     }
-    return nullptr;
+    return result;
   }
   // Error if there are multiple valid candidates.
-  if (validCandidates.size() > 1) {
+  if (result.validCandidates.size() > 1) {
     diags.diagnose(funcNameLoc, diag::autodiff_attr_original_decl_ambiguous,
                    funcName);
-    for (auto *validCandidate : validCandidates) {
+    for (auto *validCandidate : result.validCandidates) {
       auto declKind = validCandidate->getDescriptiveKind();
       diags.diagnose(validCandidate,
                      diag::autodiff_attr_original_decl_ambiguous_candidate,
                      declKind);
     }
-    return nullptr;
+    return result;
   }
   // Success if there is one unambiguous valid candidate.
-  return validCandidates.front();
+  return result;
 }
 
 /// Checks that the `candidate` function type equals the `required` function
@@ -4462,8 +4493,29 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
   }
   attr->setDerivativeKind(kind);
 
+  // Resolve the differentiability parameter indices.
+  auto *resolvedDiffParamIndices = attr->getParameterIndices();
+
+  // Get the parsed differentiability parameter indices, which have not yet been
+  // resolved. Parsed differentiability parameter indices are defined only for
+  // parsed attributes.
+  auto parsedDiffParams = attr->getParsedParameters();
+
+  // If differentiability parameter indices are not resolved, compute them.
+  if (!resolvedDiffParamIndices)
+    resolvedDiffParamIndices = computeDifferentiabilityParameters(
+        parsedDiffParams, derivative, derivative->getGenericEnvironment(),
+        attr->getAttrName(), attr->getLocation());
+  if (!resolvedDiffParamIndices)
+    return true;
+
+  // Set the resolved differentiability parameter indices in the attribute.
+  // Differentiability parameter indices verification is done by
+  // `AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType` below.
+  attr->setParameterIndices(resolvedDiffParamIndices);
+
   // Compute expected original function type and look up original function.
-  auto *originalFnType =
+  auto *expectedOriginalFnType =
       getDerivativeOriginalFunctionType(derivativeInterfaceType);
 
   // Returns true if the generic parameters in `source` satisfy the generic
@@ -4513,7 +4565,7 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
       return AbstractFunctionDeclLookupErrorKind::CandidateWrongTypeContext;
     // Error if the original candidate does not have the expected type.
     if (!checkFunctionSignature(
-            cast<AnyFunctionType>(originalFnType->getCanonicalType()),
+            cast<AnyFunctionType>(expectedOriginalFnType->getCanonicalType()),
             originalCandidate->getInterfaceType()->getCanonicalType(),
             checkGenericSignatureSatisfied))
       return AbstractFunctionDeclLookupErrorKind::CandidateTypeMismatch;
@@ -4541,25 +4593,28 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
 
   // Diagnose unsupported original accessor kinds.
   // Currently, only getters and setters are supported.
-  if (originalName.AccessorKind.hasValue()) {
-    if (*originalName.AccessorKind != AccessorKind::Get &&
-        *originalName.AccessorKind != AccessorKind::Set) {
+  if (auto accessorKind = originalName.AccessorKind) {
+    if (*accessorKind != AccessorKind::Get &&
+        *accessorKind != AccessorKind::Set) {
       attr->setInvalid();
-      diags.diagnose(
-          originalName.Loc, diag::derivative_attr_unsupported_accessor_kind,
-          getAccessorDescriptiveDeclKind(*originalName.AccessorKind));
+      diags.diagnose(originalName.Loc,
+                     diag::derivative_attr_unsupported_accessor_kind,
+                     getAccessorDescriptiveDeclKind(*accessorKind));
       return true;
     }
   }
 
   // Look up original function.
-  auto *originalAFD = findAbstractFunctionDecl(
-      attr, baseType, originalName, derivativeTypeCtx, lookupOptions,
-      isValidOriginalCandidate, originalFnType);
+  auto originalAFDResults = findAbstractFunctionDecl(
+      attr, derivative, baseType, originalName, derivativeTypeCtx, lookupOptions,
+      isValidOriginalCandidate, expectedOriginalFnType);
+  auto *originalAFD = originalAFDResults.getValidCandidate();
   if (!originalAFD) {
     attr->setInvalid();
     return true;
   }
+  llvm::errs() << "ORIGINAL AFD FOUND!\n";
+  originalAFD->getInterfaceType()->dump();
 
   // Diagnose original stored properties. Stored properties cannot have custom
   // registered derivatives.
@@ -4667,30 +4722,9 @@ static bool typeCheckDerivativeAttr(ASTContext &Ctx, Decl *D,
     return true;
   }
 
-  // Get the resolved differentiability parameter indices.
-  auto *resolvedDiffParamIndices = attr->getParameterIndices();
-
-  // Get the parsed differentiability parameter indices, which have not yet been
-  // resolved. Parsed differentiability parameter indices are defined only for
-  // parsed attributes.
-  auto parsedDiffParams = attr->getParsedParameters();
-
-  // If differentiability parameter indices are not resolved, compute them.
-  if (!resolvedDiffParamIndices)
-    resolvedDiffParamIndices = computeDifferentiabilityParameters(
-        parsedDiffParams, derivative, derivative->getGenericEnvironment(),
-        attr->getAttrName(), attr->getLocation());
-  if (!resolvedDiffParamIndices)
-    return true;
-
-  // Set the resolved differentiability parameter indices in the attribute.
-  // Differentiability parameter indices verification is done by
-  // `AnyFunctionType::getAutoDiffDerivativeFunctionLinearMapType` below.
-  attr->setParameterIndices(resolvedDiffParamIndices);
-
   // Compute the expected differential/pullback type.
   auto expectedLinearMapTypeOrError =
-      originalFnType->getAutoDiffDerivativeFunctionLinearMapType(
+      expectedOriginalFnType->getAutoDiffDerivativeFunctionLinearMapType(
           resolvedDiffParamIndices, kind.getLinearMapKind(),
           LookUpConformanceInModule(derivative->getModuleContext()),
           /*makeSelfParamFirst*/ true);
@@ -4999,7 +5033,7 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
       transpose->getInterfaceType()->castTo<AnyFunctionType>();
   bool isCurried = transposeInterfaceType->getResult()->is<AnyFunctionType>();
 
-  // Get the linearity parameter indices.
+  // Resolve the linearity parameter indices.
   auto *linearParamIndices = attr->getParameterIndices();
 
   // Get the parsed linearity parameter indices, which have not yet been
@@ -5111,9 +5145,10 @@ void AttributeChecker::visitTransposeAttr(TransposeAttr *attr) {
   auto funcLoc = originalName.Loc.getBaseNameLoc();
   if (attr->getBaseTypeRepr())
     funcLoc = attr->getBaseTypeRepr()->getLoc();
-  auto *originalAFD = findAbstractFunctionDecl(
-      attr, baseType, originalName, transposeTypeCtx, lookupOptions,
+  auto originalAFDResults = findAbstractFunctionDecl(
+      attr, transpose, baseType, originalName, transposeTypeCtx, lookupOptions,
       isValidOriginalCandidate, expectedOriginalFnType);
+  auto *originalAFD = originalAFDResults.getValidCandidate();
   if (!originalAFD) {
     attr->setInvalid();
     return;

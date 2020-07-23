@@ -1061,9 +1061,12 @@ static ValueDecl *getAutoDiffApplyDerivativeFunction(
   // Generator for the resultant function type, i.e. the AD derivative function.
   BuiltinFunctionBuilder::LambdaGenerator resultGen{
       [=, &Context](BuiltinFunctionBuilder &builder) -> Type {
-        auto derivativeFnTy = diffFnType->getAutoDiffDerivativeFunctionType(
-            paramIndices, kind,
-            LookUpConformanceInModule(Context.TheBuiltinModule));
+        auto derivativeFnTyExpected =
+            diffFnType->getAutoDiffDerivativeFunctionType(
+                paramIndices, kind,
+                LookUpConformanceInModule(Context.TheBuiltinModule));
+        assert(derivativeFnTyExpected && "Expected derivative function type");
+        auto *derivativeFnTy = derivativeFnTyExpected.get();
         return derivativeFnTy->getResult();
       }};
   builder.addParameter(firstArgGen);

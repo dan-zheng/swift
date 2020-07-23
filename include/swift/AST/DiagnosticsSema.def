@@ -3161,6 +3161,11 @@ NOTE(autodiff_attr_original_decl_type_mismatch,none,
      "candidate %0 does not have "
      "%select{expected type|type equal to or less constrained than}2 %1",
      (DescriptiveDeclKind, Type, /*hasGenericSignature*/ bool))
+NOTE(autodiff_attr_original_decl_static_mismatch,none,
+     "%0 operates on %select{a type|an instance}2, but candidate %1 operates "
+     "on %select{an instance|a type}2",
+     (/*attributedDeclName*/ DeclName, /*referencedDeclName*/ DeclNameRef,
+      /*isStatic*/ bool))
 NOTE(autodiff_attr_original_decl_not_same_type_context,none,
      "candidate %0 is not defined in the current type context",
      (DescriptiveDeclKind))

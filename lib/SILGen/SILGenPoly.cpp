@@ -3428,10 +3428,12 @@ static ManagedValue createDifferentiableFunctionThunk(
   auto getDerivativeFnTy =
       [&](CanAnyFunctionType fnTy,
           AutoDiffDerivativeFunctionKind kind) -> CanAnyFunctionType {
-    auto assocTy = fnTy->getAutoDiffDerivativeFunctionType(
+    auto derivativeFnTyExpected = fnTy->getAutoDiffDerivativeFunctionType(
         parameterIndices, kind,
         LookUpConformanceInModule(SGF.SGM.M.getSwiftModule()));
-    return cast<AnyFunctionType>(assocTy->getCanonicalType());
+    assert(derivativeFnTyExpected && "Expected derivative function type");
+    auto *derivativeFnTy = derivativeFnTyExpected.get();
+    return cast<AnyFunctionType>(derivativeFnTy->getCanonicalType());
   };
   auto getDerivativeFnPattern =
       [&](AbstractionPattern pattern,
