@@ -1,0 +1,2447 @@
+*** SIL module before Mandatory Diagnostic Passes + Enabling Optimization Passes ***
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [unknown] %1 : $*T   // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [unknown] %1 : $*T  // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #193, stage Mandatory Diagnostic Passes + Enabling Optimization Passes, pass 3: CapturePromotion (capture-promotion)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [unknown] %1 : $*T   // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [unknown] %1 : $*T  // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #194, stage Mandatory Diagnostic Passes + Enabling Optimization Passes, pass 4: AccessEnforcementSelection (access-enforcement-selection)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [static] %1 : $*T    // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [static] %1 : $*T   // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #772, stage Mandatory Diagnostic Passes + Enabling Optimization Passes, pass 12: MandatoryInlining (mandatory-inlining)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [static] %1 : $*T    // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [static] %1 : $*T   // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #773, stage Mandatory Diagnostic Passes + Enabling Optimization Passes, pass 13: MandatorySILLinker (mandatory-linker)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [static] %1 : $*T    // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [static] %1 : $*T   // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #1255, stage Mandatory Diagnostic Passes + Enabling Optimization Passes, pass 18: DiagnoseUnreachable (diagnose-unreachable)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [static] %1 : $*T    // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [static] %1 : $*T   // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before PrepareOptimizationPasses ***
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %12, %4, %2
+// %1 "self"                                      // users: %14, %6, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %11, %9
+  %6 = begin_access [modify] [static] %1 : $*T    // users: %10, %7
+  %7 = struct_element_addr %6 : $*T, #T.u1        // user: %9
+  // function_ref U.move(along:)
+  %8 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %9
+  %9 = apply %8(%5, %7) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %6 : $*T                             // id: %10
+  destroy_value %5 : $U.TangentVector             // id: %11
+  %12 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %13
+  %13 = copy_value %12 : $U.TangentVector         // users: %19, %17
+  %14 = begin_access [modify] [static] %1 : $*T   // users: %18, %15
+  %15 = struct_element_addr %14 : $*T, #T.u2      // user: %17
+  // function_ref U.move(along:)
+  %16 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %17
+  %17 = apply %16(%13, %15) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  end_access %14 : $*T                            // id: %18
+  destroy_value %13 : $U.TangentVector            // id: %19
+  %20 = tuple ()                                  // user: %21
+  return %20 : $()                                // id: %21
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #200, stage PrepareOptimizationPasses, pass 2: AccessMarkerElimination (access-marker-elim)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %10, %4, %2
+// %1 "self"                                      // users: %6, %12, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %9, %8
+  %6 = struct_element_addr %1 : $*T, #T.u1        // user: %8
+  // function_ref U.move(along:)
+  %7 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %8
+  %8 = apply %7(%5, %6) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %5 : $U.TangentVector             // id: %9
+  %10 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %11 = copy_value %10 : $U.TangentVector         // users: %15, %14
+  %12 = struct_element_addr %1 : $*T, #T.u2       // user: %14
+  // function_ref U.move(along:)
+  %13 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %14
+  %14 = apply %13(%11, %12) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %11 : $U.TangentVector            // id: %15
+  %16 = tuple ()                                  // user: %17
+  return %16 : $()                                // id: %17
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before EarlyModulePasses ***
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %10, %4, %2
+// %1 "self"                                      // users: %6, %12, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %9, %8
+  %6 = struct_element_addr %1 : $*T, #T.u1        // user: %8
+  // function_ref U.move(along:)
+  %7 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %8
+  %8 = apply %7(%5, %6) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %5 : $U.TangentVector             // id: %9
+  %10 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %11 = copy_value %10 : $U.TangentVector         // users: %15, %14
+  %12 = struct_element_addr %1 : $*T, #T.u2       // user: %14
+  // function_ref U.move(along:)
+  %13 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %14
+  %14 = apply %13(%11, %12) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %11 : $U.TangentVector            // id: %15
+  %16 = tuple ()                                  // user: %17
+  return %16 : $()                                // id: %17
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #201, stage EarlyModulePasses, pass 0: DeadFunctionElimination (sil-deadfuncelim)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %10, %4, %2
+// %1 "self"                                      // users: %6, %12, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %5
+  %5 = copy_value %4 : $U.TangentVector           // users: %9, %8
+  %6 = struct_element_addr %1 : $*T, #T.u1        // user: %8
+  // function_ref U.move(along:)
+  %7 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %8
+  %8 = apply %7(%5, %6) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %5 : $U.TangentVector             // id: %9
+  %10 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %11 = copy_value %10 : $U.TangentVector         // users: %15, %14
+  %12 = struct_element_addr %1 : $*T, #T.u2       // user: %14
+  // function_ref U.move(along:)
+  %13 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %14
+  %14 = apply %13(%11, %12) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  destroy_value %11 : $U.TangentVector            // id: %15
+  %16 = tuple ()                                  // user: %17
+  return %16 : $()                                // id: %17
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #359, stage EarlyModulePasses, pass 2: SemanticARCOpts (semantic-arc-opts)
+// T.move(along:)
+sil hidden [ossa] @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %8, %4, %2
+// %1 "self"                                      // users: %5, %9, %3
+bb0(%0 : @guaranteed $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %7
+  %5 = struct_element_addr %1 : $*T, #T.u1        // user: %7
+  // function_ref U.move(along:)
+  %6 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %7
+  %7 = apply %6(%4, %5) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %8 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %9 = struct_element_addr %1 : $*T, #T.u2        // user: %11
+  // function_ref U.move(along:)
+  %10 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %11
+  %11 = apply %10(%8, %9) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %12 = tuple ()                                  // user: %13
+  return %12 : $()                                // id: %13
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #499, stage EarlyModulePasses, pass 4: NonStdlibNonTransparentFunctionOwnershipModelEliminator (non-stdlib-non-transparent-func-ownership-model-eliminator)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %8, %4, %2
+// %1 "self"                                      // users: %5, %9, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %7
+  %5 = struct_element_addr %1 : $*T, #T.u1        // user: %7
+  // function_ref U.move(along:)
+  %6 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %7
+  %7 = apply %6(%4, %5) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %8 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %9 = struct_element_addr %1 : $*T, #T.u2        // user: %11
+  // function_ref U.move(along:)
+  %10 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %11
+  %11 = apply %10(%8, %9) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %12 = tuple ()                                  // user: %13
+  return %12 : $()                                // id: %13
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before HighLevel,Function+EarlyLoopOpt ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %8, %4, %2
+// %1 "self"                                      // users: %5, %9, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // user: %7
+  %5 = struct_element_addr %1 : $*T, #T.u1        // user: %7
+  // function_ref U.move(along:)
+  %6 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %7
+  %7 = apply %6(%4, %5) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %8 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // user: %11
+  %9 = struct_element_addr %1 : $*T, #T.u2        // user: %11
+  // function_ref U.move(along:)
+  %10 = function_ref @$s4main1UV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> () // user: %11
+  %11 = apply %10(%8, %9) : $@convention(method) (@guaranteed U.TangentVector, @inout U) -> ()
+  %12 = tuple ()                                  // user: %13
+  return %12 : $()                                // id: %13
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6270, stage HighLevel,Function+EarlyLoopOpt, pass 18: EarlyInliner (early-inline)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %36, %4, %2
+// %1 "self"                                      // users: %5, %37, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = tuple ()
+  %36 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %52, %40, %38
+  %37 = struct_element_addr %1 : $*T, #T.u2       // users: %53, %41, %39
+  debug_value %36 : $U.TangentVector, let, name "direction", argno 1 // id: %38
+  debug_value_addr %37 : $*U, var, name "self", argno 2 // id: %39
+  %40 = struct_extract %36 : $U.TangentVector, #U.TangentVector.s // users: %47, %45
+  %41 = struct_element_addr %37 : $*U, #U.s       // users: %50, %42
+  %42 = load %41 : $*S<Float>                     // users: %48, %47
+  %43 = metatype $@thin S<Float>.Type             // users: %61, %47
+  // function_ref static S.+ infix(_:_:)
+  %44 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %61, %47
+  %45 = struct_extract %40 : $S<Float>, #S.c      // users: %51, %46
+  strong_retain %45 : $S<Float>.C                 // id: %46
+  %47 = apply %44<Float>(%42, %40, %43) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %50
+  %48 = struct_extract %42 : $S<Float>, #S.c      // user: %49
+  strong_release %48 : $S<Float>.C                // id: %49
+  store %47 to %41 : $*S<Float>                   // id: %50
+  strong_release %45 : $S<Float>.C                // id: %51
+  %52 = struct_extract %36 : $U.TangentVector, #U.TangentVector.v // users: %56, %54
+  %53 = struct_element_addr %37 : $*U, #U.v       // users: %66, %57, %55
+  debug_value %52 : $V.TangentVector, let, name "direction", argno 1 // id: %54
+  debug_value_addr %53 : $*V, var, name "self", argno 2 // id: %55
+  %56 = struct_extract %52 : $V.TangentVector, #V.TangentVector.s // users: %61, %59
+  %57 = struct_element_addr %53 : $*V, #V.s       // user: %58
+  %58 = load %57 : $*S<Float>                     // users: %62, %61
+  %59 = struct_extract %56 : $S<Float>, #S.c      // users: %64, %60
+  strong_retain %59 : $S<Float>.C                 // id: %60
+  %61 = apply %44<Float>(%58, %56, %43) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %65
+  %62 = struct_extract %58 : $S<Float>, #S.c      // user: %63
+  strong_release %62 : $S<Float>.C                // id: %63
+  strong_release %59 : $S<Float>.C                // id: %64
+  %65 = struct $V (%61 : $S<Float>)               // user: %66
+  store %65 to %53 : $*V                          // id: %66
+  %67 = tuple ()
+  %68 = tuple ()                                  // user: %69
+  return %68 : $()                                // id: %69
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6281, stage HighLevel,Function+EarlyLoopOpt, pass 12: SILCombine (sil-combine)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %51, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %52, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %46, %44
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %49, %41
+  %41 = load %40 : $*S<Float>                     // users: %47, %46
+  %42 = metatype $@thin S<Float>.Type             // users: %60, %46
+  // function_ref static S.+ infix(_:_:)
+  %43 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %60, %46
+  %44 = struct_extract %39 : $S<Float>, #S.c      // users: %50, %45
+  strong_retain %44 : $S<Float>.C                 // id: %45
+  %46 = apply %43<Float>(%41, %39, %42) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %49
+  %47 = struct_extract %41 : $S<Float>, #S.c      // user: %48
+  strong_release %47 : $S<Float>.C                // id: %48
+  store %46 to %40 : $*S<Float>                   // id: %49
+  strong_release %44 : $S<Float>.C                // id: %50
+  %51 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %55, %53
+  %52 = struct_element_addr %36 : $*U, #U.v       // users: %65, %56, %54
+  debug_value %51 : $V.TangentVector, let, name "direction", argno 1 // id: %53
+  debug_value_addr %52 : $*V, var, name "self", argno 2 // id: %54
+  %55 = struct_extract %51 : $V.TangentVector, #V.TangentVector.s // users: %60, %58
+  %56 = struct_element_addr %52 : $*V, #V.s       // user: %57
+  %57 = load %56 : $*S<Float>                     // users: %61, %60
+  %58 = struct_extract %55 : $S<Float>, #S.c      // users: %63, %59
+  strong_retain %58 : $S<Float>.C                 // id: %59
+  %60 = apply %43<Float>(%57, %55, %42) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %64
+  %61 = struct_extract %57 : $S<Float>, #S.c      // user: %62
+  strong_release %61 : $S<Float>.C                // id: %62
+  strong_release %58 : $S<Float>.C                // id: %63
+  %64 = struct $V (%60 : $S<Float>)               // user: %65
+  store %64 to %52 : $*V                          // id: %65
+  %66 = tuple ()                                  // user: %67
+  return %66 : $()                                // id: %67
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6292, stage HighLevel,Function+EarlyLoopOpt, pass 25: CSE (cse)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6300, stage HighLevel,Function+EarlyLoopOpt, pass 33: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6305, stage HighLevel,Function+EarlyLoopOpt, pass 39: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6307, stage HighLevel,Function+EarlyLoopOpt, pass 41: LowerAggregateInstrs (lower-aggregate-instrs)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %38, %4, %2
+// %1 "self"                                      // users: %5, %39, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %21, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %22, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %19, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %47, %62, %30, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %47, %62, %30, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  %19 = struct_extract %8 : $S<Float>, #S.c       // user: %20
+  strong_release %19 : $S<Float>.C                // id: %20
+  %21 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %33, %25, %23
+  %22 = struct_element_addr %5 : $*U, #U.v        // users: %37, %26, %24
+  debug_value %21 : $V.TangentVector, let, name "direction", argno 1 // id: %23
+  debug_value_addr %22 : $*V, var, name "self", argno 2 // id: %24
+  %25 = struct_extract %21 : $V.TangentVector, #V.TangentVector.s // users: %30, %28
+  %26 = struct_element_addr %22 : $*V, #V.s       // user: %27
+  %27 = load %26 : $*S<Float>                     // users: %31, %30
+  %28 = struct_extract %25 : $S<Float>, #S.c      // user: %29
+  strong_retain %28 : $S<Float>.C                 // id: %29
+  %30 = apply %12<Float>(%27, %25, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %36
+  %31 = struct_extract %27 : $S<Float>, #S.c      // user: %32
+  strong_release %31 : $S<Float>.C                // id: %32
+  %33 = struct_extract %21 : $V.TangentVector, #V.TangentVector.s // user: %34
+  %34 = struct_extract %33 : $S<Float>, #S.c      // user: %35
+  strong_release %34 : $S<Float>.C                // id: %35
+  %36 = struct $V (%30 : $S<Float>)               // user: %37
+  store %36 to %22 : $*V                          // id: %37
+  %38 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %53, %42, %40
+  %39 = struct_element_addr %1 : $*T, #T.u2       // users: %54, %43, %41
+  debug_value %38 : $U.TangentVector, let, name "direction", argno 1 // id: %40
+  debug_value_addr %39 : $*U, var, name "self", argno 2 // id: %41
+  %42 = struct_extract %38 : $U.TangentVector, #U.TangentVector.s // users: %51, %47, %45
+  %43 = struct_element_addr %39 : $*U, #U.s       // users: %50, %44
+  %44 = load %43 : $*S<Float>                     // users: %48, %47
+  %45 = struct_extract %42 : $S<Float>, #S.c      // user: %46
+  strong_retain %45 : $S<Float>.C                 // id: %46
+  %47 = apply %12<Float>(%44, %42, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %50
+  %48 = struct_extract %44 : $S<Float>, #S.c      // user: %49
+  strong_release %48 : $S<Float>.C                // id: %49
+  store %47 to %43 : $*S<Float>                   // id: %50
+  %51 = struct_extract %42 : $S<Float>, #S.c      // user: %52
+  strong_release %51 : $S<Float>.C                // id: %52
+  %53 = struct_extract %38 : $U.TangentVector, #U.TangentVector.v // users: %65, %57, %55
+  %54 = struct_element_addr %39 : $*U, #U.v       // users: %69, %58, %56
+  debug_value %53 : $V.TangentVector, let, name "direction", argno 1 // id: %55
+  debug_value_addr %54 : $*V, var, name "self", argno 2 // id: %56
+  %57 = struct_extract %53 : $V.TangentVector, #V.TangentVector.s // users: %62, %60
+  %58 = struct_element_addr %54 : $*V, #V.s       // user: %59
+  %59 = load %58 : $*S<Float>                     // users: %63, %62
+  %60 = struct_extract %57 : $S<Float>, #S.c      // user: %61
+  strong_retain %60 : $S<Float>.C                 // id: %61
+  %62 = apply %12<Float>(%59, %57, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %68
+  %63 = struct_extract %59 : $S<Float>, #S.c      // user: %64
+  strong_release %63 : $S<Float>.C                // id: %64
+  %65 = struct_extract %53 : $V.TangentVector, #V.TangentVector.s // user: %66
+  %66 = struct_extract %65 : $S<Float>, #S.c      // user: %67
+  strong_release %66 : $S<Float>.C                // id: %67
+  %68 = struct $V (%62 : $S<Float>)               // user: %69
+  store %68 to %54 : $*V                          // id: %69
+  %70 = tuple ()                                  // user: %71
+  return %70 : $()                                // id: %71
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #6315, stage HighLevel,Function+EarlyLoopOpt, pass 53: HighLevelCSE (high-level-cse)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before HighLevel,Module+StackPromote ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #11564, stage HighLevel,Module+StackPromote, pass 0: DeadFunctionElimination (sil-deadfuncelim)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #11565, stage HighLevel,Module+StackPromote, pass 1: PerformanceSILLinker (performance-linker)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before Serialize ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #11777, stage Serialize, pass 0: SerializeSILPass (serialize-sil)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #11778, stage Serialize, pass 1: OwnershipModelEliminator (ownership-model-eliminator)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before MidLevel,Function ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #13437, stage MidLevel,Function, pass 38: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #13442, stage MidLevel,Function, pass 44: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before ClosureSpecialize ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before LowLevel,Function ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #17063, stage LowLevel,Function, pass 4: LowerAggregateInstrs (lower-aggregate-instrs)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %38, %4, %2
+// %1 "self"                                      // users: %5, %39, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %21, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %22, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %19, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %47, %62, %30, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %47, %62, %30, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  %19 = struct_extract %8 : $S<Float>, #S.c       // user: %20
+  strong_release %19 : $S<Float>.C                // id: %20
+  %21 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %33, %25, %23
+  %22 = struct_element_addr %5 : $*U, #U.v        // users: %37, %26, %24
+  debug_value %21 : $V.TangentVector, let, name "direction", argno 1 // id: %23
+  debug_value_addr %22 : $*V, var, name "self", argno 2 // id: %24
+  %25 = struct_extract %21 : $V.TangentVector, #V.TangentVector.s // users: %30, %28
+  %26 = struct_element_addr %22 : $*V, #V.s       // user: %27
+  %27 = load %26 : $*S<Float>                     // users: %31, %30
+  %28 = struct_extract %25 : $S<Float>, #S.c      // user: %29
+  strong_retain %28 : $S<Float>.C                 // id: %29
+  %30 = apply %12<Float>(%27, %25, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %36
+  %31 = struct_extract %27 : $S<Float>, #S.c      // user: %32
+  strong_release %31 : $S<Float>.C                // id: %32
+  %33 = struct_extract %21 : $V.TangentVector, #V.TangentVector.s // user: %34
+  %34 = struct_extract %33 : $S<Float>, #S.c      // user: %35
+  strong_release %34 : $S<Float>.C                // id: %35
+  %36 = struct $V (%30 : $S<Float>)               // user: %37
+  store %36 to %22 : $*V                          // id: %37
+  %38 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %53, %42, %40
+  %39 = struct_element_addr %1 : $*T, #T.u2       // users: %54, %43, %41
+  debug_value %38 : $U.TangentVector, let, name "direction", argno 1 // id: %40
+  debug_value_addr %39 : $*U, var, name "self", argno 2 // id: %41
+  %42 = struct_extract %38 : $U.TangentVector, #U.TangentVector.s // users: %51, %47, %45
+  %43 = struct_element_addr %39 : $*U, #U.s       // users: %50, %44
+  %44 = load %43 : $*S<Float>                     // users: %48, %47
+  %45 = struct_extract %42 : $S<Float>, #S.c      // user: %46
+  strong_retain %45 : $S<Float>.C                 // id: %46
+  %47 = apply %12<Float>(%44, %42, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %50
+  %48 = struct_extract %44 : $S<Float>, #S.c      // user: %49
+  strong_release %48 : $S<Float>.C                // id: %49
+  store %47 to %43 : $*S<Float>                   // id: %50
+  %51 = struct_extract %42 : $S<Float>, #S.c      // user: %52
+  strong_release %51 : $S<Float>.C                // id: %52
+  %53 = struct_extract %38 : $U.TangentVector, #U.TangentVector.v // users: %65, %57, %55
+  %54 = struct_element_addr %39 : $*U, #U.v       // users: %69, %58, %56
+  debug_value %53 : $V.TangentVector, let, name "direction", argno 1 // id: %55
+  debug_value_addr %54 : $*V, var, name "self", argno 2 // id: %56
+  %57 = struct_extract %53 : $V.TangentVector, #V.TangentVector.s // users: %62, %60
+  %58 = struct_element_addr %54 : $*V, #V.s       // user: %59
+  %59 = load %58 : $*S<Float>                     // users: %63, %62
+  %60 = struct_extract %57 : $S<Float>, #S.c      // user: %61
+  strong_retain %60 : $S<Float>.C                 // id: %61
+  %62 = apply %12<Float>(%59, %57, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %68
+  %63 = struct_extract %59 : $S<Float>, #S.c      // user: %64
+  strong_release %63 : $S<Float>.C                // id: %64
+  %65 = struct_extract %53 : $V.TangentVector, #V.TangentVector.s // user: %66
+  %66 = struct_extract %65 : $S<Float>, #S.c      // user: %67
+  strong_release %66 : $S<Float>.C                // id: %67
+  %68 = struct $V (%62 : $S<Float>)               // user: %69
+  store %68 to %54 : $*V                          // id: %69
+  %70 = tuple ()                                  // user: %71
+  return %70 : $()                                // id: %71
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #17077, stage LowLevel,Function, pass 24: CSE (cse)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %35, %4, %2
+// %1 "self"                                      // users: %5, %36, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %20, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %21, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %18, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %44, %58, %29, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %44, %58, %29, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // users: %19, %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %18
+  %16 = struct_extract %10 : $S<Float>, #S.c      // user: %17
+  strong_release %16 : $S<Float>.C                // id: %17
+  store %15 to %9 : $*S<Float>                    // id: %18
+  strong_release %13 : $S<Float>.C                // id: %19
+  %20 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %24, %22
+  %21 = struct_element_addr %5 : $*U, #U.v        // users: %34, %25, %23
+  debug_value %20 : $V.TangentVector, let, name "direction", argno 1 // id: %22
+  debug_value_addr %21 : $*V, var, name "self", argno 2 // id: %23
+  %24 = struct_extract %20 : $V.TangentVector, #V.TangentVector.s // users: %29, %27
+  %25 = struct_element_addr %21 : $*V, #V.s       // user: %26
+  %26 = load %25 : $*S<Float>                     // users: %30, %29
+  %27 = struct_extract %24 : $S<Float>, #S.c      // users: %32, %28
+  strong_retain %27 : $S<Float>.C                 // id: %28
+  %29 = apply %12<Float>(%26, %24, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %33
+  %30 = struct_extract %26 : $S<Float>, #S.c      // user: %31
+  strong_release %30 : $S<Float>.C                // id: %31
+  strong_release %27 : $S<Float>.C                // id: %32
+  %33 = struct $V (%29 : $S<Float>)               // user: %34
+  store %33 to %21 : $*V                          // id: %34
+  %35 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %49, %39, %37
+  %36 = struct_element_addr %1 : $*T, #T.u2       // users: %50, %40, %38
+  debug_value %35 : $U.TangentVector, let, name "direction", argno 1 // id: %37
+  debug_value_addr %36 : $*U, var, name "self", argno 2 // id: %38
+  %39 = struct_extract %35 : $U.TangentVector, #U.TangentVector.s // users: %44, %42
+  %40 = struct_element_addr %36 : $*U, #U.s       // users: %47, %41
+  %41 = load %40 : $*S<Float>                     // users: %45, %44
+  %42 = struct_extract %39 : $S<Float>, #S.c      // users: %48, %43
+  strong_retain %42 : $S<Float>.C                 // id: %43
+  %44 = apply %12<Float>(%41, %39, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %47
+  %45 = struct_extract %41 : $S<Float>, #S.c      // user: %46
+  strong_release %45 : $S<Float>.C                // id: %46
+  store %44 to %40 : $*S<Float>                   // id: %47
+  strong_release %42 : $S<Float>.C                // id: %48
+  %49 = struct_extract %35 : $U.TangentVector, #U.TangentVector.v // users: %53, %51
+  %50 = struct_element_addr %36 : $*U, #U.v       // users: %63, %54, %52
+  debug_value %49 : $V.TangentVector, let, name "direction", argno 1 // id: %51
+  debug_value_addr %50 : $*V, var, name "self", argno 2 // id: %52
+  %53 = struct_extract %49 : $V.TangentVector, #V.TangentVector.s // users: %58, %56
+  %54 = struct_element_addr %50 : $*V, #V.s       // user: %55
+  %55 = load %54 : $*S<Float>                     // users: %59, %58
+  %56 = struct_extract %53 : $S<Float>, #S.c      // users: %61, %57
+  strong_retain %56 : $S<Float>.C                 // id: %57
+  %58 = apply %12<Float>(%55, %53, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %62
+  %59 = struct_extract %55 : $S<Float>, #S.c      // user: %60
+  strong_release %59 : $S<Float>.C                // id: %60
+  strong_release %56 : $S<Float>.C                // id: %61
+  %62 = struct $V (%58 : $S<Float>)               // user: %63
+  store %62 to %50 : $*V                          // id: %63
+  %64 = tuple ()                                  // user: %65
+  return %64 : $()                                // id: %65
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #17085, stage LowLevel,Function, pass 32: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #17091, stage LowLevel,Function, pass 39: ReleaseHoisting (release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before LateLoopOpt ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #18167, stage LateLoopOpt, pass 0: LateDeadFunctionElimination (late-deadfuncelim)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL function after  #18767, stage LateLoopOpt, pass 15: LateReleaseHoisting (late-release-hoisting)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before SIL Debug Info Generator ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before Address Lowering ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+*** SIL module before IRGen Preparation ***
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %33, %4, %2
+// %1 "self"                                      // users: %5, %34, %3
+bb0(%0 : $T.TangentVector, %1 : $*T):
+  debug_value %0 : $T.TangentVector, let, name "direction", argno 1 // id: %2
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %3
+  %4 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u1 // users: %19, %8, %6
+  %5 = struct_element_addr %1 : $*T, #T.u1        // users: %20, %9, %7
+  debug_value %4 : $U.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %5 : $*U, var, name "self", argno 2 // id: %7
+  %8 = struct_extract %4 : $U.TangentVector, #U.TangentVector.s // users: %18, %15, %13
+  %9 = struct_element_addr %5 : $*U, #U.s         // users: %17, %10
+  %10 = load %9 : $*S<Float>                      // users: %16, %15
+  %11 = metatype $@thin S<Float>.Type             // users: %42, %55, %28, %15
+  // function_ref static S.+ infix(_:_:)
+  %12 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %42, %55, %28, %15
+  %13 = struct_extract %8 : $S<Float>, #S.c       // user: %14
+  strong_retain %13 : $S<Float>.C                 // id: %14
+  %15 = apply %12<Float>(%10, %8, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %17
+  release_value %10 : $S<Float>                   // id: %16
+  store %15 to %9 : $*S<Float>                    // id: %17
+  release_value %8 : $S<Float>                    // id: %18
+  %19 = struct_extract %4 : $U.TangentVector, #U.TangentVector.v // users: %30, %23, %21
+  %20 = struct_element_addr %5 : $*U, #U.v        // users: %32, %24, %22
+  debug_value %19 : $V.TangentVector, let, name "direction", argno 1 // id: %21
+  debug_value_addr %20 : $*V, var, name "self", argno 2 // id: %22
+  %23 = struct_extract %19 : $V.TangentVector, #V.TangentVector.s // users: %28, %26
+  %24 = struct_element_addr %20 : $*V, #V.s       // user: %25
+  %25 = load %24 : $*S<Float>                     // users: %29, %28
+  %26 = struct_extract %23 : $S<Float>, #S.c      // user: %27
+  strong_retain %26 : $S<Float>.C                 // id: %27
+  %28 = apply %12<Float>(%25, %23, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %31
+  release_value %25 : $S<Float>                   // id: %29
+  release_value %19 : $V.TangentVector            // id: %30
+  %31 = struct $V (%28 : $S<Float>)               // user: %32
+  store %31 to %20 : $*V                          // id: %32
+  %33 = struct_extract %0 : $T.TangentVector, #T.TangentVector.u2 // users: %46, %37, %35
+  %34 = struct_element_addr %1 : $*T, #T.u2       // users: %47, %38, %36
+  debug_value %33 : $U.TangentVector, let, name "direction", argno 1 // id: %35
+  debug_value_addr %34 : $*U, var, name "self", argno 2 // id: %36
+  %37 = struct_extract %33 : $U.TangentVector, #U.TangentVector.s // users: %45, %42, %40
+  %38 = struct_element_addr %34 : $*U, #U.s       // users: %44, %39
+  %39 = load %38 : $*S<Float>                     // users: %43, %42
+  %40 = struct_extract %37 : $S<Float>, #S.c      // user: %41
+  strong_retain %40 : $S<Float>.C                 // id: %41
+  %42 = apply %12<Float>(%39, %37, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %44
+  release_value %39 : $S<Float>                   // id: %43
+  store %42 to %38 : $*S<Float>                   // id: %44
+  release_value %37 : $S<Float>                   // id: %45
+  %46 = struct_extract %33 : $U.TangentVector, #U.TangentVector.v // users: %57, %50, %48
+  %47 = struct_element_addr %34 : $*U, #U.v       // users: %59, %51, %49
+  debug_value %46 : $V.TangentVector, let, name "direction", argno 1 // id: %48
+  debug_value_addr %47 : $*V, var, name "self", argno 2 // id: %49
+  %50 = struct_extract %46 : $V.TangentVector, #V.TangentVector.s // users: %55, %53
+  %51 = struct_element_addr %47 : $*V, #V.s       // user: %52
+  %52 = load %51 : $*S<Float>                     // users: %56, %55
+  %53 = struct_extract %50 : $S<Float>, #S.c      // user: %54
+  strong_retain %53 : $S<Float>.C                 // id: %54
+  %55 = apply %12<Float>(%52, %50, %11) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %58
+  release_value %52 : $S<Float>                   // id: %56
+  release_value %46 : $V.TangentVector            // id: %57
+  %58 = struct $V (%55 : $S<Float>)               // user: %59
+  store %58 to %47 : $*V                          // id: %59
+  %60 = tuple ()                                  // user: %61
+  return %60 : $()                                // id: %61
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
+  *** SIL module after #99, stage IRGen Preparation, pass 1: LoadableByAddress (loadable-address)
+// T.move(along:)
+sil hidden @$s4main1TV4move5alongyAC13TangentVectorV_tF : $@convention(method) (@in_guaranteed T.TangentVector, @inout T) -> () {
+// %0 "direction"                                 // users: %6, %8, %41
+// %1 "self"                                      // users: %10, %43, %7
+bb0(%0 : $*T.TangentVector, %1 : $*T):
+  %2 = alloc_stack $V.TangentVector               // users: %38, %28, %30, %26, %76
+  %3 = alloc_stack $U.TangentVector               // users: %11, %13, %25, %9, %75
+  %4 = alloc_stack $V.TangentVector               // users: %69, %59, %61, %57, %74
+  %5 = alloc_stack $U.TangentVector               // users: %44, %46, %56, %42, %73
+  debug_value_addr %0 : $*T.TangentVector, let, name "direction", argno 1 // id: %6
+  debug_value_addr %1 : $*T, var, name "self", argno 2 // id: %7
+  %8 = struct_element_addr %0 : $*T.TangentVector, #T.TangentVector.u1 // user: %9
+  copy_addr [take] %8 to [initialization] %3 : $*U.TangentVector // id: %9
+  %10 = struct_element_addr %1 : $*T, #T.u1       // users: %27, %15, %12
+  debug_value_addr %3 : $*U.TangentVector, let, name "direction", argno 1 // id: %11
+  debug_value_addr %10 : $*U, var, name "self", argno 2 // id: %12
+  %13 = struct_element_addr %3 : $*U.TangentVector, #U.TangentVector.s // user: %14
+  %14 = load %13 : $*S<Float>                     // users: %24, %21, %19
+  %15 = struct_element_addr %10 : $*U, #U.s       // users: %16, %23
+  %16 = load %15 : $*S<Float>                     // users: %21, %22
+  %17 = metatype $@thin S<Float>.Type             // users: %52, %67, %36, %21
+  // function_ref static S.+ infix(_:_:)
+  %18 = function_ref @$s1M1SV1poiyACyxGAE_AEtFZ : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // users: %52, %67, %36, %21
+  %19 = struct_extract %14 : $S<Float>, #S.c      // user: %20
+  strong_retain %19 : $S<Float>.C                 // id: %20
+  %21 = apply %18<Float>(%16, %14, %17) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %23
+  release_value %16 : $S<Float>                   // id: %22
+  store %21 to %15 : $*S<Float>                   // id: %23
+  release_value %14 : $S<Float>                   // id: %24
+  %25 = struct_element_addr %3 : $*U.TangentVector, #U.TangentVector.v // user: %26
+  copy_addr [take] %25 to [initialization] %2 : $*V.TangentVector // id: %26
+  %27 = struct_element_addr %10 : $*U, #U.v       // users: %40, %32, %29
+  debug_value_addr %2 : $*V.TangentVector, let, name "direction", argno 1 // id: %28
+  debug_value_addr %27 : $*V, var, name "self", argno 2 // id: %29
+  %30 = struct_element_addr %2 : $*V.TangentVector, #V.TangentVector.s // user: %31
+  %31 = load %30 : $*S<Float>                     // users: %36, %34
+  %32 = struct_element_addr %27 : $*V, #V.s       // user: %33
+  %33 = load %32 : $*S<Float>                     // users: %36, %37
+  %34 = struct_extract %31 : $S<Float>, #S.c      // user: %35
+  strong_retain %34 : $S<Float>.C                 // id: %35
+  %36 = apply %18<Float>(%33, %31, %17) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %39
+  release_value %33 : $S<Float>                   // id: %37
+  release_value_addr %2 : $*V.TangentVector       // id: %38
+  %39 = struct $V (%36 : $S<Float>)               // user: %40
+  store %39 to %27 : $*V                          // id: %40
+  %41 = struct_element_addr %0 : $*T.TangentVector, #T.TangentVector.u2 // user: %42
+  copy_addr [take] %41 to [initialization] %5 : $*U.TangentVector // id: %42
+  %43 = struct_element_addr %1 : $*T, #T.u2       // users: %58, %48, %45
+  debug_value_addr %5 : $*U.TangentVector, let, name "direction", argno 1 // id: %44
+  debug_value_addr %43 : $*U, var, name "self", argno 2 // id: %45
+  %46 = struct_element_addr %5 : $*U.TangentVector, #U.TangentVector.s // user: %47
+  %47 = load %46 : $*S<Float>                     // users: %55, %52, %50
+  %48 = struct_element_addr %43 : $*U, #U.s       // users: %49, %54
+  %49 = load %48 : $*S<Float>                     // users: %52, %53
+  %50 = struct_extract %47 : $S<Float>, #S.c      // user: %51
+  strong_retain %50 : $S<Float>.C                 // id: %51
+  %52 = apply %18<Float>(%49, %47, %17) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %54
+  release_value %49 : $S<Float>                   // id: %53
+  store %52 to %48 : $*S<Float>                   // id: %54
+  release_value %47 : $S<Float>                   // id: %55
+  %56 = struct_element_addr %5 : $*U.TangentVector, #U.TangentVector.v // user: %57
+  copy_addr [take] %56 to [initialization] %4 : $*V.TangentVector // id: %57
+  %58 = struct_element_addr %43 : $*U, #U.v       // users: %71, %63, %60
+  debug_value_addr %4 : $*V.TangentVector, let, name "direction", argno 1 // id: %59
+  debug_value_addr %58 : $*V, var, name "self", argno 2 // id: %60
+  %61 = struct_element_addr %4 : $*V.TangentVector, #V.TangentVector.s // user: %62
+  %62 = load %61 : $*S<Float>                     // users: %67, %65
+  %63 = struct_element_addr %58 : $*V, #V.s       // user: %64
+  %64 = load %63 : $*S<Float>                     // users: %67, %68
+  %65 = struct_extract %62 : $S<Float>, #S.c      // user: %66
+  strong_retain %65 : $S<Float>.C                 // id: %66
+  %67 = apply %18<Float>(%64, %62, %17) : $@convention(method) <τ_0_0> (@guaranteed S<τ_0_0>, @guaranteed S<τ_0_0>, @thin S<τ_0_0>.Type) -> @owned S<τ_0_0> // user: %70
+  release_value %64 : $S<Float>                   // id: %68
+  release_value_addr %4 : $*V.TangentVector       // id: %69
+  %70 = struct $V (%67 : $S<Float>)               // user: %71
+  store %70 to %58 : $*V                          // id: %71
+  %72 = tuple ()                                  // user: %77
+  dealloc_stack %5 : $*U.TangentVector            // id: %73
+  dealloc_stack %4 : $*V.TangentVector            // id: %74
+  dealloc_stack %3 : $*U.TangentVector            // id: %75
+  dealloc_stack %2 : $*V.TangentVector            // id: %76
+  return %72 : $()                                // id: %77
+} // end sil function '$s4main1TV4move5alongyAC13TangentVectorV_tF'
+
