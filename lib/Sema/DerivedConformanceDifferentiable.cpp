@@ -676,8 +676,7 @@ getOrSynthesizeTangentVectorStruct(DerivedConformance &derived, Identifier id) {
     // will synthesize derivative functions for its accessors. We only add this
     // to public stored properties, because their access outside the module will
     // go through accessor declarations.
-    if (member->getEffectiveAccess() > AccessLevel::Internal &&
-        !member->getAttrs().hasAttribute<DifferentiableAttr>()) {
+    if (!member->getAttrs().hasAttribute<DifferentiableAttr>()) {
       auto *getter = member->getSynthesizedAccessor(AccessorKind::Get);
       (void)getter->getInterfaceType();
       // If member or its getter already has a `@differentiable` attribute,
@@ -693,11 +692,15 @@ getOrSynthesizeTangentVectorStruct(DerivedConformance &derived, Identifier id) {
       if (auto *extDecl = dyn_cast<ExtensionDecl>(parentDC->getAsDecl()))
         if (auto extGenSig = extDecl->getGenericSignature())
           derivativeGenericSignature = extGenSig;
+      auto *parameterIndices = IndexSubset::get(C, 1, {0});
+      auto *resultIndices = IndexSubset::get(C, 1, {0});
       auto *diffableAttr = DifferentiableAttr::create(
           getter, /*implicit*/ true, SourceLoc(), SourceLoc(),
-          /*linear*/ false, /*parameterIndices*/ IndexSubset::get(C, 1, {0}),
-          derivativeGenericSignature);
+          /*linear*/ false, parameterIndices, derivativeGenericSignature);
       member->getAttrs().add(diffableAttr);
+      getter->getAttrs().add(diffableAttr);
+      getter->addDerivativeFunctionConfiguration(
+          {parameterIndices, resultIndices, derivativeGenericSignature});
     }
   }
 

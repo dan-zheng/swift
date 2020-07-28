@@ -115,7 +115,6 @@ ClassTests.test("GenericNontrivialMember") {
 // TF-1149: Test class with loadable type but address-only `TangentVector` type.
 ClassTests.test("AddressOnlyTangentVector") {
   final class C<T: Differentiable>: Differentiable {
-    @differentiable
     var stored: T
 
     @differentiable
@@ -138,7 +137,6 @@ ClassTests.test("AddressOnlyTangentVector") {
 // TF-1175: Test whether class-typed arguments are not marked active.
 ClassTests.test("ClassArgumentActivity") {
   class C: Differentiable {
-    @differentiable
     var x: Float
 
     init(_ x: Float) {
@@ -491,7 +489,6 @@ ClassTests.test("ClassMethods - closure captures") {
 
 ClassTests.test("ClassProperties") {
   class Super: Differentiable {
-    @differentiable
     var base: Tracked<Float>
 
     init(base: Tracked<Float>) { self.base = base }
