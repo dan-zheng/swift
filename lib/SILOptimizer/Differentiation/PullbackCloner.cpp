@@ -651,6 +651,16 @@ private:
   }
 
   //--------------------------------------------------------------------------//
+  // Optional differentiation
+  //--------------------------------------------------------------------------//
+
+  /// Given a `wrappedAdjoint` value of type `T.TangentVector`, creates an
+  /// `Optional<T>.TangentVector` value from it and adds it to the adjoint value
+  /// of `optionalValue`.
+  void accumulateAdjointForOptional(SILBasicBlock *bb, SILValue optionalValue,
+                                    SILValue wrappedAdjoint);
+
+  //--------------------------------------------------------------------------//
   // Array literal initialization differentiation
   //--------------------------------------------------------------------------//
 
@@ -783,11 +793,6 @@ public:
   buildPullbackSuccessor(SILBasicBlock *origBB, SILBasicBlock *origPredBB,
                          llvm::SmallDenseMap<SILValue, TrampolineBlockSet>
                              &pullbackTrampolineBlockMap);
-
-  /// Given a `wrappedAdjoint` value, constructs a `Optional.TangentVector` value 
-  /// from it and adds it to the adjoint value of the `optionalValue`.
-  void propagateAdjointForOptional(SILBasicBlock *bb,
-                                   SILValue optionalValue, SILValue wrappedAdjoint);
 
   /// Emits pullback code in the corresponding pullback block.
   void visitSILBasicBlock(SILBasicBlock *bb);
@@ -1525,7 +1530,7 @@ public:
       errorOccurred = true;
       return;
     }
-    propagateAdjointForOptional(bb, utedai->getOperand(), adjBuf);
+    accumulateAdjointForOptional(bb, utedai->getOperand(), adjBuf);
   }
 
 #define NOT_DIFFERENTIABLE(INST, DIAG) void visit##INST##Inst(INST##Inst *inst);
@@ -2002,7 +2007,7 @@ void PullbackCloner::Implementation::emitZeroDerivativesForNonvariedResult(
              << pullback);
 }
 
-void PullbackCloner::Implementation::propagateAdjointForOptional(
+void PullbackCloner::Implementation::accumulateAdjointForOptional(
     SILBasicBlock *bb, SILValue optionalValue,
     SILValue wrappedAdjoint) {
   auto pbLoc = getPullback().getLocation();
@@ -2237,8 +2242,10 @@ void PullbackCloner::Implementation::visitSILBasicBlock(SILBasicBlock *bb) {
     SmallVector<std::pair<SILBasicBlock *, SILValue>, 4> incomingValues;
     bbArg->getSingleTerminatorOperands(incomingValues);
 
-    auto isSwitchEnumInstOnOptional =
-        [&Ctx = getASTContext()](TermInst *termInst) {
+    // Returns true iff the given terminator instruction is a `switch_enum` on
+    // an `Optional`-typed value. Such instructions requires special-case
+    // adjoint propagation logic.
+    auto isSwitchEnumInstOnOptional = [&Ctx = getASTContext()](TermInst *termInst) {
           if (!termInst)
             return false;
           if (auto *sei = dyn_cast<SwitchEnumInst>(termInst)) {
@@ -2267,8 +2274,8 @@ void PullbackCloner::Implementation::visitSILBasicBlock(SILBasicBlock *bb) {
         // Handle `switch_enum` on `Optional`.
         auto termInst = bbArg->getSingleTerminator();
         if (isSwitchEnumInstOnOptional(termInst))
-          propagateAdjointForOptional(bb, incomingValue,
-                                      concreteBBArgAdjCopy);
+          accumulateAdjointForOptional(bb, incomingValue,
+                                       concreteBBArgAdjCopy);
         else
           setAdjointValue(predBB, incomingValue,
                           makeConcreteAdjointValue(concreteBBArgAdjCopy));
@@ -2286,7 +2293,7 @@ void PullbackCloner::Implementation::visitSILBasicBlock(SILBasicBlock *bb) {
         // Handle `switch_enum` on `Optional`.
         auto termInst = bbArg->getSingleTerminator();
         if (isSwitchEnumInstOnOptional(termInst))
-          propagateAdjointForOptional(bb, incomingValue, bbArgAdjBuf);
+          accumulateAdjointForOptional(bb, incomingValue, bbArgAdjBuf);
         else
           addToAdjointBuffer(predBB, incomingValue, bbArgAdjBuf, pbLoc);
       }

@@ -5998,6 +5998,10 @@ maybeDiagnoseUnsupportedDifferentiableConversion(ConstraintSystem &cs,
   auto fromFnType = fromType->getAs<AnyFunctionType>();
   auto isToTypeLinear =
       toType->getDifferentiabilityKind() == DifferentiabilityKind::Linear;
+  llvm::errs() << "FROM TYPE\n";
+  fromType->dump();
+  llvm::errs() << "TO TYPE\n";
+  toType->dump();
   // Conversion from a `@differentiable` function to a `@differentiable(linear)`
   // function is not allowed, because the from-expression will never be a
   // closure expression or a declaration/member reference.
