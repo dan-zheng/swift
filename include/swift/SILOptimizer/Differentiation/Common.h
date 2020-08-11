@@ -309,8 +309,12 @@ public:
   template <typename Pred>
   void pushChildrenIf(DominanceInfoNode *node, Pred pred) {
     SmallVector<DominanceInfoNode *, 4> children;
-    for (auto *child : *node)
+    for (auto *child : *node) {
+      // Skip
+      if (isa<UnreachableInst>(child->getBlock()->getTerminator()))
+        continue;
       children.push_back(child);
+    }
     llvm::sort(children.begin(), children.end(),
                [&](DominanceInfoNode *n1, DominanceInfoNode *n2) {
                  return postOrderInfo->getPONumber(n1->getBlock()) <

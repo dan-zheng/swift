@@ -1728,16 +1728,37 @@ bool PullbackCloner::Implementation::run() {
   // there are multiple roots.
   PostOrderPostDominanceOrder postDomOrder(postDomInfo->getRootNode(),
                                            postOrderInfo, original.size());
+  llvm::errs() << "POST DOM INFO\n";
+  postDomInfo->print(llvm::errs());
   while (auto *origNode = postDomOrder.getNext()) {
     auto *origBB = origNode->getBlock();
     postDomOrder.pushChildren(origNode);
     // If node is the `nullptr` marker basic block, do not push it.
     if (!origBB)
       continue;
+    llvm::errs() << "ADDING ORIG BB: " << origBB->getDebugID() << "\n";
     postOrderPostDomOrder.push_back(origBB);
   }
+
+  // [2, 4, 1, 3, 0]
+  // [4, 2, 1, 3, 0]
+
+  // NOTE: Ad-hoc swapping logic for testing.
+  // auto tmp = postOrderPostDomOrder[0];
+  // postOrderPostDomOrder[0] = postOrderPostDomOrder[1];
+  // postOrderPostDomOrder[1] = postOrderPostDomOrder[0];
+  // std::swap(postOrderPostDomOrder[0], postOrderPostDomOrder[1]);
+  //
+  // To generalize this code: make sure the entry basic block is first.
+
+  llvm::errs() << "BB ORDER: ";
+  for (auto *origBB : postOrderPostDomOrder)
+    llvm::errs() << origBB->getDebugID() << " ";
+  llvm::errs() << "\n";
+
   for (auto *origBB : postOrderPostDomOrder) {
     auto *pullbackBB = pullback.createBasicBlock();
+    llvm::errs() << "VISITING ORIG BB: " << origBB->getDebugID() << ", PB BB: " << pullbackBB->getDebugID() << "\n";
     pullbackBBMap.insert({origBB, pullbackBB});
     auto pbStructLoweredType =
         remapType(getPullbackInfo().getLinearMapStructLoweredType(origBB));
@@ -1801,6 +1822,9 @@ bool PullbackCloner::Implementation::run() {
     //   struct argument. They branch from a pullback successor block to the
     //   pullback original block, passing adjoint values of active values.
     for (auto *succBB : origBB->getSuccessorBlocks()) {
+      // TODO: Skip generating pullback block for original unreachable block here
+      if (isa<UnreachableInst>(succBB->getTerminator()))
+        continue;
       auto *pullbackTrampolineBB = pullback.createBasicBlockBefore(pullbackBB);
       pullbackTrampolineBBMap.insert({{origBB, succBB}, pullbackTrampolineBB});
       // Get the enum element type (i.e. the pullback struct type). The enum
@@ -1964,6 +1988,8 @@ bool PullbackCloner::Implementation::run() {
   }
   assert(!leakFound && "Leaks found!");
 #endif
+
+  pullback.verify();
 
   LLVM_DEBUG(getADDebugStream()
              << "Generated pullback for " << original.getName() << ":\n"

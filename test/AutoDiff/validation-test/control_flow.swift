@@ -736,6 +736,7 @@ ControlFlowTests.test("BranchingCastInstructions") {
   expectEqual((3, 1), valueWithGradient(at: Float(3), in: conditionalCast))
 }
 
+/*
 ControlFlowTests.test("ThrowingCalls") {
   // TF-433: Test non-active `try_apply` differentiation.
   func rethrowing(_ body: () throws -> Void) rethrows -> Void {}
@@ -781,5 +782,6 @@ ControlFlowTests.test("ThrowingCalls") {
   }
   print(gradient(at: 3, in: { x in testBooleanAnd(x, bool: true) }))
 }
+*/
 
 runAllTests()
