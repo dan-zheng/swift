@@ -1974,3 +1974,47 @@ visitClassifyBridgeObjectInst(ClassifyBridgeObjectInst *CBOI) {
   return nullptr;
 }
 
+SILInstruction *SILCombiner::visitDifferentiableFunctionExtractInst(
+    DifferentiableFunctionExtractInst *DFEI) {
+  // diff_func = differentiable_function(orig, jvp, vjp)
+  // differentiable_function_extract [original] diff_func -> orig
+  // differentiable_function_extract [jvp]      diff_func -> jvp
+  // differentiable_function_extract [vjp       diff_func -> vjp
+  if (auto *DFI = dyn_cast<DifferentiableFunctionInst>(DFEI->getOperand())) {
+    if (DFI->hasExtractee(DFEI->getExtractee())) {
+      SILValue newValue = DFI->getExtractee(DFEI->getExtractee());
+      // If the type of the `differentiable_function` operand does not precisely
+      // match the type of the original `differentiable_function_extract`,
+      // create a `convert_function`.
+      if (newValue->getType() != DFEI->getType()) {
+        newValue = Builder.createConvertFunction(DFEI->getLoc(), newValue, DFEI->getType(), /*WithoutActuallyEscaping*/ false);
+      }
+      replaceInstUsesWith(*DFEI, newValue);
+      return nullptr;
+    }
+  }
+
+  return nullptr;
+}
+
+SILInstruction *SILCombiner::visitLinearFunctionExtractInst(
+    LinearFunctionExtractInst *LFEI) {
+  // linear_func = linear_function(orig, transpose)
+  // linear_function_extract [original]  linear_func -> orig
+  // linear_function_extract [transpose] linear_func -> transpose
+  if (auto *LFI = dyn_cast<LinearFunctionInst>(LFEI->getOperand())) {
+    if (LFI->hasExtractee(LFEI->getExtractee())) {
+      SILValue newValue = LFI->getExtractee(LFEI->getExtractee());
+      // If the type of the `differentiable_function` operand does not precisely
+      // match the type of the original `differentiable_function_extract`,
+      // create a `convert_function`.
+      if (newValue->getType() != LFEI->getType()) {
+        newValue = Builder.createConvertFunction(LFEI->getLoc(), newValue, LFEI->getType(), /*WithoutActuallyEscaping*/ false);
+      }
+      replaceInstUsesWith(*LFEI, newValue);
+      return nullptr;
+    }
+  }
+
+  return nullptr;
+}

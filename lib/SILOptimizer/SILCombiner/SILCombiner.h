@@ -222,8 +222,11 @@ public:
   SILInstruction *visitMarkDependenceInst(MarkDependenceInst *MDI);
   SILInstruction *visitClassifyBridgeObjectInst(ClassifyBridgeObjectInst *CBOI);
   SILInstruction *visitConvertFunctionInst(ConvertFunctionInst *CFI);
-  SILInstruction *
-  visitConvertEscapeToNoEscapeInst(ConvertEscapeToNoEscapeInst *Cvt);
+    SILInstruction *
+    visitConvertEscapeToNoEscapeInst(ConvertEscapeToNoEscapeInst *Cvt);
+  SILInstruction *visitDifferentiableFunctionExtractInst(
+      DifferentiableFunctionExtractInst *DFEI);
+  SILInstruction *visitLinearFunctionExtractInst(LinearFunctionExtractInst *LFEI);
 
   /// Instruction visitor helpers.
   SILInstruction *optimizeBuiltinCanBeObjCClass(BuiltinInst *AI);
