@@ -249,6 +249,135 @@ CanSILFunctionType buildThunkType(SILFunction *fn,
       fn->getASTContext());
 }
 
+/// Apply trivial conversions to a value to handle differences between the inner
+/// and outer types of a function conversion thunk.
+///
+/// Adapted from `applyTrivialConversions` in SILGenPoly.cpp.
+static SILValue applyTrivialConversions(SILBuilder &builder, SILLocation loc,
+                                        SILValue innerValue,
+                                        SILType outerType) {
+  auto innerASTTy = innerValue->getType().getASTType();
+  auto outerASTTy = outerType.getASTType();
+  if (innerASTTy->hasArchetype())
+    innerASTTy = innerASTTy->mapTypeOutOfContext()->getCanonicalType();
+  if (outerASTTy->hasArchetype())
+    outerASTTy = outerASTTy->mapTypeOutOfContext()->getCanonicalType();
+
+  if (innerASTTy == outerASTTy) {
+    return innerValue;
+  }
+  if (innerASTTy->getClassOrBoundGenericClass() &&
+      outerASTTy->getClassOrBoundGenericClass()) {
+    if (outerASTTy->isExactSuperclassOf(innerASTTy)) {
+      return builder.createUpcast(loc, innerValue, outerType);
+    } else if (innerASTTy->isExactSuperclassOf(outerASTTy)) {
+      return builder.createUncheckedRefCast(loc, innerValue, outerType);
+    }
+  } else if (auto innerFnTy = dyn_cast<SILFunctionType>(innerASTTy)) {
+    auto &typeConverter = builder.getModule().Types;
+    if (auto outerFnTy = dyn_cast<SILFunctionType>(outerASTTy)) {
+      auto abiDiffA = typeConverter.checkFunctionForABIDifferences(
+          builder.getModule(), innerFnTy, outerFnTy);
+      auto abiDiffB = typeConverter.checkFunctionForABIDifferences(
+          builder.getModule(), outerFnTy, innerFnTy);
+
+      if (abiDiffA == Lowering::TypeConverter::ABIDifference::
+                          CompatibleRepresentation ||
+          abiDiffA == Lowering::TypeConverter::ABIDifference::
+                          CompatibleCallingConvention ||
+          abiDiffB == Lowering::TypeConverter::ABIDifference::
+                          CompatibleRepresentation ||
+          abiDiffB == Lowering::TypeConverter::ABIDifference::
+                          CompatibleCallingConvention) {
+        return builder.createConvertFunction(loc, innerValue, outerType,
+                                             /*withoutActuallyEscaping*/ false);
+      }
+    }
+  }
+
+  llvm_unreachable("unhandled reabstraction type mismatch");
+}
+
+/// Forward arguments according to a function type's ownership conventions.
+static void forwardFunctionArguments(SILBuilder &builder, SILLocation loc,
+                                     CanSILFunctionType fTy,
+                                     ArrayRef<SILValue> managedArgs,
+                                     SmallVectorImpl<SILValue> &forwardedArgs) {
+  auto &function = builder.getFunction();
+  auto argTypes = fTy->getParameters();
+  for (auto index : indices(managedArgs)) {
+    auto arg = managedArgs[index];
+    auto argTy = argTypes[index];
+    auto argSubstTy = argTy.getArgumentType(function.getModule(), fTy,
+                                            function.getTypeExpansionContext());
+    arg = applyTrivialConversions(builder, loc, arg,
+                                  SILType::getPrimitiveObjectType(argSubstTy));
+    if (argTy.isConsumed()) {
+      // forwardedArgs.push_back(arg.ensurePlusOne(SGF, loc).forward(SGF));
+      // TODO
+      forwardedArgs.push_back(arg);
+      continue;
+    }
+    if (isGuaranteedParameter(argTy.getConvention())) {
+      // builder.createBeginBorrow(<#SILLocation Loc#>, <#SILValue LV#>)
+#if 0
+      forwardedArgs.push_back(
+          SGF.emitManagedBeginBorrow(loc, arg).getValue());
+#endif
+      continue;
+    }
+    forwardedArgs.push_back(arg);
+  }
+}
+
+/// Forward function arguments, converting ownership.
+/// Adapted from `forwardFunctionArguments` in SILGenPoly.cpp.
+static void forwardFunctionArgumentsConvertingOwnership(
+    SILBuilder &builder, SILLocation loc, CanSILFunctionType fromTy,
+    CanSILFunctionType toTy, ArrayRef<SILValue> managedArgs,
+    SmallVectorImpl<SILValue> &forwardedArgs,
+    SmallVectorImpl<AllocStackInst *> &localAllocations,
+    SmallVectorImpl<SILValue> &argumentsToFree) {
+  auto &function = builder.getFunction();
+  auto fromParameters = fromTy->getParameters();
+  auto toParameters = toTy->getParameters();
+  for (auto index : indices(managedArgs)) {
+    auto &arg = managedArgs[index];
+    auto fromParam = fromParameters[index];
+    auto toParam = toParameters[index];
+    // To convert owned argument to be guaranteed, retain the argument.
+    if (fromParam.isConsumed() && !toParam.isConsumed()) {
+      // If the argument has an object type, emit `retain_value`.
+      if (arg->getType().isObject()) {
+        builder.createRetainValue(loc, arg, builder.getDefaultAtomicity());
+        forwardedArgs.push_back(arg);
+        continue;
+      }
+      // If the argument has a loadable address type, emit `retain_value_addr`.
+      if (arg->getType().isLoadable(function)) {
+        builder.createRetainValueAddr(loc, arg, builder.getDefaultAtomicity());
+        forwardedArgs.push_back(arg);
+        continue;
+      }
+      // If the argument is address-only, emit a local allocation and
+      // `copy_addr`.
+      auto *alloc = builder.createAllocStack(loc, arg->getType());
+      builder.createCopyAddr(loc, arg, alloc, IsNotTake, IsInitialization);
+      localAllocations.push_back(alloc);
+      forwardedArgs.push_back(alloc);
+      continue;
+    }
+    // To convert guaranteed argument to be owned, release the argument later.
+    if (fromParam.isGuaranteed() && !toParam.isGuaranteed()) {
+      forwardedArgs.push_back(arg);
+      argumentsToFree.push_back(arg);
+      continue;
+    }
+    // Otherwise, simply forward the argument.
+    forwardedArgs.push_back(arg);
+  }
+}
+
 SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
                                            SILModule &module, SILLocation loc,
                                            SILFunction *caller,
@@ -274,18 +403,13 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
       thunkType, fromInterfaceType, toInterfaceType, Type(),
       module.getSwiftModule());
 
-  // FIXME(TF-989): Mark reabstraction thunks as transparent. This requires
-  // generating ossa reabstraction thunks so that they can be inlined during
-  // mandatory inlining when `-enable-strip-ownership-after-serialization` is
-  // true and ownership model eliminator is not run after differentiation.
   auto *thunk = fb.getOrCreateSharedFunction(
-      loc, name, thunkDeclType, IsBare, IsNotTransparent, IsSerialized,
+      loc, name, thunkDeclType, IsBare, IsTransparent, IsSerialized,
       ProfileCounter(), IsReabstractionThunk, IsNotDynamic);
   if (!thunk->empty())
     return thunk;
 
   thunk->setGenericEnvironment(genericEnv);
-  thunk->setOwnershipEliminated();
   auto *entry = thunk->createBasicBlock();
   SILBuilder builder(entry);
   createEntryArguments(thunk);
@@ -294,13 +418,19 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
   SILFunctionConventions toConv(toType, module);
   assert(toConv.useLoweredAddresses());
 
+  SmallVector<SILValue, 4> forwardedArgs;
+  SmallVector<AllocStackInst *, 4> localAllocations;
+#if 0
+  SmallVector<SILValue *, 4> argumentsToFree;
+  forwardFunctionArgumentsConvertingOwnership(builder, loc, fromType, toType,
+                                              thunk->getArgumentsWithoutIndirectResults(), forwardedArgs, localAllocations, argumentsToFree);
+#endif
   auto *fnArg = thunk->getArgumentsWithoutIndirectResults().back();
 
   SmallVector<SILValue, 4> arguments;
   auto toArgIter = thunk->getArguments().begin();
   auto useNextArgument = [&]() { arguments.push_back(*toArgIter++); };
 
-  SmallVector<AllocStackInst *, 4> localAllocations;
   auto createAllocStack = [&](SILType type) {
     auto *alloc = builder.createAllocStack(loc, type);
     localAllocations.push_back(alloc);
@@ -352,16 +482,16 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
       assert(paramTy.isAddress());
       auto *toArg = *toArgIter++;
       auto *buf = createAllocStack(toArg->getType());
-      builder.createStore(loc, toArg, buf,
-                          StoreOwnershipQualifier::Unqualified);
+      builder.emitStoreValueOperation(loc, toArg, buf,
+                                      StoreOwnershipQualifier::Init);
       arguments.push_back(buf);
       continue;
     }
     // Convert direct parameter to indirect parameter.
     assert(toParam.isFormalIndirect());
     auto *toArg = *toArgIter++;
-    auto *load =
-        builder.createLoad(loc, toArg, LoadOwnershipQualifier::Unqualified);
+    auto load = builder.emitLoadValueOperation(loc, toArg,
+                                               LoadOwnershipQualifier::Take);
     arguments.push_back(load);
   }
 
@@ -413,8 +543,8 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
     // Load direct results from indirect results.
     if (fromRes.isFormalIndirect()) {
       auto indRes = *fromIndResultsIter++;
-      auto *load =
-          builder.createLoad(loc, indRes, LoadOwnershipQualifier::Unqualified);
+      auto load = builder.emitLoadValueOperation(loc, indRes,
+                                                 LoadOwnershipQualifier::Take);
       results.push_back(load);
       continue;
     }
@@ -426,8 +556,8 @@ SILFunction *getOrCreateReabstractionThunk(SILOptFunctionBuilder &fb,
     assert(resultTy.isAddress());
 #endif
     auto indRes = *toIndResultsIter++;
-    builder.createStore(loc, *fromDirResultsIter++, indRes,
-                        StoreOwnershipQualifier::Unqualified);
+    builder.emitStoreValueOperation(loc, *fromDirResultsIter++, indRes,
+                                    StoreOwnershipQualifier::Init);
   }
   auto retVal = joinElements(results, builder, loc);
 
@@ -549,11 +679,11 @@ getOrCreateSubsetParametersThunkForLinearMap(
       auto *buf = builder.createAllocStack(loc, zeroSILObjType);
       localAllocations.push_back(buf);
       emitZeroIntoBuffer(builder, zeroType, buf, loc);
-      if (zeroSILType.isAddress())
+      if (zeroSILType.isAddress()) {
         arguments.push_back(buf);
-      else {
-        auto *arg =
-            builder.createLoad(loc, buf, LoadOwnershipQualifier::Unqualified);
+      } else {
+        auto arg = builder.emitLoadValueOperation(loc, buf,
+                                                  LoadOwnershipQualifier::Take);
         arguments.push_back(arg);
       }
       break;
@@ -811,7 +941,6 @@ getOrCreateSubsetParametersThunkForDerivativeFunction(
     return {thunk, interfaceSubs};
 
   // TODO(TF-1206): Enable ownership in all differentiation thunks.
-  thunk->setOwnershipEliminated();
   thunk->setGenericEnvironment(genericEnv);
   auto *entry = thunk->createBasicBlock();
   SILBuilder builder(entry);

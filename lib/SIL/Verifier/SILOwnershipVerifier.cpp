@@ -878,6 +878,7 @@ void SILInstruction::verifyOperandOwnership() const {
       llvm::errs() << "Instruction:\n";
       printInContext(llvm::errs());
       llvm::errs() << "Operand Ownership Kind Map: " << operandOwnershipKindMap;
+      opValue->getFunction()->dump();
     });
   }
 }

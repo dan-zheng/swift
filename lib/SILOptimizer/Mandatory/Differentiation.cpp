@@ -66,7 +66,7 @@ static llvm::cl::opt<bool> EnableExperimentalLinearMapTransposition(
 /// folding for SIL testing purposes.
 static llvm::cl::opt<bool> SkipFoldingDifferentiableFunctionExtraction(
     "differentiation-skip-folding-differentiable-function-extraction",
-    llvm::cl::init(true));
+    llvm::cl::init(false));
 
 //===----------------------------------------------------------------------===//
 // Helpers
@@ -1240,18 +1240,22 @@ SILValue DifferentiationTransformer::promoteToLinearFunction(
 
 /// Fold `differentiable_function_extract` users of the given
 /// `differentiable_function` instruction, directly replacing them with
-/// `differentiable_function` instruction operands. If the
-/// `differentiable_function` instruction has no remaining uses, delete the
-/// instruction itself after folding.
+/// operands of the `differentiable_function` instruction.
+///
+/// If the `differentiable_function` instruction has no remaining uses, delete
+/// the instruction itself after folding.
 ///
 /// Folding can be disabled by the `SkipFoldingDifferentiableFunctionExtraction`
 /// flag for SIL testing purposes.
-// FIXME: This function is not correctly detecting the foldable pattern and
-// needs to be rewritten.
 void DifferentiationTransformer::foldDifferentiableFunctionExtraction(
-    DifferentiableFunctionInst *source) {
+    DifferentiableFunctionInst *dfi) {
+  auto f = dfi->getFunction();
+#if 0
+  llvm::errs() << "BEFORE FOLDING:\n";
+  f->dump();
+#endif
   // Iterate through all `differentiable_function` instruction uses.
-  for (auto use : source->getUses()) {
+  for (auto use : dfi->getUses()) {
     auto *dfei = dyn_cast<DifferentiableFunctionExtractInst>(use->getUser());
     // If user is not an `differentiable_function_extract` instruction, set flag
     // to false.
@@ -1260,27 +1264,33 @@ void DifferentiationTransformer::foldDifferentiableFunctionExtraction(
     // Fold original function extractors.
     if (dfei->getExtractee() ==
         NormalDifferentiableFunctionTypeComponent::Original) {
-      auto originalFnValue = source->getOriginalFunction();
+      auto originalFnValue = dfi->getOriginalFunction();
       dfei->replaceAllUsesWith(originalFnValue);
       dfei->eraseFromParent();
       continue;
     }
     // Fold derivative function extractors.
     auto derivativeFnValue =
-        source->getDerivativeFunction(dfei->getDerivativeFunctionKind());
+        dfi->getDerivativeFunction(dfei->getDerivativeFunctionKind());
     dfei->replaceAllUsesWith(derivativeFnValue);
     dfei->eraseFromParent();
   }
   // If the `differentiable_function` instruction has no remaining uses, erase
   // it.
-  if (isInstructionTriviallyDead(source)) {
-    SILBuilder builder(source);
-    builder.emitDestroyAddrAndFold(source->getLoc(), source->getJVPFunction());
-    builder.emitDestroyAddrAndFold(source->getLoc(), source->getVJPFunction());
-    source->eraseFromParent();
+  if (isInstructionTriviallyDead(dfi)) {
+    SILBuilder builder(dfi);
+    // builder.emitDestroyValueAndFold(dfi->getLoc(), dfi->getJVPFunction());
+    // builder.emitDestroyValueAndFold(dfi->getLoc(), dfi->getVJPFunction());
+    builder.emitDestroyValueOperation(dfi->getLoc(), dfi->getJVPFunction());
+    builder.emitDestroyValueOperation(dfi->getLoc(), dfi->getVJPFunction());
+    dfi->eraseFromParent();
   }
-  // Mark `source` as processed so that it won't be reprocessed after deletion.
-  context.markDifferentiableFunctionInstAsProcessed(source);
+  // Mark `dfi` as processed so that it won't be reprocessed after deletion.
+  context.markDifferentiableFunctionInstAsProcessed(dfi);
+#if 0
+  llvm::errs() << "AFTER FOLDING:\n";
+  f->dump();
+#endif
 }
 
 bool DifferentiationTransformer::processDifferentiableFunctionInst(
