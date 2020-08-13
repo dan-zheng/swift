@@ -31,6 +31,7 @@
 
 namespace swift {
 
+class AbstractFunctionDecl;
 class AnyFunctionType;
 class SourceFile;
 class SILFunctionType;
@@ -552,6 +553,27 @@ public:
 };
 
 void simple_display(llvm::raw_ostream &OS, TangentPropertyInfo info);
+
+/// The kind of a parameter in a `wrt:` differentiation parameters clause:
+/// either a differentiability parameter or a linearity parameter. Used for
+/// printing `@differentiable`, `@derivative`, and `@transpose` attributes.
+enum class DifferentiationParameterKind {
+  /// A differentiability parameter, printed by name.
+  /// Used for `@differentiable` and `@derivative` attribute.
+  Differentiability,
+  /// A linearity parameter, printed by index.
+  /// Used for `@transpose` attribute.
+  Linearity
+};
+
+/// Returns the differentiation parameters clause string for the given function,
+/// parameter indices, parsed parameters, and differentiation parameter kind.
+/// Use the parameter indices if specified; otherwise, use the parsed
+/// parameters.
+std::string getDifferentiationParametersClauseString(
+    const AbstractFunctionDecl *function, IndexSubset *parameterIndices,
+    ArrayRef<ParsedAutoDiffParameter> parsedParams,
+    DifferentiationParameterKind parameterKind);
 
 /// The key type used for uniquing `SILDifferentiabilityWitness` in
 /// `SILModule`: original function name, parameter indices, result indices, and

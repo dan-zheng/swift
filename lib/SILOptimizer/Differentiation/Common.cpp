@@ -428,17 +428,88 @@ getExactDifferentiabilityWitness(SILModule &module, SILFunction *original,
   return nullptr;
 }
 
+unsigned setDifference2(IndexSubset *goal, IndexSubset *candidate) {
+  unsigned count = 0;
+  for (auto paramIndex : goal->getIndices()) {
+    if (!candidate->contains(paramIndex))
+      ++count;
+  }
+  return count;
+}
+
+IndexSubset *setDifference(ASTContext &ctx, IndexSubset *goal,
+                           IndexSubset *candidate) {
+  SmallBitVector indices(candidate->getCapacity());
+  for (auto index : goal->getIndices())
+    if (!candidate->contains(index))
+      indices.set(index);
+  return IndexSubset::get(ctx, indices);
+}
+
 Optional<AutoDiffConfig>
 findMinimalDerivativeConfiguration(AbstractFunctionDecl *original,
                                    IndexSubset *parameterIndices,
                                    IndexSubset *&minimalASTParameterIndices) {
   Optional<AutoDiffConfig> minimalConfig = None;
+  auto &ctx = original->getASTContext();
   auto configs = original->getDerivativeFunctionConfigurations();
+  auto *originalFnType =
+      original->getInterfaceType()->castTo<AnyFunctionType>();
+  for (auto config : configs) {
+    auto *silParameterIndices = autodiff::getLoweredParameterIndices(
+        config.parameterIndices, originalFnType);
+    // If all indices in `parameterIndices` are in `silParameterIndices`, and
+    // it has fewer indices than our current candidate and a primitive VJP,
+    // then `attr` is our new candidate.
+    //
+    // NOTE(TF-642): `attr` may come from a un-partial-applied function and
+    // have larger capacity than the desired indices. We expect this logic to
+    // go away when `partial_apply` supports `@differentiable` callees.
+    auto unfulfilled =
+        setDifference(ctx, parameterIndices, silParameterIndices);
+    llvm::errs() << "NUMBER UNFULFILLED:\n";
+    unfulfilled->dump();
+    auto string = getDifferentiationParametersClauseString(
+        original, config.parameterIndices, {},
+        DifferentiationParameterKind::Differentiability);
+    llvm::errs() << "STRING: '" << string << "'\n";
+    SmallVector<AnyFunctionType::Param, 4> params;
+    originalFnType->getSubsetParameters(config.parameterIndices, params);
+    for (auto param : params)
+      param.getLabel();
+    // getSubsetParameters
+
+    if (silParameterIndices->isSupersetOf(parameterIndices->extendingCapacity(
+            original->getASTContext(), silParameterIndices->getCapacity())) &&
+        // fewer parameters than before
+        (!minimalConfig ||
+         silParameterIndices->getNumIndices() <
+             minimalConfig->parameterIndices->getNumIndices())) {
+      minimalASTParameterIndices = config.parameterIndices;
+      minimalConfig = AutoDiffConfig(silParameterIndices, config.resultIndices,
+                                     config.derivativeGenericSignature);
+    }
+  }
+  return minimalConfig;
+}
+
+Optional<AutoDiffConfig>
+findMaximumDerivativeConfiguration(SILFunction *original,
+                                   IndexSubset *parameterIndices,
+                                   IndexSubset *&minimalASTParameterIndices) {
+  // Explicit differentiability witnesses only exist on SIL functions that come
+  // from AST functions.
+  auto *originalAFD = findAbstractFunctionDecl(original);
+  if (!originalAFD)
+    return None;
+
+  Optional<AutoDiffConfig> minimalConfig = None;
+  auto configs = originalAFD->getDerivativeFunctionConfigurations();
   for (auto config : configs) {
     auto *silParameterIndices = autodiff::getLoweredParameterIndices(
         config.parameterIndices,
-        original->getInterfaceType()->castTo<AnyFunctionType>());
-    // If all indices in `parameterIndices` are in `daParameterIndices`, and
+        originalAFD->getInterfaceType()->castTo<AnyFunctionType>());
+    // If all indices in `parameterIndices` are in `silParameterIndices`, and
     // it has fewer indices than our current candidate and a primitive VJP,
     // then `attr` is our new candidate.
     //
@@ -452,11 +523,13 @@ findMinimalDerivativeConfiguration(AbstractFunctionDecl *original,
          silParameterIndices->getNumIndices() <
              minimalConfig->parameterIndices->getNumIndices())) {
       minimalASTParameterIndices = config.parameterIndices;
+#if 0
       minimalConfig =
           AutoDiffConfig(silParameterIndices, config.resultIndices,
                          autodiff::getDifferentiabilityWitnessGenericSignature(
                              original->getGenericSignature(),
                              config.derivativeGenericSignature));
+#endif
     }
   }
   return minimalConfig;

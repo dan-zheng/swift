@@ -15,6 +15,7 @@
 #include "swift/AST/GenericEnvironment.h"
 #include "swift/AST/ImportCache.h"
 #include "swift/AST/Module.h"
+#include "swift/AST/ParameterList.h"
 #include "swift/AST/TypeCheckRequests.h"
 #include "swift/AST/Types.h"
 
@@ -144,6 +145,85 @@ bool swift::isDifferentiableProgrammingEnabled(SourceFile &SF) {
     }
   }
   return importsDifferentiationModule;
+}
+
+std::string swift::getDifferentiationParametersClauseString(
+    const AbstractFunctionDecl *function, IndexSubset *parameterIndices,
+    ArrayRef<ParsedAutoDiffParameter> parsedParams,
+    DifferentiationParameterKind parameterKind) {
+  assert(function);
+  bool isInstanceMethod = function->isInstanceMember();
+  bool isStaticMethod = function->isStatic();
+  std::string result;
+  llvm::raw_string_ostream printer(result);
+
+  // Use the parameter indices, if specified.
+  if (parameterIndices) {
+    auto parameters = parameterIndices->getBitVector();
+    auto parameterCount = parameters.count();
+    printer << "wrt: ";
+    if (parameterCount > 1)
+      printer << '(';
+    // Check if differentiating wrt `self`. If so, manually print it first.
+    bool isWrtSelf =
+        (isInstanceMethod ||
+         (isStaticMethod &&
+          parameterKind == DifferentiationParameterKind::Linearity)) &&
+        parameters.test(parameters.size() - 1);
+    if (isWrtSelf) {
+      parameters.reset(parameters.size() - 1);
+      printer << "self";
+      if (parameters.any())
+        printer << ", ";
+    }
+    // Print remaining differentiation parameters.
+    interleave(
+        parameters.set_bits(),
+        [&](unsigned index) {
+          switch (parameterKind) {
+          // Print differentiability parameters by name.
+          case DifferentiationParameterKind::Differentiability:
+            printer << function->getParameters()->get(index)->getName().str();
+            break;
+          // Print linearity parameters by index.
+          case DifferentiationParameterKind::Linearity:
+            printer << index;
+            break;
+          }
+        },
+        [&] { printer << ", "; });
+    if (parameterCount > 1)
+      printer << ')';
+  }
+  // Otherwise, use the parsed parameters.
+  else if (!parsedParams.empty()) {
+    printer << "wrt: ";
+    if (parsedParams.size() > 1)
+      printer << '(';
+    interleave(
+        parsedParams,
+        [&](const ParsedAutoDiffParameter &param) {
+          switch (param.getKind()) {
+          case ParsedAutoDiffParameter::Kind::Named:
+            printer << param.getName();
+            break;
+          case ParsedAutoDiffParameter::Kind::Self:
+            printer << "self";
+            break;
+          case ParsedAutoDiffParameter::Kind::Ordered:
+            auto *paramList = function->getParameters();
+            assert(param.getIndex() <= paramList->size() &&
+                   "wrt parameter is out of range");
+            auto *funcParam = paramList->get(param.getIndex());
+            printer << funcParam->getNameStr();
+            break;
+          }
+        },
+        [&] { printer << ", "; });
+    if (parsedParams.size() > 1)
+      printer << ')';
+  }
+  return printer.str();
 }
 
 // TODO(TF-874): This helper is inefficient and should be removed. Unwrapping at
