@@ -627,6 +627,35 @@ visitCheckedCastAddrBranchInst(CheckedCastAddrBranchInst *CCABI) {
 
 SILInstruction *SILCombiner::visitConvertEscapeToNoEscapeInst(
     ConvertEscapeToNoEscapeInst *Cvt) {
+#if 0
+  auto operand = Cvt->getOperand();
+  if (auto *dfi = dyn_cast<DifferentiableFunctionInst>(operand)) {
+    if (dfi->getSingleUse() && dfi->getSingleUse()->getUser() == Cvt) {
+      llvm::errs() << "FOUND CONVERT_ESCAPE_TO_NO_ESCAPE OF DIFFERENTIABLE_FUNCTION_INST!\n";
+      Cvt->dumpInContext();
+      auto original = dfi->getOriginalFunction();
+      auto jvp = dfi->getJVPFunction();
+      auto vjp = dfi->getVJPFunction();
+      auto getNoEscapeType = [](SILValue v) {
+        auto functionType = v->getType().castTo<SILFunctionType>();
+        auto noEscapeFunctionType = functionType->getWithExtInfo(functionType->getExtInfo().withNoEscape());
+        return SILType::getPrimitiveObjectType(noEscapeFunctionType);
+      };
+      auto *originalNoEscape = Builder.createConvertEscapeToNoEscape(original.getLoc(), original, getNoEscapeType(original), Cvt->isLifetimeGuaranteed());
+      SILValue jvpNoEscape = Builder.createConvertEscapeToNoEscape(jvp.getLoc(), jvp, getNoEscapeType(jvp), Cvt->isLifetimeGuaranteed());
+      SILValue vjpNoEscape = Builder.createConvertEscapeToNoEscape(vjp.getLoc(), vjp, getNoEscapeType(vjp), Cvt->isLifetimeGuaranteed());
+      auto *newDFI = Builder.createDifferentiableFunction(dfi->getLoc(), dfi->getParameterIndices(), dfi->getResultIndices(), originalNoEscape, std::make_pair(jvpNoEscape, vjpNoEscape));
+      if (newDFI->getType() != Cvt->getType()) {
+        newDFI->getType().dump();
+        Cvt->getType().dump();
+        assert(false);
+      }
+      replaceInstUsesWith(*Cvt, newDFI);
+      return nullptr;
+    }
+  }
+#endif
+
   if (Cvt->getFunction()->hasOwnership())
     return nullptr;
 
@@ -642,7 +671,52 @@ SILInstruction *SILCombiner::visitConvertEscapeToNoEscapeInst(
       SILType::getPrimitiveObjectType(NewTy));
 }
 
+static SILType getExtracteeType(
+    SILValue function, NormalDifferentiableFunctionTypeComponent extractee,
+    SILModule &module) {
+  auto fnTy = function->getType().castTo<SILFunctionType>();
+  assert(fnTy->getDifferentiabilityKind() == DifferentiabilityKind::Normal);
+  auto originalFnTy = fnTy->getWithoutDifferentiability();
+  auto kindOpt = extractee.getAsDerivativeFunctionKind();
+  if (!kindOpt) {
+    assert(extractee == NormalDifferentiableFunctionTypeComponent::Original);
+    return SILType::getPrimitiveObjectType(originalFnTy);
+  }
+  auto resultFnTy = originalFnTy->getAutoDiffDerivativeFunctionType(
+      fnTy->getDifferentiabilityParameterIndices(),
+      fnTy->getDifferentiabilityResultIndices(), *kindOpt, module.Types,
+      LookUpConformanceInModule(module.getSwiftModule()));
+  return SILType::getPrimitiveObjectType(resultFnTy);
+}
+
 SILInstruction *SILCombiner::visitConvertFunctionInst(ConvertFunctionInst *CFI) {
+#if 0
+  auto operand = CFI->getOperand();
+  if (auto *dfi = dyn_cast<DifferentiableFunctionInst>(operand)) {
+    if (dfi->getSingleUse() && dfi->getSingleUse()->getUser() == CFI) {
+      llvm::errs() << "FOUND CONVERT_FUNCTION OF DIFFERENTIABLE_FUNCTION_INST!\n";
+      CFI->dumpInContext();
+      auto original = dfi->getOriginalFunction();
+      auto jvp = dfi->getJVPFunction();
+      auto vjp = dfi->getVJPFunction();
+      auto getConvertedType = [&](NormalDifferentiableFunctionTypeComponent extractee) {
+        return getExtracteeType(CFI, extractee, Builder.getModule());
+      };
+      auto *originalConverted = Builder.createConvertFunction(original.getLoc(), original, getConvertedType(NormalDifferentiableFunctionTypeComponent::Original), /*withoutActuallyEscaping*/ false);
+      SILValue jvpConverted = Builder.createConvertFunction(jvp.getLoc(), jvp, getConvertedType(NormalDifferentiableFunctionTypeComponent::JVP), /*withoutActuallyEscaping*/ false);
+      SILValue vjpConverted = Builder.createConvertFunction(vjp.getLoc(), vjp, getConvertedType(NormalDifferentiableFunctionTypeComponent::VJP), /*withoutActuallyEscaping*/ false);
+      auto *newDFI = Builder.createDifferentiableFunction(dfi->getLoc(), dfi->getParameterIndices(), dfi->getResultIndices(), originalConverted, std::make_pair(jvpConverted, vjpConverted));
+      if (newDFI->getType() != CFI->getType()) {
+        newDFI->getType().dump();
+        CFI->getType().dump();
+        assert(false);
+      }
+      replaceInstUsesWith(*CFI, newDFI);
+      return nullptr;
+    }
+  }
+#endif
+
   if (CFI->getFunction()->hasOwnership())
     return nullptr;
 
