@@ -649,6 +649,7 @@ static void addLateLoopOptPassPipeline(SILPassPipelinePlan &P) {
   // Try to hoist all releases, including epilogue releases. This should be
   // after FSO.
   P.addLateReleaseHoisting();
+  P.addLateInliner();
 }
 
 // Run passes that
