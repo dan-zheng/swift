@@ -1505,7 +1505,7 @@ public:
     auto &adjDest = getAdjointBuffer(bb, cai->getDest());
     auto destType = remapType(adjDest->getType());
     addToAdjointBuffer(bb, cai->getSrc(), adjDest, cai->getLoc());
-    builder.emitDestroyAddrAndFold(cai->getLoc(), adjDest);
+    builder.emitDestroyAddr(cai->getLoc(), adjDest);
     emitZeroIndirect(destType.getASTType(), adjDest, cai->getLoc());
   }
 
