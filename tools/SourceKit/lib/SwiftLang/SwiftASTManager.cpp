@@ -429,10 +429,11 @@ bool SwiftASTManager::initCompilerInvocation(
     CompilerInvocation &Invocation, ArrayRef<const char *> OrigArgs,
     DiagnosticEngine &Diags, StringRef UnresolvedPrimaryFile,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileSystem,
+    llvm::IntrusiveRefCntPtr<clang::InMemoryOutputFileSystem> InMemoryOutputFileSystem,
     std::string &Error) {
   return ide::initCompilerInvocation(
       Invocation, OrigArgs, Diags, UnresolvedPrimaryFile, FileSystem,
-      Impl.RuntimeResourcePath, Impl.DiagnosticDocumentationPath,
+      InMemoryOutputFileSystem, Impl.RuntimeResourcePath, Impl.DiagnosticDocumentationPath,
       Impl.Config->shouldOptimizeForIDE(), Impl.SessionTimestamp, Error);
 }
 

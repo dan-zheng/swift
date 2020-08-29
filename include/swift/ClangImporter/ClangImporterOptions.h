@@ -15,6 +15,7 @@
 
 // SWIFT_ENABLE_TENSORFLOW
 #include "clang/Basic/InMemoryOutputFileSystem.h"
+// SWIFT_ENABLE_TENSORFLOW END
 #include "llvm/ADT/Hashing.h"
 
 #include <string>

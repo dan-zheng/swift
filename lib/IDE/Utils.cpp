@@ -20,6 +20,7 @@
 #include "swift/Subsystems.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/InMemoryOutputFileSystem.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -273,6 +274,10 @@ bool ide::initCompilerInvocation(
     CompilerInvocation &Invocation, ArrayRef<const char *> OrigArgs,
     DiagnosticEngine &Diags, StringRef UnresolvedPrimaryFile,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileSystem,
+    // SWIFT_ENABLE_TENSORFLOW
+    llvm::IntrusiveRefCntPtr<clang::InMemoryOutputFileSystem>
+        InMemoryOutputFileSystem,
+    // SWIFT_ENABLE_TENSORFLOW END
     const std::string &runtimeResourcePath,
     const std::string &diagnosticDocumentationPath,
     bool shouldOptimizeForIDE, time_t sessionTimestamp, std::string &Error) {
@@ -316,7 +321,7 @@ bool ide::initCompilerInvocation(
   ImporterOpts.DetailedPreprocessingRecord = true;
 
   // SWIFT_ENABLE_TENSORFLOW
-  ImporterOpts.InMemoryOutputFileSystem = Impl.InMemoryOutputFileSystem;
+  ImporterOpts.InMemoryOutputFileSystem = InMemoryOutputFileSystem;
   // SWIFT_ENABLE_TENSORFLOW END
 
   assert(!Invocation.getModuleName().empty());

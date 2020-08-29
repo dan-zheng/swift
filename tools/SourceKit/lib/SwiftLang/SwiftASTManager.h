@@ -17,6 +17,7 @@
 #include "SourceKit/Core/LLVM.h"
 // SWIFT_ENABLE_TENSORFLOW
 #include "clang/Basic/InMemoryOutputFileSystem.h"
+// SWIFT_ENABLE_TENSORFLOW END
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
@@ -103,6 +104,7 @@ public:
   /// rather than to the real filesystem.
   void setInMemoryOutputFileSystem(
       llvm::IntrusiveRefCntPtr<clang::InMemoryOutputFileSystem> FS);
+  // SWIFT_ENABLE_TENSORFLOW END
 
   SwiftInvocationRef getInvocation(
       ArrayRef<const char *> Args, StringRef PrimaryFile, std::string &Error);
@@ -139,6 +141,10 @@ public:
       swift::CompilerInvocation &Invocation, ArrayRef<const char *> Args,
       swift::DiagnosticEngine &Diags, StringRef PrimaryFile,
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FileSystem,
+      // SWIFT_ENABLE_TENSORFLOW
+      llvm::IntrusiveRefCntPtr<clang::InMemoryOutputFileSystem>
+           InMemoryOutputFileSystem,
+      // SWIFT_ENABLE_TENSORFLOW END
       std::string &Error);
 
   bool initCompilerInvocation(swift::CompilerInvocation &CompInvok,
