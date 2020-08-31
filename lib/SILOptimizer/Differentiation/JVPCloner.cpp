@@ -729,14 +729,6 @@ public:
                          joinElements(directResults, builder, loc));
   }
 
-  void visitBranchInst(BranchInst *bi) {
-    llvm_unreachable("Unsupported SIL instruction.");
-  }
-
-  void visitCondBranchInst(CondBranchInst *cbi) {
-    llvm_unreachable("Unsupported SIL instruction.");
-  }
-
   void visitSwitchEnumInst(SwitchEnumInst *sei) {
     llvm_unreachable("Unsupported SIL instruction.");
   }
@@ -1134,6 +1126,16 @@ public:
         continue;
       setTangentValue(bb, origElt, makeConcreteTangentValue(tanElts[tanIdx++]));
     }
+  }
+
+  /// Handle `br` instruction.
+  CLONE_AND_EMIT_TANGENT(Branch, bi) {
+    #warning TODO: fill in.
+  }
+
+  /// Handle `cond_br` instruction.
+  CLONE_AND_EMIT_TANGENT(CondBranch, cbi) {
+    #warning TODO: fill in.
   }
 
 #undef CLONE_AND_EMIT_TANGENT
