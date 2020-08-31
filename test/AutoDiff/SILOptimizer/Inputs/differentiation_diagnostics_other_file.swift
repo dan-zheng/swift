@@ -42,11 +42,11 @@ class Class: Differentiable {
   }
 }
 
-struct S: Differentiable {
-  var value: Float
-}
+// Test cross-file lookup of derivative functions with all-concrete derivative generic signature.
 
-extension Array where Element == S {
+struct DummyStruct: Differentiable {}
+
+extension Array where Element == DummyStruct {
   @differentiable
   func sum() -> Float {
     return 0

@@ -1679,6 +1679,13 @@ DifferentiableAttr::create(AbstractFunctionDecl *original, bool implicit,
                            IndexSubset *parameterIndices,
                            GenericSignature derivativeGenSig) {
   auto &ctx = original->getASTContext();
+
+  // Register derivative function configuration for the given original
+  // declaration.
+  auto *resultIndices = IndexSubset::get(ctx, 1, {0});
+  original->addDerivativeFunctionConfiguration(
+      {parameterIndices, resultIndices, derivativeGenSig});
+
   void *mem = ctx.Allocate(sizeof(DifferentiableAttr),
                            alignof(DifferentiableAttr));
   return new (mem) DifferentiableAttr(original, implicit, atLoc, baseRange,

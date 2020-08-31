@@ -60,7 +60,7 @@ func classRequirementSetters(_ x: inout Class, _ newValue: Float) {
 
 // Test cross-file lookup of a derivative function with all-concrete derivative generic signature.
 @differentiable
-func allConcreteDerivativeGenericSignature(_ a: [S]) -> Float {
+func allConcreteDerivativeGenericSignature(_ a: [DummyStruct]) -> Float {
   // No error expected.
   return a.sum()
 }

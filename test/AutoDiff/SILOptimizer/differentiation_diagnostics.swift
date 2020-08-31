@@ -85,6 +85,7 @@ func testWriteToGlobalVariable(x: Float) -> Float {
 //===----------------------------------------------------------------------===//
 
 class Class : Differentiable {
+  // Stored property with explicit `@differentiable` attribute.
   @differentiable
   var stored: Float = 1
 
@@ -93,12 +94,15 @@ class Class : Differentiable {
     return stored * x
   }
 
+  // Stored property with no explicit `@differentiable` attribute.
+  //
+  // Note: `Differentiable` derived conformances should synthesize implicit
+  // `@differentiable` attributes on all "differentiation stored properties"
+  // (e.g. `nonDifferentiableStored`).
   var nonDifferentiableStored: Float = 1
 
   @differentiable
   func testNonDifferentiableRefElementAddr(_ x: Float) -> Float {
-    // expected-error @+2 {{expression is not differentiable}}
-    // expected-note @+1 {{member is not differentiable because the corresponding class member is not '@differentiable'}}
     return nonDifferentiableStored * x
   }
 

@@ -6,14 +6,14 @@
 // RUN: %target-run %t/a.out %t/%target-library-name(cross_module_differentiation_other)
 // REQUIRES: executable_test
 
-// TF-1025: Test differentiability witness linkage for `PublicNonABI` original functions.
-// TF-1239: Test `SynthesizedFileUnit` TBDGen.
-
 import cross_module_differentiation_other
 import _Differentiation
 import StdlibUnittest
 
-var CrossModuleTests = TestSuite("E2ECrossModule")
+var CrossModuleTests = TestSuite("E2ECrossModuleDifferentiation")
+
+// TF-1025: Test differentiability witness linkage for `PublicNonABI` original functions.
+// TF-1239: Test `SynthesizedFileUnit` TBDGen.
 
 CrossModuleTests.test("differentiable function default argument") {
   let actualGrad = gradient(at: 0) { applyArgument($0) }
