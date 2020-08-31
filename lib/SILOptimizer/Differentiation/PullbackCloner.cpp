@@ -571,8 +571,13 @@ private:
 
     // If the original buffer is a projection, return a corresponding projection
     // into the adjoint buffer.
-    if (auto adjProj = getAdjointProjection(origBB, originalValue))
-      return (bufferMap[{origBB, originalValue}] = adjProj);
+    if (auto adjProj = getAdjointProjection(origBB, originalValue)) {
+      // return (bufferMap[{origBB, originalValue}] = adjProj);
+      llvm::errs() << "ADJ PROJECTION FOUND! CURRENT VALUE: "
+                   << insertion.first->getSecond().getOpaqueValue() << "\n";
+      adjProj->dump();
+      return (insertion.first->getSecond() = adjProj);
+    }
 
     auto bufType = getRemappedTangentType(originalValue->getType());
     // Set insertion point for local allocation builder: before the last local
@@ -587,7 +592,8 @@ private:
                               localAllocBuilder.getInsertionPoint());
     emitZeroIndirect(bufType.getASTType(), newBuf, newBuf->getLoc());
     builder.setInsertionPoint(insertionPoint);
-    return (insertion.first->getSecond() = newBuf);
+    // return (insertion.first->getSecond() = newBuf);
+    return (bufferMap[{origBB, originalValue}] = newBuf);
   }
 
   /// Initializes the adjoint buffer for the original value. Asserts that the
@@ -605,13 +611,18 @@ private:
   /// original value.
   void addToAdjointBuffer(SILBasicBlock *origBB, SILValue originalValue,
                           SILValue rhsAddress, SILLocation loc) {
+    llvm::errs() << "addToAdjointBuffer:\n";
     assert(getTangentValueCategory(originalValue) ==
                SILValueCategory::Address &&
            rhsAddress->getType().isAddress());
     assert(originalValue->getFunction() == &getOriginal());
     assert(rhsAddress->getFunction() == &getPullback());
+    llvm::errs() << "ADD TO ADJOINT BUFFER DOES MAPPING EXIST, bb " << origBB->getDebugID() << ", VALUE: "
+                 << originalValue << ", " << bufferMap.count({origBB, originalValue}) << "\n";
+    originalValue->dumpInContext();
     auto adjointBuffer = getAdjointBuffer(origBB, originalValue);
     accumulateIndirect(adjointBuffer, rhsAddress, loc);
+    llvm::errs() << "rhsAddress: " << rhsAddress << "\n";
   }
 
   /// Returns a next insertion point for creating a local allocation: either
@@ -1501,12 +1512,16 @@ public:
   ///   Original: copy_addr x to y
   ///    Adjoint: adj[x] += adj[y]; adj[y] = 0
   void visitCopyAddrInst(CopyAddrInst *cai) {
+    llvm::errs() << "visitCopyAddrInst\n";
+    cai->dumpInContext();
     auto *bb = cai->getParent();
     auto &adjDest = getAdjointBuffer(bb, cai->getDest());
+    llvm::errs() << "ADJ DEST: " << adjDest << "\n";
     auto destType = remapType(adjDest->getType());
-    addToAdjointBuffer(bb, cai->getSrc(), adjDest, cai->getLoc());
-    builder.emitDestroyAddr(cai->getLoc(), adjDest);
-    emitZeroIndirect(destType.getASTType(), adjDest, cai->getLoc());
+    // addToAdjointBuffer(bb, cai->getSrc(), adjDest, cai->getLoc());
+    llvm::errs() << "ADJ DEST AFTER: " << adjDest << "\n";
+    // builder.emitDestroyAddr(cai->getLoc(), adjDest);
+    // emitZeroIndirect(destType.getASTType(), adjDest, cai->getLoc());
   }
 
   /// Handle `copy_value` instruction.
@@ -1888,6 +1903,11 @@ bool PullbackCloner::Implementation::run() {
     pullbackBBMap.insert({origBB, pullbackBB});
     auto pbStructLoweredType =
         remapType(getPullbackInfo().getLinearMapStructLoweredType(origBB));
+    // Get all active values in the original block.
+    // If the original block has no active values, continue.
+    auto &bbActiveValues = activeValues[origBB];
+    if (bbActiveValues.empty())
+      continue;
     // If the BB is the original exit, then the pullback block that we just
     // created must be the pullback function's entry. For the pullback entry,
     // create entry arguments and continue to the next block.
@@ -1901,25 +1921,36 @@ bool PullbackCloner::Implementation::run() {
       builder.setInsertionPoint(pullbackBB);
       auto *dsi = builder.createDestructureStruct(pbLoc, mainPullbackStruct);
       initializePullbackStructElements(origBB, dsi->getResults());
+      for (auto activeValue : bbActiveValues) {
+        switch (getTangentValueCategory(activeValue)) {
+        case SILValueCategory::Address: {
+          // Allocate and zero initialize a new local buffer using
+          // `getAdjointBuffer`.
+          builder.setInsertionPoint(pullback.getEntryBlock());
+          llvm::errs() << "SETTING ADJOINT BUFFER FOR ORIG BB " << origBB->getDebugID() << ", VALUE: " << activeValue;
+          getAdjointBuffer(origBB, activeValue);
+          break;
+        }
+        case SILValueCategory::Object:
+          break;
+        }
+      }
       continue;
     }
-    // Get all active values in the original block.
-    // If the original block has no active values, continue.
-    auto &bbActiveValues = activeValues[origBB];
-    if (bbActiveValues.empty())
-      continue;
     // Otherwise, if the original block has active values:
     // - For each active buffer in the original block, allocate a new local
     //   buffer in the pullback entry. (All adjoint buffers are allocated in
     //   the pullback entry and deallocated in the pullback exit.)
     // - For each active value in the original block, add adjoint value
     //   arguments to the pullback block.
+    llvm::errs() << "SETTING ADJOINT BUFFERS\n";
     for (auto activeValue : bbActiveValues) {
       switch (getTangentValueCategory(activeValue)) {
       case SILValueCategory::Address: {
         // Allocate and zero initialize a new local buffer using
         // `getAdjointBuffer`.
         builder.setInsertionPoint(pullback.getEntryBlock());
+        llvm::errs() << "SETTING ADJOINT BUFFER FOR ORIG BB " << origBB->getDebugID() << ", VALUE: " << activeValue;
         getAdjointBuffer(origBB, activeValue);
         break;
       }
@@ -1985,7 +2016,8 @@ bool PullbackCloner::Implementation::run() {
       auto seedParamInfo =
           pullback.getLoweredFunctionType()->getParameters()[seedIndex];
       if (seedParamInfo.isIndirectInOut()) {
-        setAdjointBuffer(origExit, origResult, seed);
+        // setAdjointBuffer(origExit, origResult, seed);
+        addToAdjointBuffer(origExit, origResult, seed, pbLoc);
       }
       // Otherwise, assign a copy of the seed argument as the adjoint buffer of
       // the original result.
@@ -1994,7 +2026,8 @@ bool PullbackCloner::Implementation::run() {
             createFunctionLocalAllocation(seed->getType(), pbLoc);
         builder.createCopyAddr(pbLoc, seed, seedBufCopy, IsNotTake,
                                IsInitialization);
-        setAdjointBuffer(origExit, origResult, seedBufCopy);
+        // setAdjointBuffer(origExit, origResult, seedBufCopy);
+        addToAdjointBuffer(origExit, origResult, seedBufCopy, pbLoc);
         LLVM_DEBUG(getADDebugStream()
                    << "Assigned seed buffer " << *seedBufCopy
                    << " as the adjoint of original indirect result "
@@ -2781,7 +2814,7 @@ SILValue PullbackCloner::Implementation::getAdjointProjection(
   if (auto *bai = dyn_cast<BeginAccessInst>(originalProjection)) {
     auto adjBase = getAdjointBuffer(origBB, bai->getOperand());
     if (errorOccurred)
-      return (bufferMap[{origBB, originalProjection}] = SILValue());
+      return SILValue();
     // Return the base buffer's adjoint buffer.
     return adjBase;
   }
