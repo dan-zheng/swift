@@ -122,7 +122,7 @@ def get_branch_for_repo(config, repo_name, scheme_name, scheme_map,
 
 def update_single_repository(pool_args):
     source_root, config, repo_name, scheme_name, scheme_map, tag, timestamp, \
-        reset_to_remote, should_clean, cross_repos_pr = pool_args
+        reset_to_remote, should_clean, cross_repos_pr, should_update = pool_args
     repo_path = os.path.join(source_root, repo_name)
     if not os.path.isdir(repo_path) or os.path.islink(repo_path):
         return
@@ -132,6 +132,15 @@ def update_single_repository(pool_args):
         with shell.pushd(repo_path, dry_run=False, echo=False):
             cross_repo = False
             checkout_target = None
+
+            # The update option runs `git remote update` to download remote
+            # branches and tags before attempting to checkout.
+            #
+            # Note: we use `git remote update` instead of `git fetch` to avoid
+            # overwriting `.git/FETCH_HEAD`.
+            if should_update:
+                shell.run(['git', 'remote', 'update'], echo=True)
+
             if tag:
                 checkout_target = confirm_tag_in_repo(tag, repo_name)
             elif scheme_name:
@@ -253,7 +262,8 @@ def update_all_repositories(args, config, scheme_name, cross_repos_pr):
                    timestamp,
                    args.reset_to_remote,
                    args.clean,
-                   cross_repos_pr]
+                   cross_repos_pr,
+                   args.update]
         pool_args.append(my_args)
 
     return run_parallel(update_single_repository, pool_args, args.n_processes)
@@ -469,6 +479,10 @@ repositories.
     parser.add_argument(
         "--clone-with-ssh",
         help="Obtain Sources for Swift and Related Projects via SSH",
+        action="store_true")
+    parser.add_argument(
+        "--update",
+        help="Update the latest branches and tags before checking out code.",
         action="store_true")
     parser.add_argument(
         "--skip-history",
