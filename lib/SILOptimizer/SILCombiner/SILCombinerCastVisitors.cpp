@@ -630,16 +630,47 @@ SILInstruction *SILCombiner::visitConvertEscapeToNoEscapeInst(
   if (Cvt->getFunction()->hasOwnership())
     return nullptr;
 
+  // Rewrite conversion of `convert_function` of `thin_to_thick_function` as
+  // conversion of `thin_to_thick_function` of `convert_function`.
+  //
+  // (convert_escape_to_noescape (convert_function (thin_to_thick_function x)))
+  // =>
+  // (convert_escape_to_noescape (thin_to_thick_function (convert_function x)))
+  //
+  // This unblocks the `thin_to_thick_function` peephole optimization below.
+  if (auto *CFI = dyn_cast<ConvertFunctionInst>(Cvt->getConverted())) {
+    if (auto *TTTFI = dyn_cast<ThinToThickFunctionInst>(CFI->getConverted())) {
+      if (TTTFI->getSingleUse()) {
+        auto convertedThickType = CFI->getType().castTo<SILFunctionType>();
+        auto convertedThinType = convertedThickType->getWithRepresentation(
+            SILFunctionTypeRepresentation::Thin);
+        auto *newCFI = Builder.createConvertFunction(
+            CFI->getLoc(), TTTFI->getConverted(),
+            SILType::getPrimitiveObjectType(convertedThinType),
+            CFI->withoutActuallyEscaping());
+        auto *newTTTFI = Builder.createThinToThickFunction(
+            TTTFI->getLoc(), newCFI, CFI->getType());
+        replaceInstUsesWith(*CFI, newTTTFI);
+      }
+    }
+  }
+
+  // Rewrite conversion of `thin_to_thick_function` as `thin_to_thick_function`
+  // with a noescape function type.
+  //
+  // (convert_escape_to_noescape (thin_to_thick_function x)) =>
+  // (thin_to_thick_function [noescape] x)
   auto *OrigThinToThick =
       dyn_cast<ThinToThickFunctionInst>(Cvt->getConverted());
   if (!OrigThinToThick)
     return nullptr;
   auto origFunType = OrigThinToThick->getType().getAs<SILFunctionType>();
-  auto NewTy = origFunType->getWithExtInfo(origFunType->getExtInfo().withNoEscape(true));
+  auto noEscapeOrigFunType = origFunType->getWithExtInfo(
+      origFunType->getExtInfo().withNoEscape(true));
 
   return Builder.createThinToThickFunction(
       OrigThinToThick->getLoc(), OrigThinToThick->getOperand(),
-      SILType::getPrimitiveObjectType(NewTy));
+      SILType::getPrimitiveObjectType(noEscapeOrigFunType));
 }
 
 SILInstruction *SILCombiner::visitConvertFunctionInst(ConvertFunctionInst *CFI) {
@@ -693,7 +724,29 @@ SILInstruction *SILCombiner::visitConvertFunctionInst(ConvertFunctionInst *CFI) 
       }
     }
   }
-  
+
+#if 0
+  // (convert_function (thin_to_thick_function x)) =>
+  // (thin_to_thick_function (convert_function x))
+  //
+  // This unblocks downstream optimizations.
+  if (auto *tttfi = dyn_cast<ThinToThickFunctionInst>(CFI->getConverted())) {
+    if (tttfi->getSingleUse()) {
+      // tttfi->replaceAllUsesWith(subCFI->getConverted());
+      // eraseInstFromFunction(*CFI);
+      // CFI->getOperandRef().set(tttfi->getConverted());
+      auto convertedThickType = CFI->getType().castTo<SILFunctionType>();
+      auto convertedThinType = convertedThickType->getWithRepresentation(SILFunctionTypeRepresentation::Thin);
+      auto *newCFI = Builder.createConvertFunction(CFI->getLoc(), tttfi->getConverted(),
+                                                   SILType::getPrimitiveObjectType(convertedThinType),
+                                                   CFI->withoutActuallyEscaping());
+      // eraseInstFromFunction(*tttfi);
+      auto *newTTTFI = Builder.createThinToThickFunction(tttfi->getLoc(), newCFI, CFI->getType());
+      return newTTTFI;
+    }
+  }
+#endif
+
   // (convert_function (convert_function x)) => (convert_function x)
   if (auto subCFI = dyn_cast<ConvertFunctionInst>(CFI->getConverted())) {
     // If we convert the function type back to itself, we can replace the
