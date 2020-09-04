@@ -314,6 +314,8 @@ private:
   // Tangent buffer mapping
   //--------------------------------------------------------------------------//
 
+  /// Sets the tangent buffer for the original buffer. Asserts that the
+  /// original buffer does not already have a tangent buffer.
   void setTangentBuffer(SILBasicBlock *origBB, SILValue originalBuffer,
                         SILValue tangentBuffer, IsInitialized_t initInfo) {
     assert(originalBuffer->getType().isAddress());
@@ -341,7 +343,8 @@ private:
     InitializationNotRequired,
     InitializationRequired
   };
-  /// Returns a tangent buffer for a provided original buffer. If
+
+  /// Returns the tangent buffer for the given original buffer. If
   /// `InitializationRequired` is specified, the tangent buffer is initialized
   /// with zero and its initialization info in `tangentBufferInitializationInfo`
   /// map is set to `Initialized`.
@@ -350,10 +353,9 @@ private:
                                  InitializationNotRequired) {
     assert(originalBuffer->getType().isAddress());
     assert(originalBuffer->getFunction() == original);
-    auto insertion =
-        bufferMap.try_emplace({origBB, originalBuffer}, SILValue());
-    assert(!insertion.second && "Tangent buffer should already exist");
-    auto &tanBuf = insertion.first->getSecond();
+    auto it = bufferMap.find({origBB, originalBuffer});
+    assert(it != bufferMap.end() && "Tangent buffer should already exist");
+    auto &tanBuf = it->getSecond();
     assert(tangentBufferInitializationInfo.count(tanBuf) &&
            "Initialization info must exist");
     auto &initializationInfo = getTangentBufferInitializationInfo(tanBuf);
@@ -483,9 +485,21 @@ public:
   // If an `apply` has active results or active inout parameters, replace it
   // with an `apply` of its JVP.
   void visitApplyInst(ApplyInst *ai) {
+    bool shouldDifferentiate =
+        differentialInfo.shouldDifferentiateApplySite(ai);
+    // If the function has no active arguments or results, zero-initialize the
+    // tangent buffers of the active indirect results.
+    if (!shouldDifferentiate) {
+      for (auto indResult : ai->getIndirectSILResults())
+        if (activityInfo.isActive(indResult, getIndices())) {
+          auto &tanBuf = getTangentBuffer(ai->getParent(), indResult);
+          emitZeroIndirect(tanBuf->getType().getASTType(), tanBuf,
+                           tanBuf.getLoc());
+        }
+    }
     // If the function should not be differentiated or its the array literal
     // initialization intrinsic, just do standard cloning.
-    if (!differentialInfo.shouldDifferentiateApplySite(ai) ||
+    if (!shouldDifferentiate ||
         ArraySemanticsCall(ai, semantics::ARRAY_UNINITIALIZED_INTRINSIC)) {
       LLVM_DEBUG(getADDebugStream() << "No active results:\n" << *ai << '\n');
       TypeSubstCloner::visitApplyInst(ai);
@@ -760,6 +774,7 @@ public:
       }
       differentialBuilder.createDeallocStack(loc, alloc);
     }
+
     // Emit zero into uninitialized indirect results.
     for (auto &diffIndResult : getDifferential().getIndirectResults()) {
       auto &initializationInfo =
@@ -770,6 +785,7 @@ public:
         initializationInfo = Initialized;
       }
     }
+
     // Return a tuple of the original result and differential.
     SmallVector<SILValue, 8> directResults;
     directResults.append(origResults.begin(), origResults.end());
@@ -1642,9 +1658,9 @@ void JVPCloner::Implementation::prepareForDifferentialGeneration() {
           origTy->getIndirectMutatingParameters().begin(), inoutParamIndex);
       auto paramIndex =
           std::distance(origTy->getParameters().begin(), &*inoutParamIt);
-      // If the original `inout` parameter is a differentiability parameter, then
-      // it already has a corresponding differential parameter. Skip adding a
-      // corresponding differential result.
+      // If the original `inout` parameter is a differentiability parameter,
+      // then it already has a corresponding differential parameter. Do not add
+      // a corresponding differential result.
       if (indices.parameters->contains(paramIndex))
         continue;
       auto inoutParam = origTy->getParameters()[paramIndex];
