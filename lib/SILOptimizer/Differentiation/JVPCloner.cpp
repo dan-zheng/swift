@@ -344,10 +344,10 @@ private:
     assert(originalBuffer->getType().isAddress());
     auto insertion =
         bufferMap.try_emplace({origBB, originalBuffer}, tangentBuffer);
+    (void)insertion;
     assert(insertion.second && "Tangent buffer already exists");
     assert(tangentBuffer->getType().isAddress());
     tangentBufferInitializationInfo[tangentBuffer] = initInfo;
-    (void)insertion;
   }
 
   IsInitialized_t &getTangentBufferInitializationInfo(SILValue tangentBuffer) {
@@ -1414,6 +1414,7 @@ public:
     for (auto *alloc : differentialLocalAllocations) {
       // Assert that local allocations have at least one use.
       // Buffers should not be allocated needlessly.
+      // FIXME: Re-enable this assertion.
       // assert(!alloc->use_empty());
       auto &initializationInfo = getTangentBufferInitializationInfo(alloc);
       if (initializationInfo == Initialized) {
@@ -1543,6 +1544,7 @@ void JVPCloner::Implementation::prepareForDifferentialGeneration() {
   // Create differential blocks and arguments.
   auto &differential = getDifferential();
   auto diffLoc = differential.getLocation();
+  auto origFnTy = original->getLoweredFunctionType();
   auto *origEntry = original->getEntryBlock();
   for (auto &origBB : *original) {
     auto *diffBB = differential.createBasicBlock();
@@ -1620,10 +1622,48 @@ void JVPCloner::Implementation::prepareForDifferentialGeneration() {
       setTangentValue(origEntry, origArg, makeConcreteTangentValue(diffArg));
     }
     LLVM_DEBUG(getADDebugStream()
-               << "Assigned parameter " << *diffArg
-               << " as the tangent of original result " << *origArg);
+               << "Assigned differential argument " << *diffArg
+               << " as the tangent of original argument " << *origArg);
   }
 
+  // Initialize tangent mapping for original address-typed results: formal
+  // indirect results and non-wrt `inout` parameters.
+  auto diffIndResults = differential.getIndirectResults();
+  // Collect original results.
+  SmallVector<SILValue, 2> originalResults;
+  collectAllFormalResultsInTypeOrder(*original, originalResults);
+  unsigned differentialIndirectResultIndex = 0;
+  for (auto resultIndex : getIndices().results->getIndices()) {
+    auto origResult = originalResults[resultIndex];
+    // Handle original formal indirect result.
+    if (resultIndex < origFnTy->getNumResults()) {
+      if (getTangentValueCategory(origResult->getType()) !=
+          SILValueCategory::Address)
+        continue;
+      auto diffIndRes = diffIndResults[differentialIndirectResultIndex++];
+      setTangentBuffer(origEntry, origResult, diffIndRes);
+      continue;
+    }
+    // Handle original non-wrt `inout` parameters.
+    // Only original non-wrt `inout` parameters have corresponding
+    // differential indirect results.
+    auto inoutParamIndex = resultIndex - origFnTy->getNumResults();
+    auto inoutParamIt = std::next(
+        origFnTy->getIndirectMutatingParameters().begin(), inoutParamIndex);
+    auto paramIndex =
+        std::distance(origFnTy->getParameters().begin(), &*inoutParamIt);
+    if (getIndices().parameters->contains(paramIndex))  
+      continue;
+    auto diffIndRes = diffIndResults[differentialIndirectResultIndex++];
+    setTangentBuffer(origEntry, origResult, diffIndRes, NotInitialized);
+  }
+  // Set initialization info for differential indirect result that potentially
+  // do not correspond to any index of original indirect results (e.g. non wrt
+  // inout params).
+  for (auto &diffIndResult : diffIndResults)
+    setTangentBufferInitializationInfo(diffIndResult, NotInitialized);
+
+#if 0
   // Initialize tangent mapping for original non-wrt `inout` parameters.
   // Give these parameters zero-initialized tangent buffers.
   differentialBuilder.setInsertionPoint(differential.getEntryBlock());
@@ -1650,6 +1690,7 @@ void JVPCloner::Implementation::prepareForDifferentialGeneration() {
   // inout params).
   for (auto &diffIndResult : diffIndResults)
     setTangentBufferInitializationInfo(diffIndResult, NotInitialized);
+#endif
 }
 
 /*static*/ SILFunction *JVPCloner::Implementation::createEmptyDifferential(
