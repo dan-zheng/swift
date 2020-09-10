@@ -1070,8 +1070,6 @@ ForwardModeTests.test("ResultSelection") {
   expectEqual(1, derivative(at: 3, 3, in: { x, y in tuple(x, y).0 }))
   expectEqual(1, derivative(at: 3, 3, in: { x, y in tuple(x, y).1 }))
 
-  // FIXME(SR-12175): Fix forward-mode differentiation tangent buffer crash.
-  /*
   func tupleGeneric<T>(_ x: T, _ y: T) -> (T, T) {
     return (x, y)
   }
@@ -1079,7 +1077,6 @@ ForwardModeTests.test("ResultSelection") {
   func tupleGenericSecond<T>(_ x: T, _ y: T) -> T { tupleGeneric(x, y).1 }
   expectEqual(1, derivative(at: 3, 3, in: tupleGenericFirst))
   expectEqual(1, derivative(at: 3, 3, in: tupleGenericSecond))
-  */
 }
 
 // TODO(TF-983): Support forward-mode differentiation of multiple results.
@@ -1378,6 +1375,18 @@ ForwardModeTests.test("NonVariedResult") {
 }
 
 ForwardModeTests.test("ApplyNonActiveIndirectResult") {
+  func identity<T: Differentiable>(_ x: T) -> T { x }
+
+  @differentiable
+  func applyNonactiveArgumentActiveIndirectResult(_ x: Tracked<Float>) -> Tracked<Float> {
+    var y = identity(0 as Tracked<Float>)
+    y = x
+    return y
+  }
+  expectEqual(1.0, derivative(at: 2, in: applyNonactiveArgumentActiveIndirectResult))
+}
+
+ForwardModeTests.test("ApplyNonActiveIndirectResults") {
   func identity<T: Differentiable>(_ x: T) -> T { x }
 
   @differentiable

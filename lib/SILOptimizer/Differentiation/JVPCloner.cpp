@@ -1205,16 +1205,35 @@ public:
     auto differentialType = remapSILTypeInDifferential(differential->getType())
                                 .castTo<SILFunctionType>();
 
-    // Get the differential arguments.
+    // Get the original `apply` results.
+    SmallVector<SILValue, 8> origDirectResults;
+    forEachApplyDirectResult(ai, [&](SILValue directResult) {
+      origDirectResults.push_back(directResult);
+    });
+    SmallVector<SILValue, 8> origAllResults;
+    collectAllActualResultsInTypeOrder(ai, origDirectResults, origAllResults);
+    for (auto inoutArg : ai->getInoutArguments())
+      origAllResults.push_back(inoutArg);
+
+    // Collect the differential arguments.
     SmallVector<SILValue, 8> diffArgs;
 
-    for (auto indRes : ai->getIndirectSILResults())
-      diffArgs.push_back(getTangentBuffer(bb, indRes));
+    // Collect the differential indirect results.
+    for (auto resultIndex : applyIndices.results->getIndices()) {
+      auto origResult = origAllResults[resultIndex];
+      // Skip all results except the original indirect results.
+      if (resultIndex < ai->getSubstCalleeType()->getNumResults() &&
+          ai->getSubstCalleeType()
+              ->getResults()[resultIndex]
+              .isFormalIndirect())
+        continue;
+      diffArgs.push_back(getTangentBuffer(bb, origResult));
+    }
 
-    auto paramArgs = ai->getArgumentsWithoutIndirectResults();
-    // Get the tangent value of the original arguments.
-    for (auto i : indices(paramArgs)) {
-      auto origArg = paramArgs[i];
+    // Collect the remaining differential arguments.
+    auto origArgs = ai->getArgumentsWithoutIndirectResults();
+    for (auto i : indices(origArgs)) {
+      auto origArg = origArgs[i];
       // If the argument is not active:
       // - Skip the element, if it is not differentiable.
       // - Otherwise, add a zero value to that location.
@@ -1265,19 +1284,11 @@ public:
           });
     }
 
-    // Call the differential.
+    // Apply the differential.
     auto *differentialCall =
         diffBuilder.createApply(loc, differential, SubstitutionMap(), diffArgs,
                                 /*isNonThrowing*/ false);
     diffBuilder.emitDestroyValueOperation(loc, differential);
-
-    // Get the original `apply` results.
-    SmallVector<SILValue, 8> origDirectResults;
-    forEachApplyDirectResult(ai, [&](SILValue directResult) {
-      origDirectResults.push_back(directResult);
-    });
-    SmallVector<SILValue, 8> origAllResults;
-    collectAllActualResultsInTypeOrder(ai, origDirectResults, origAllResults);
 
     // Get the callee differential `apply` results.
     SmallVector<SILValue, 8> differentialDirectResults;
@@ -1286,8 +1297,6 @@ public:
     SmallVector<SILValue, 8> differentialAllResults;
     collectAllActualResultsInTypeOrder(
         differentialCall, differentialDirectResults, differentialAllResults);
-    for (auto inoutArg : ai->getInoutArguments())
-      origAllResults.push_back(inoutArg);
     for (auto inoutArg : differentialCall->getInoutArguments())
       differentialAllResults.push_back(inoutArg);
     assert(applyIndices.results->getNumIndices() ==
