@@ -5129,6 +5129,8 @@ public:
       AlreadySeenScopes.insert(LastSeenScope);
       break;
     }
+    llvm::errs() << "VERIFYING BB " << BB->getDebugID()
+                 << " IN FUNCTION: " << BB->getParent()->getName() << "\n";
     for (SILInstruction &SI : *BB) {
       if (SI.isMetaInstruction())
         continue;
@@ -5140,6 +5142,9 @@ public:
       if (!AlreadySeenScopes.count(DS)) {
         AlreadySeenScopes.insert(DS);
         LastSeenScope = DS;
+        llvm::errs() << "UPDATING LAST SEEN SCOPE!\n";
+        SI.dump();
+        DS->print(BB->getModule());
         continue;
       }
 
@@ -5163,10 +5168,17 @@ public:
       };
 
       if (isAncestorScope(DS, LastSeenScope)) {
+        llvm::errs() << "ANCESTOR SCOPE FOUND!\n";
+        SI.dump();
+        DS->print(BB->getModule());
         LastSeenScope = DS;
         continue;
       }
       if (DS != LastSeenScope) {
+        llvm::errs() << "DEBUG SCOPE HOLE\n";
+        SI.dump();
+        DS->print(BB->getModule());
+        LastSeenScope->print(BB->getModule());
         LLVM_DEBUG(llvm::dbgs() << "Broken instruction!\n"; SI.dump());
         LLVM_DEBUG(llvm::dbgs() << "Please report a bug on bugs.swift.org\n");
         LLVM_DEBUG(llvm::dbgs() <<
