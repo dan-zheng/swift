@@ -66,7 +66,8 @@ static llvm::cl::opt<bool> EnableExperimentalLinearMapTransposition(
 /// folding for SIL testing purposes.
 static llvm::cl::opt<bool> SkipFoldingDifferentiableFunctionExtraction(
     "differentiation-skip-folding-differentiable-function-extraction",
-    llvm::cl::init(true));
+    llvm::cl::init(false));
+// llvm::cl::init(true));
 
 //===----------------------------------------------------------------------===//
 // Helpers
@@ -1237,49 +1238,54 @@ SILValue DifferentiationTransformer::promoteToLinearFunction(
   return newLinearFn;
 }
 
-/// Fold `differentiable_function_extract` users of the given
-/// `differentiable_function` instruction, directly replacing them with
-/// `differentiable_function` instruction operands. If the
-/// `differentiable_function` instruction has no remaining uses, delete the
-/// instruction itself after folding.
-///
-/// Folding can be disabled by the `SkipFoldingDifferentiableFunctionExtraction`
-/// flag for SIL testing purposes.
-// FIXME: This function is not correctly detecting the foldable pattern and
-// needs to be rewritten.
 void DifferentiationTransformer::foldDifferentiableFunctionExtraction(
-    DifferentiableFunctionInst *source) {
-  // Iterate through all `differentiable_function` instruction uses.
-  for (auto use : source->getUses()) {
+    DifferentiableFunctionInst *dfi) {
+  // Visit only `differentiable_function_extract` users.
+  for (auto use : dfi->getUses()) {
     auto *dfei = dyn_cast<DifferentiableFunctionExtractInst>(use->getUser());
-    // If user is not an `differentiable_function_extract` instruction, set flag
-    // to false.
     if (!dfei)
       continue;
-    // Fold original function extractors.
-    if (dfei->getExtractee() ==
-        NormalDifferentiableFunctionTypeComponent::Original) {
-      auto originalFnValue = source->getOriginalFunction();
-      dfei->replaceAllUsesWith(originalFnValue);
+    // %diff_func = differentiable_function(%orig, %jvp, %vjp)
+    // differentiable_function_extract [original] %diff_func -> %orig
+    // differentiable_function_extract [jvp]      %diff_func -> %jvp
+    // differentiable_function_extract [vjp]      %diff_func -> %vjp
+    if (dfi->hasExtractee(dfei->getExtractee())) {
+      SILValue newValue = dfi->getExtractee(dfei->getExtractee());
+      // If the type of the `differentiable_function` operand does not precisely
+      // match the type of the original `differentiable_function_extract`,
+      // create a `convert_function`.
+      if (newValue->getType() != dfei->getType()) {
+        SILBuilderWithScope builder(dfei);
+        newValue = builder.createConvertFunction(
+            dfei->getLoc(), newValue, dfei->getType(),
+            /*WithoutActuallyEscaping*/ false);
+      }
+      dfei->replaceAllUsesWith(newValue);
+      llvm::errs() << "NEW EXTRACTEE VALUE!\n";
+      dfei->dumpInContext();
       dfei->eraseFromParent();
-      continue;
     }
-    // Fold derivative function extractors.
-    auto derivativeFnValue =
-        source->getDerivativeFunction(dfei->getDerivativeFunctionKind());
-    dfei->replaceAllUsesWith(derivativeFnValue);
-    dfei->eraseFromParent();
+  }
+  for (auto use : dfi->getUses()) {
+    llvm::errs() << "REMAINING USER!\n";
+    use->getUser()->dumpInContext();
+  }
+  if (!dfi->getUses().empty()) {
+    llvm::errs() << "PARENT FUNCTION\n";
+    dfi->getFunction()->dump();
   }
   // If the `differentiable_function` instruction has no remaining uses, erase
   // it.
-  if (isInstructionTriviallyDead(source)) {
-    SILBuilder builder(source);
-    builder.emitDestroyAddrAndFold(source->getLoc(), source->getJVPFunction());
-    builder.emitDestroyAddrAndFold(source->getLoc(), source->getVJPFunction());
-    source->eraseFromParent();
+  if (isInstructionTriviallyDead(dfi)) {
+    llvm::errs() << "HELLO, NO REMAINING USES!\n";
+    SILBuilderWithScope builder(dfi);
+    builder.emitDestroyValueOperation(dfi->getLoc(), dfi->getJVPFunction());
+    builder.emitDestroyValueOperation(dfi->getLoc(), dfi->getVJPFunction());
+    dfi->eraseFromParent();
   }
-  // Mark `source` as processed so that it won't be reprocessed after deletion.
-  context.markDifferentiableFunctionInstAsProcessed(source);
+  // Mark `differentiation_function` instruction as processed so that it won't
+  // be reprocessed after deletion.
+  context.markDifferentiableFunctionInstAsProcessed(dfi);
 }
 
 bool DifferentiationTransformer::processDifferentiableFunctionInst(
@@ -1314,10 +1320,14 @@ bool DifferentiationTransformer::processDifferentiableFunctionInst(
   // `differentiable_function` instruction, fold
   // `differentiable_function_extract` instructions. If
   // `differentiable_function_extract` folding is disabled, return.
-  if (!SkipFoldingDifferentiableFunctionExtraction)
+  if (!SkipFoldingDifferentiableFunctionExtraction) {
+    llvm::errs() << "HELLO FOLDING FLAG!\n";
     if (auto *newDFI =
-            dyn_cast<DifferentiableFunctionInst>(differentiableFnValue))
+            dyn_cast<DifferentiableFunctionInst>(differentiableFnValue)) {
+      llvm::errs() << "HELLO! FOLDING NOW\n";
       foldDifferentiableFunctionExtraction(newDFI);
+    }
+  }
   transform.invalidateAnalysis(parent,
                                SILAnalysis::InvalidationKind::FunctionBody);
   return false;
