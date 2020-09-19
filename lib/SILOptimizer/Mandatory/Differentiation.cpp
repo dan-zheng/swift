@@ -854,9 +854,11 @@ static SILFunction *createEmptyJVP(ADContext &context, SILFunction *original,
 }
 
 /// Apply the fatal error function with the given name of type
-/// `@convention(thin) () -> Never` in `f`.
+/// `@convention(thin) (String) -> Never` in `f`.
 static void emitFatalError(ADContext &context, SILFunction *f,
-                           StringRef fatalErrorFuncName) {
+                           StringRef fatalErrorFuncName,
+                           StringRef fatalErrorArgument) {
+  auto &astCtx = context.getASTContext();
   auto *entry = f->createBasicBlock();
   createEntryArguments(f);
   SILBuilder builder(entry);
@@ -865,23 +867,48 @@ static void emitFatalError(ADContext &context, SILFunction *f,
   for (auto *arg : entry->getArguments())
     if (arg->getOwnershipKind() == ValueOwnershipKind::Owned)
       builder.emitDestroyOperation(loc, arg);
-  // Fatal error with a nice message.
-  auto neverResultInfo =
-      SILResultInfo(context.getModule().getASTContext().getNeverType(),
-                    ResultConvention::Unowned);
-  // Fatal error function must have type `@convention(thin) () -> Never`.
+  // Create a `SILValue` from the fatal error string message argument.
+  auto *stringDecl = astCtx.getStringDecl();
+  auto stringType = stringDecl->getDeclaredInterfaceType()->getCanonicalType();
+  auto stringSILType = SILType::getPrimitiveObjectType(stringType);
+  auto stringInitDecl = astCtx.getStringBuiltinInitDecl(stringDecl);
+  SILDeclRef stringInitRef(stringInitDecl.getDecl(),
+                           SILDeclRef::Kind::Allocator);
+  SILOptFunctionBuilder fnBuilder(context.getTransform());
+  auto stringInitFn =
+      fnBuilder.getOrCreateFunction(loc, stringInitRef, NotForDefinition);
+  auto stringValue = builder.createStringLiteral(
+      loc, fatalErrorArgument, StringLiteralInst::Encoding::UTF8);
+  auto stringLen = builder.createIntegerLiteral(
+      loc, SILType::getBuiltinWordType(astCtx), fatalErrorArgument.size());
+  auto isAscii = builder.createIntegerLiteral(
+      loc, SILType::getBuiltinIntegerType(1, astCtx),
+      astCtx.isASCIIString(fatalErrorArgument));
+  auto metaTy = CanMetatypeType::get(stringSILType.getASTType(),
+                                     MetatypeRepresentation::Thin);
+  auto self =
+      builder.createMetatype(loc, SILType::getPrimitiveObjectType(metaTy));
+  auto stringInitFnRef = builder.createFunctionRef(loc, stringInitFn);
+  auto functionNameValue = builder.createApply(
+      loc, stringInitFnRef, {}, {stringValue, stringLen, isAscii, self});
+  // Fatal error function must have type `@convention(thin) (String) -> Never`.
+  SILParameterInfo stringParamInfo(stringType,
+                                   ParameterConvention::Direct_Guaranteed);
+  SILResultInfo neverResultInfo(astCtx.getNeverType(),
+                                ResultConvention::Unowned);
   auto fatalErrorFnType = SILFunctionType::get(
       /*genericSig*/ nullptr, SILFunctionType::ExtInfo::getThin(),
-      SILCoroutineKind::None, ParameterConvention::Direct_Unowned, {},
+      SILCoroutineKind::None, ParameterConvention::Direct_Unowned,
+      {stringParamInfo},
       /*interfaceYields*/ {}, neverResultInfo,
       /*interfaceErrorResults*/ None, {}, {}, context.getASTContext());
-  auto fnBuilder = SILOptFunctionBuilder(context.getTransform());
   auto *fatalErrorFn = fnBuilder.getOrCreateFunction(
       loc, fatalErrorFuncName, SILLinkage::PublicExternal, fatalErrorFnType,
       IsNotBare, IsNotTransparent, IsNotSerialized, IsNotDynamic,
       ProfileCounter(), IsNotThunk);
   auto *fatalErrorFnRef = builder.createFunctionRef(loc, fatalErrorFn);
-  builder.createApply(loc, fatalErrorFnRef, SubstitutionMap(), {});
+  builder.createApply(loc, fatalErrorFnRef, SubstitutionMap(),
+                      {functionNameValue});
   builder.createUnreachable(loc);
 }
 
@@ -937,8 +964,16 @@ bool DifferentiationTransformer::canonicalizeDifferentiabilityWitness(
     } else {
       // If JVP generation is disabled or a user-defined custom VJP function
       // exists, fatal error with a nice message.
-      emitFatalError(context, jvp,
-                     "_fatalErrorForwardModeDifferentiationDisabled");
+      std::string demangledOriginalFunctionName =
+          Demangle::demangleSymbolAsString(
+              original->getName(),
+              Demangle::DemangleOptions::SimplifiedUIDemangleOptions());
+      std::string message =
+          "JVP for " + demangledOriginalFunctionName +
+          " does not exist. Use '-Xfrontend "
+          "-enable-experimental-forward-mode-differentiation' to enable "
+          "differential-first differentiation APIs.";
+      emitFatalError(context, jvp, "_fatalErrorWithMessage", message);
       LLVM_DEBUG(getADDebugStream()
                  << "Generated empty JVP for " << original->getName() << ":\n"
                  << *jvp);
