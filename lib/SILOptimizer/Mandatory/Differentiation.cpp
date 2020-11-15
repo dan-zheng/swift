@@ -154,8 +154,12 @@ static bool diagnoseNoReturn(ADContext &context, SILFunction *original,
   return true;
 }
 
-static bool isSupportedTerminator(TermInst *term,
-                                  AutoDiffDerivativeFunctionKind kind) {
+/// Returns true iff the given terminator instruction is supported by
+/// differentiation.
+static bool
+isTerminatorSupportedByDifferentiation(TermInst *term,
+                                       AutoDiffDerivativeFunctionKind kind) {
+  // Check instructions supported by forward-mode/reverse-mode differentiation.
   switch (kind) {
   case AutoDiffDerivativeFunctionKind::VJP:
     return isa<BranchInst>(term) || isa<CondBranchInst>(term) ||
@@ -183,7 +187,7 @@ diagnoseUnsupportedControlFlow(ADContext &context, SILFunction *original,
   for (auto &bb : *original) {
     auto *term = bb.getTerminator();
     // Check supported branching terminators.
-    if (isSupportedTerminator(term, kind))
+    if (isTerminatorSupportedByDifferentiation(term, kind))
       continue;
     // If terminator is an unsupported branching terminator, emit an error.
     if (term->isBranch()) {
@@ -934,14 +938,6 @@ bool DifferentiationTransformer::canonicalizeDifferentiabilityWitness(
     if (context.getASTContext()
             .LangOpts.EnableExperimentalForwardModeDifferentiation &&
         !witness->getVJP()) {
-      // JVP and differential generation do not currently support functions with
-      // multiple basic blocks.
-      /*if (original->getBlocks().size() > 1) {
-        context.emitNondifferentiabilityError(
-            original->getLocation().getSourceLoc(), invoker,
-            diag::autodiff_jvp_control_flow_not_supported);
-        return true;
-      }*/
       // Emit JVP function.
       JVPCloner cloner(context, original, witness, jvp, invoker);
       if (cloner.run())

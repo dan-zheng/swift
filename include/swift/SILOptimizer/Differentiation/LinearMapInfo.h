@@ -108,8 +108,12 @@ private:
   /// original function linkage.
   void computeAccessLevel(NominalTypeDecl *nominal, SILLinkage originalLinkage);
 
-  void addEnumToStruct(SILBasicBlock *predBB, SILBasicBlock *originalBB,
-                       EnumDecl *branchingTraceDecl);
+  /// Adds an enum element declaration to the given branching trace enum for the
+  /// given predecessor and original basic blocks.
+  void addBranchingTraceEnumElement(SILBasicBlock *predBB,
+                                    SILBasicBlock *originalBB,
+                                    EnumDecl *branchingTraceDecl);
+
   /// Creates an enum declaration with the given JVP/VJP generic signature,
   /// whose cases represent the predecessors/successors of the given original
   /// block.

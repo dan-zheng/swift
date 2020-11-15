@@ -113,38 +113,39 @@ void LinearMapInfo::computeAccessLevel(NominalTypeDecl *nominal,
   }
 }
 
-void LinearMapInfo::addEnumToStruct(SILBasicBlock *toBB, SILBasicBlock *fromBB,
-                       EnumDecl *branchingTraceDecl) {
-    auto &astCtx = original->getASTContext();
-    auto *moduleDecl = original->getModule().getSwiftModule();
-    auto loc = original->getLocation().getSourceLoc();
+void LinearMapInfo::addBranchingTraceEnumElement(SILBasicBlock *toBB,
+                                                 SILBasicBlock *fromBB,
+                                                 EnumDecl *branchingTraceDecl) {
+  auto &astCtx = original->getASTContext();
+  auto *moduleDecl = original->getModule().getSwiftModule();
+  auto loc = original->getLocation().getSourceLoc();
 
-    auto bbId = "bb" + std::to_string(toBB->getDebugID());
-    auto *linearMapStruct = getLinearMapStruct(toBB);
-    assert(linearMapStruct);
-    auto linearMapStructTy =
-        linearMapStruct->getDeclaredInterfaceType()->getCanonicalType();
-    // Create dummy declaration representing enum case parameter.
-    auto *decl = new (astCtx)
-        ParamDecl(loc, loc, Identifier(), loc, Identifier(), moduleDecl);
-    decl->setSpecifier(ParamDecl::Specifier::Default);
-    if (linearMapStructTy->hasArchetype())
-      decl->setInterfaceType(linearMapStructTy->mapTypeOutOfContext());
-    else
-      decl->setInterfaceType(linearMapStructTy);
-    // Create enum element and enum case declarations.
-    auto *paramList = ParameterList::create(astCtx, {decl});
-    auto *enumEltDecl = new (astCtx) EnumElementDecl(
-        /*IdentifierLoc*/ loc, DeclName(astCtx.getIdentifier(bbId)), paramList,
-        loc, /*RawValueExpr*/ nullptr, branchingTraceDecl);
-    enumEltDecl->setImplicit();
-    auto *enumCaseDecl = EnumCaseDecl::create(
-        /*CaseLoc*/ loc, {enumEltDecl}, branchingTraceDecl);
-    enumCaseDecl->setImplicit();
-    branchingTraceDecl->addMember(enumEltDecl);
-    branchingTraceDecl->addMember(enumCaseDecl);
-    // Record enum element declaration.
-    branchingTraceEnumCases.insert({{toBB, fromBB}, enumEltDecl});
+  auto bbId = "bb" + std::to_string(toBB->getDebugID());
+  auto *linearMapStruct = getLinearMapStruct(toBB);
+  assert(linearMapStruct);
+  auto linearMapStructTy =
+      linearMapStruct->getDeclaredInterfaceType()->getCanonicalType();
+  // Create dummy declaration representing enum case parameter.
+  auto *decl = new (astCtx)
+      ParamDecl(loc, loc, Identifier(), loc, Identifier(), moduleDecl);
+  decl->setSpecifier(ParamDecl::Specifier::Default);
+  if (linearMapStructTy->hasArchetype())
+    decl->setInterfaceType(linearMapStructTy->mapTypeOutOfContext());
+  else
+    decl->setInterfaceType(linearMapStructTy);
+  // Create enum element and enum case declarations.
+  auto *paramList = ParameterList::create(astCtx, {decl});
+  auto *enumEltDecl = new (astCtx) EnumElementDecl(
+      /*IdentifierLoc*/ loc, DeclName(astCtx.getIdentifier(bbId)), paramList,
+      loc, /*RawValueExpr*/ nullptr, branchingTraceDecl);
+  enumEltDecl->setImplicit();
+  auto *enumCaseDecl = EnumCaseDecl::create(
+      /*CaseLoc*/ loc, {enumEltDecl}, branchingTraceDecl);
+  enumCaseDecl->setImplicit();
+  branchingTraceDecl->addMember(enumEltDecl);
+  branchingTraceDecl->addMember(enumCaseDecl);
+  // Record enum element declaration.
+  branchingTraceEnumCases.insert({{toBB, fromBB}, enumEltDecl});
 }
 
 EnumDecl *
@@ -179,11 +180,11 @@ LinearMapInfo::createBranchingTraceDecl(SILBasicBlock *originalBB,
   switch (kind) {
   case AutoDiffLinearMapKind::Differential:
     for (auto *succBB : originalBB->getSuccessorBlocks())
-      addEnumToStruct(succBB, originalBB, branchingTraceDecl);
+      addBranchingTraceEnumElement(succBB, originalBB, branchingTraceDecl);
     break;
   case AutoDiffLinearMapKind::Pullback:
     for (auto *predBB : originalBB->getPredecessorBlocks())
-      addEnumToStruct(predBB, originalBB, branchingTraceDecl);
+      addBranchingTraceEnumElement(predBB, originalBB, branchingTraceDecl);
     break;
   }
   // If original block is in a loop, mark branching trace enum as indirect.
@@ -391,10 +392,10 @@ void LinearMapInfo::generateDifferentiationDataStructures(
   switch (kind) {
   case AutoDiffLinearMapKind::Differential:
     traceEnumFieldName = "successor";
-  break;
+    break;
   case AutoDiffLinearMapKind::Pullback:
     traceEnumFieldName = "predecessor";
-  break;
+    break;
   }
   for (auto &origBB : *original) {
     auto *traceEnum =
@@ -402,13 +403,13 @@ void LinearMapInfo::generateDifferentiationDataStructures(
     branchingTraceDecls.insert({&origBB, traceEnum});
     auto &origExit = *original->findReturnBB();
     switch (kind) {
-      case AutoDiffLinearMapKind::Differential:
-        if (&origExit == &origBB)
-          continue;
+    case AutoDiffLinearMapKind::Differential:
+      if (&origExit == &origBB)
+        continue;
       break;
-      case AutoDiffLinearMapKind::Pullback:
-        if (origBB.isEntry())
-          continue;
+    case AutoDiffLinearMapKind::Pullback:
+      if (origBB.isEntry())
+        continue;
       break;
     }
     // Add branching trace enum field to corresponding linear map struct.
