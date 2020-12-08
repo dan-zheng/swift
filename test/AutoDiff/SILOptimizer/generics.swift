@@ -1,15 +1,17 @@
 // RUN: %target-swift-emit-sil -verify %s | %FileCheck %s -check-prefix=CHECK-SIL
 
+import _Differentiation
+
 @_silgen_name("identity")
 func identity<T : Differentiable>(_ x: T) -> T {
   return x
 }
 _ = gradient(at: Float(1), in: { x in identity(x) })
 
-// Test AdjointEmitter local buffer allocation.
+// Test PullbackCloner local buffer allocation.
 // Verify that local buffers are immediately set to zero.
 
-// CHECK-SIL-LABEL: sil private @AD__identity__pullback_src_0_wrt_0_s14DifferentiableRzl
+// CHECK-SIL-LABEL: sil private @AD__identity__pullback_src_0_wrt_0_{{16_Differentiation|s}}14DifferentiableRzl
 // CHECK-SIL:      [[ORIG_COTAN:%.*]] = alloc_stack $τ_0_0.TangentVector
 // CHECK-SIL-NEXT: [[ZERO_WITNESS:%.*]] = witness_method $τ_0_0.TangentVector, #AdditiveArithmetic.zero!getter
 // CHECK-SIL-NEXT: [[ORIG_COTAN_METATYPE:%.*]] = metatype $@thick τ_0_0.TangentVector.Type
@@ -209,7 +211,7 @@ let _: @differentiable(Float, Float) -> TF_546<Float> = { r, i in
   TF_546(real: r, imaginary: i)
 }
 
-// TF-652: Test VJPEmitter substitution map generic signature.
+// TF-652: Test VJPCloner substitution map generic signature.
 // The substitution map should have the VJP's generic signature, not the
 // original function's.
 struct TF_652<Scalar> {}
@@ -241,7 +243,9 @@ extension TF_682_Proto where Self : Differentiable,
                              Scalar : FloatingPoint & Differentiable,
                              Self.TangentVector == Float {
   @derivative(of: foo)
-  func vjpFoo(lhs: Self) -> (value: Self, pullback: (TangentVector) -> (TangentVector, TangentVector)) {
+  func vjpFoo(lhs: Self) -> (
+    value: Self, pullback: (TangentVector) -> (TangentVector, TangentVector)
+  ) {
     return (lhs, { v in (v, v) })
   }
 }
@@ -384,5 +388,3 @@ extension SuperclassRequirement {
   }
 }
 */
-
-// TODO: add more tests.

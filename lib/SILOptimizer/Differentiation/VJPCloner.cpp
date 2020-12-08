@@ -427,18 +427,22 @@ public:
           return;
         }
       }
-      auto origFnType = origCallee->getType().castTo<SILFunctionType>();
-      auto origFnUnsubstType = origFnType->getUnsubstitutedType(getModule());
-      if (origFnType != origFnUnsubstType) {
-        origCallee = builder.createConvertFunction(
-            loc, origCallee, SILType::getPrimitiveObjectType(origFnUnsubstType),
-            /*withoutActuallyEscaping*/ false);
-      }
-      auto borrowedDiffFunc = builder.emitBeginBorrowOperation(loc, origCallee);
-      vjpValue = builder.createDifferentiableFunctionExtract(
-          loc, NormalDifferentiableFunctionTypeComponent::VJP,
-          borrowedDiffFunc);
-      vjpValue = builder.emitCopyValueOperation(loc, vjpValue);
+      builder.emitScopedBorrowOperation(
+          loc, origCallee, [&](SILValue borrowedDiffFunc) {
+            auto origFnType = origCallee->getType().castTo<SILFunctionType>();
+            auto origFnUnsubstType =
+                origFnType->getUnsubstitutedType(getModule());
+            if (origFnType != origFnUnsubstType) {
+              borrowedDiffFunc = builder.createConvertFunction(
+                  loc, borrowedDiffFunc,
+                  SILType::getPrimitiveObjectType(origFnUnsubstType),
+                  /*withoutActuallyEscaping*/ false);
+            }
+            vjpValue = builder.createDifferentiableFunctionExtract(
+                loc, NormalDifferentiableFunctionTypeComponent::VJP,
+                borrowedDiffFunc);
+            vjpValue = builder.emitCopyValueOperation(loc, vjpValue);
+          });
       auto vjpFnType = vjpValue->getType().castTo<SILFunctionType>();
       auto vjpFnUnsubstType = vjpFnType->getUnsubstitutedType(getModule());
       if (vjpFnType != vjpFnUnsubstType) {
