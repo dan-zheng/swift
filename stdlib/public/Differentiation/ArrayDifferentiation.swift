@@ -230,15 +230,23 @@ extension Array where Element: Differentiable {
     value: Self,
     pullback: (TangentVector) -> (TangentVector, TangentVector)
   ) {
+    let lhsCount = lhs.count
+    let rhsCount = rhs.count
     func pullback(_ v: TangentVector) -> (TangentVector, TangentVector) {
+      if v.base.isEmpty { return (.zero, .zero) }
+      if lhsCount == 0 { return (.zero, v) }
+      if rhsCount == 0 { return (v, .zero) }
+      print("v: \(v)")
+      print("lhs: \(lhs)")
+      print("rhs: \(rhs)")
       precondition(
-        v.base.count == lhs.count + rhs.count, """
-          Tangent vector with invalid count; expected to equal the sum of \
-          operand counts \(lhs.count) and \(rhs.count)
+        v.base.count == lhsCount + rhsCount, """
+          Tangent vector with invalid count \(v.base.count); expected to equal \
+          the sum of operand counts \(lhsCount) and \(rhsCount)
           """)
       return (
-        TangentVector([Element.TangentVector](v.base[0..<lhs.count])),
-        TangentVector([Element.TangentVector](v.base[lhs.count...]))
+        TangentVector([Element.TangentVector](v.base[0..<lhsCount])),
+        TangentVector([Element.TangentVector](v.base[lhsCount...]))
       )
     }
     return (lhs + rhs, pullback)
@@ -250,11 +258,14 @@ extension Array where Element: Differentiable {
     value: Self,
     differential: (TangentVector, TangentVector) -> TangentVector
   ) {
+    let lhsCount = lhs.count
+    let rhsCount = rhs.count
     func differential(_ l: TangentVector, _ r: TangentVector) -> TangentVector {
+      if l.base.isEmpty || r.base.isEmpty { return .zero }
       precondition(
-        l.base.count == lhs.count && r.base.count == rhs.count, """
+        l.base.count == lhsCount && r.base.count == rhsCount, """
           Tangent vectors with invalid count; expected to equal the \
-          operand counts \(lhs.count) and \(rhs.count)
+          operand counts \(lhsCount) and \(rhsCount)
           """)
       return .init(l.base + r.base)
     }
