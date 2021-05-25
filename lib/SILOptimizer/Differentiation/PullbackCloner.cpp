@@ -2075,18 +2075,38 @@ bool PullbackCloner::Implementation::run() {
     }
     }
   };
+
+  SmallVector<SILArgument, 4> pullbackIndirectResults(
+      getPullback().getIndirectResults().begin(),
+      getPullback().getIndirectResults().end());
+
   // Collect differentiation parameter adjoints.
+  unsigned pullbackInoutArgumentIndex = 0;
   for (auto i : getConfig().parameterIndices->getIndices()) {
-    // Skip `inout` parameters.
-    if (conv.getParameters()[i].isIndirectMutating())
-      continue;
+    // Skip `inout` parameters for function with single basic blocks:
+    // additional adjoint accumulation is not necessary.
+
+    // For functions with multiple basic blocks, accumulation is needed
+    // for `inout` parameters because pullback basic blocks have different
+    // adjoint buffers.
+    auto isOriginalFunctionSingleBasicBlock = getOriginal().size() == 1;
+    auto isParameterInout = conv.getParameters()[i].isIndirectMutating();
+    if (isParameterInout) {
+      if (isOriginalFunctionSingleBasicBlock) {
+        continue;
+      } else {
+        pullbackIndirectResults.push_back(
+            getPullback().getArgumentsWithoutIndirectResults()
+                [pullbackInoutArgumentIndex++]);
+      }
+    }
     addRetElt(i);
   }
 
   // Copy them to adjoint indirect results.
-  assert(indParamAdjoints.size() == getPullback().getIndirectResults().size() &&
+  assert(indParamAdjoints.size() == pullbackIndirectResults.size() &&
          "Indirect parameter adjoint count mismatch");
-  for (auto pair : zip(indParamAdjoints, getPullback().getIndirectResults())) {
+  for (auto pair : zip(indParamAdjoints, pullbackIndirectResults)) {
     auto source = std::get<0>(pair);
     auto *dest = std::get<1>(pair);
     builder.createCopyAddr(pbLoc, source, dest, IsTake, IsInitialization);
