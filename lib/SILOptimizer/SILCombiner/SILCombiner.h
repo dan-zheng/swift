@@ -329,6 +329,10 @@ public:
   SILInstruction *visitConvertFunctionInst(ConvertFunctionInst *CFI);
   SILInstruction *
   visitConvertEscapeToNoEscapeInst(ConvertEscapeToNoEscapeInst *Cvt);
+  SILInstruction *
+  visitDifferentiableFunctionInst(DifferentiableFunctionInst *DFI);
+  SILInstruction *
+  visitLinearFunctionExtractInst(LinearFunctionExtractInst *LFEI);
 
   SILInstruction *legacyVisitGlobalValueInst(GlobalValueInst *globalValue);
 

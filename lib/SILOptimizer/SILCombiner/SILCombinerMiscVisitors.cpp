@@ -2323,3 +2323,161 @@ SILCombiner::legacyVisitGlobalValueInst(GlobalValueInst *globalValue) {
   }
   return nullptr;
 }
+
+SILInstruction *
+SILCombiner::visitDifferentiableFunctionInst(DifferentiableFunctionInst *DFI) {
+  // Simplify `differentiable_function_extract` of `differentiable_function`.
+  //
+  // Before:
+  // %diff_func = differentiable_function(%orig, %jvp, %vjp)
+  // %orig' = differentiable_function_extract [original] %diff_func
+  // %jvp'  = differentiable_function_extract [jvp]      %diff_func
+  // %vjp'  = differentiable_function_extract [vjp]      %diff_func
+  //
+  // After:
+  // %orig' = %orig
+  // %jvp' = %jvp
+  // %vjp' = %vjp
+
+  for (auto use : DFI->getUses()) {
+    auto *DFEI = dyn_cast<DifferentiableFunctionExtractInst>(use->getUser());
+    if (!DFEI)
+      continue;
+    if (DFI->hasExtractee(DFEI->getExtractee())) {
+      SILValue newValue = DFI->getExtractee(DFEI->getExtractee());
+      // If the type of the `differentiable_function` operand does not precisely
+      // match the type of the original `differentiable_function_extract`,
+      // create a `convert_function`.
+      if (newValue->getType() != DFEI->getType()) {
+        auto newValueFnType = newValue->getType().castTo<SILFunctionType>();
+        auto extracteeFnType = DFEI->getType().castTo<SILFunctionType>();
+        if (!newValueFnType
+                 ->isABICompatibleWith(extracteeFnType, *DFI->getFunction())
+                 .isCompatible()) {
+          llvm::errs() << "NON-ABI-COMPATIBLE TYPES\n";
+          newValue->getType().dump();
+          DFEI->getType().dump();
+
+          continue;
+        }
+        newValue = Builder.createConvertFunction(
+            DFEI->getLoc(), newValue, DFEI->getType(),
+            /*withoutActuallyEscaping*/ false);
+      }
+      replaceInstUsesWith(*DFEI, newValue);
+      return nullptr;
+    }
+  }
+
+  // Push conversion instructions inside `differentiable_function`. This
+  // unblocks more optimizations.
+  //
+  // Before:
+  // %x = differentiable_function(%orig, %jvp, %vjp)
+  // %y = convert_escape_to_noescape %x
+  //
+  // After:
+  // %orig' = convert_escape_to_noescape %orig
+  // %jvp' = convert_escape_to_noescape %jvp
+  // %vjp' = convert_escape_to_noescape %vjp
+  // %y = differentiable_function(%orig', %jvp', %vjp')
+
+  auto original = DFI->getOriginalFunction();
+  Optional<SILValue> maybeJVP;
+  Optional<SILValue> maybeVJP;
+  if (DFI->hasDerivativeFunctions()) {
+    maybeJVP = DFI->getJVPFunction();
+    maybeVJP = DFI->getVJPFunction();
+  }
+
+  for (auto *use : DFI->getUses()) {
+    auto *user = use->getUser();
+    if (auto *convertInst = dyn_cast<ConvertEscapeToNoEscapeInst>(user)) {
+      llvm::errs() << "FOUND CONVERT_ESCAPE_TO_NO_ESCAPE OF "
+                      "DIFFERENTIABLE_FUNCTION_INST!\n";
+      convertInst->dumpInContext();
+      auto createConvertEscapeToNoEscape = [&](SILValue v) {
+        auto fnType = v->getType().castTo<SILFunctionType>();
+        auto noEscapeFnType =
+            fnType->getWithExtInfo(fnType->getExtInfo().withNoEscape());
+        auto noEscapeType = SILType::getPrimitiveObjectType(noEscapeFnType);
+        return Builder.createConvertEscapeToNoEscape(
+            v.getLoc(), v, noEscapeType, convertInst->isLifetimeGuaranteed());
+      };
+      auto *originalNoEscape = createConvertEscapeToNoEscape(original);
+      Optional<std::pair<SILValue, SILValue>> derivativeFunctions;
+      if (maybeJVP.hasValue() && maybeVJP.hasValue()) {
+        auto jvpNoEscape = createConvertEscapeToNoEscape(*maybeJVP);
+        auto vjpNoEscape = createConvertEscapeToNoEscape(*maybeVJP);
+        derivativeFunctions = std::make_pair(jvpNoEscape, vjpNoEscape);
+      }
+      auto *newDFI = Builder.createDifferentiableFunction(
+          DFI->getLoc(), DFI->getParameterIndices(), DFI->getResultIndices(),
+          originalNoEscape, derivativeFunctions);
+      assert(newDFI->getType() == convertInst->getType() &&
+             "New `@differentiable` function instruction should have same type "
+             "as the old `convert_escape_to_no_escape` instruction");
+      replaceInstUsesWith(*convertInst, newDFI);
+      return nullptr;
+    }
+    if (auto *convertInst = dyn_cast<ConvertFunctionInst>(user)) {
+      llvm::errs()
+          << "FOUND CONVERT_FUNCTION OF DIFFERENTIABLE_FUNCTION_INST!\n";
+      convertInst->dumpInContext();
+      auto createConvertFunctionOfComponent =
+          [&](NormalDifferentiableFunctionTypeComponent extractee) {
+            auto operand = DFI->getExtractee(extractee);
+            auto convertInstType =
+                convertInst->getType().castTo<SILFunctionType>();
+            auto convertedComponentFnType =
+                convertInstType->getDifferentiableComponentType(
+                    extractee, Builder.getModule());
+            auto convertedComponentType =
+                SILType::getPrimitiveObjectType(convertedComponentFnType);
+            return Builder.createConvertFunction(
+                operand.getLoc(), operand, convertedComponentType,
+                convertInst->withoutActuallyEscaping());
+          };
+      auto *convertedOriginal = createConvertFunctionOfComponent(
+          NormalDifferentiableFunctionTypeComponent::Original);
+      SILValue convertedJVP = createConvertFunctionOfComponent(
+          NormalDifferentiableFunctionTypeComponent::JVP);
+      SILValue convertedVJP = createConvertFunctionOfComponent(
+          NormalDifferentiableFunctionTypeComponent::VJP);
+      auto *newDFI = Builder.createDifferentiableFunction(
+          DFI->getLoc(), DFI->getParameterIndices(), DFI->getResultIndices(),
+          convertedOriginal, std::make_pair(convertedJVP, convertedVJP));
+      assert(newDFI->getType() == convertInst->getType() &&
+             "New `@differentiable` function instruction should have same type "
+             "as the old `convert_function` instruction");
+      replaceInstUsesWith(*convertInst, newDFI);
+      return nullptr;
+    }
+  }
+
+  return nullptr;
+}
+
+SILInstruction *
+SILCombiner::visitLinearFunctionExtractInst(LinearFunctionExtractInst *LFEI) {
+  // linear_func = linear_function(orig, transpose)
+  // linear_function_extract [original]  linear_func -> orig
+  // linear_function_extract [transpose] linear_func -> transpose
+  if (auto *LFI = dyn_cast<LinearFunctionInst>(LFEI->getOperand())) {
+    if (LFI->hasExtractee(LFEI->getExtractee())) {
+      SILValue newValue = LFI->getExtractee(LFEI->getExtractee());
+      // If the type of the `differentiable_function` operand does not precisely
+      // match the type of the original `differentiable_function_extract`,
+      // create a `convert_function`.
+      if (newValue->getType() != LFEI->getType()) {
+        newValue = Builder.createConvertFunction(
+            LFEI->getLoc(), newValue, LFEI->getType(),
+            /*WithoutActuallyEscaping*/ false);
+      }
+      replaceInstUsesWith(*LFEI, newValue);
+      return nullptr;
+    }
+  }
+
+  return nullptr;
+}

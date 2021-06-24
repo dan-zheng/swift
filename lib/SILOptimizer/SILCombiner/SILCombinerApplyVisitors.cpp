@@ -150,6 +150,11 @@ SILCombiner::optimizeApplyOfConvertFunctionInst(FullApplySite AI,
   if (AI.hasIndirectSILResults())
     return nullptr;
 
+  // `convert_function` adding an error result is not currently handled.
+  if (!FRI->getType().castTo<SILFunctionType>()->hasErrorResult() &&
+      CFI->getType().castTo<SILFunctionType>()->hasErrorResult())
+    return nullptr;
+
   // Bail if the result type of the converted callee is different from the callee's
   // result type of the apply instruction.
   if (SubstCalleeTy->getAllResultsSubstType(
