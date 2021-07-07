@@ -2393,9 +2393,6 @@ SILCombiner::visitDifferentiableFunctionInst(DifferentiableFunctionInst *DFI) {
   for (auto *use : DFI->getUses()) {
     auto *user = use->getUser();
     if (auto *convertInst = dyn_cast<ConvertEscapeToNoEscapeInst>(user)) {
-      llvm::errs() << "FOUND CONVERT_ESCAPE_TO_NO_ESCAPE OF "
-                      "DIFFERENTIABLE_FUNCTION_INST!\n";
-      convertInst->dumpInContext();
       auto createConvertEscapeToNoEscape = [&](SILValue v) {
         auto fnType = v->getType().castTo<SILFunctionType>();
         auto noEscapeFnType =
@@ -2421,9 +2418,6 @@ SILCombiner::visitDifferentiableFunctionInst(DifferentiableFunctionInst *DFI) {
       return nullptr;
     }
     if (auto *convertInst = dyn_cast<ConvertFunctionInst>(user)) {
-      llvm::errs()
-          << "FOUND CONVERT_FUNCTION OF DIFFERENTIABLE_FUNCTION_INST!\n";
-      convertInst->dumpInContext();
       auto createConvertFunctionOfComponent =
           [&](NormalDifferentiableFunctionTypeComponent extractee) {
             auto operand = DFI->getExtractee(extractee);

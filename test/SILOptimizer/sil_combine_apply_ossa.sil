@@ -425,8 +425,9 @@ sil [ossa] @helperForOptimizeApplyOfConvertFunction : $@convention(thin) (@in Bu
 // CHECK-LABEL: sil [ossa] @testOptimizeApplyOfConvertFunction : $@convention(thin) (@in Builtin.Int8) -> @out Builtin.Int32 {
 // CHECK: bb0(%0 : $*Builtin.Int32, %1 : $*Builtin.Int8):
 // CHECK:   [[FN:%.*]] = function_ref @helperForOptimizeApplyOfConvertFunction : $@convention(thin) (@in Builtin.Int8) -> @out Builtin.Int32
-// CHECK:   [[TTF:%.*]] = thin_to_thick_function [[FN]] : $@convention(thin) (@in Builtin.Int8) -> @out Builtin.Int32 to $@noescape @callee_owned (@in Builtin.Int8) -> @out Builtin.Int32
-// CHECK:   %{{.*}} = apply [[TTF]](%0, %1) : $@noescape @callee_owned (@in Builtin.Int8) -> @out Builtin.Int32
+// CHECK:   [[TTF:%.*]] = thin_to_thick_function [[FN]] : $@convention(thin) (@in Builtin.Int8) -> @out Builtin.Int32 to $@callee_owned (@in Builtin.Int8) -> @out Builtin.Int32
+// CHECK:   [[CVT:%.*]] = convert_escape_to_noescape [[TTF]] : $@callee_owned (@in Builtin.Int8) -> @out Builtin.Int32 to $@noescape @callee_owned (@in Builtin.Int8) -> @out Builtin.Int32
+// CHECK:   %{{.*}} = apply [[CVT]](%0, %1) : $@noescape @callee_owned (@in Builtin.Int8) -> @out Builtin.Int32
 // CHECK:   %{{.*}} = tuple ()
 // CHECK:   return %{{.*}} : $()
 // CHECK-LABEL: } // end sil function 'testOptimizeApplyOfConvertFunction'
@@ -652,7 +653,9 @@ bb0(%0 : $*Klass, %1 : $*Klass):
 
 // CHECK-LABEL: sil shared [ossa] @appliedEscapeToNoEscape : $@convention(thin) () -> () {
 // CHECK: [[F:%.*]] = function_ref @indirectClosure : $@convention(thin) (@in Builtin.Int64) -> @out Builtin.Int64
-// CHECK: apply [[F]](%{{.*}}, %{{.*}}) : $@convention(thin) (@in Builtin.Int64) -> @out Builtin.Int64
+// CHECK: [[TTF:%.*]] = thin_to_thick_function [[F]] : $@convention(thin) (@in Builtin.Int64) -> @out Builtin.Int64 to $@callee_guaranteed (@in Builtin.Int64) -> @out Builtin.Int64
+// CHECK: [[CVT:%.*]] = convert_escape_to_noescape [[TTF]] : $@callee_guaranteed (@in Builtin.Int64) -> @out Builtin.Int64 to $@noescape @callee_guaranteed (@in Builtin.Int64) -> @out Builtin.Int64
+// CHECK: apply [[CVT]](%{{.*}}, %{{.*}}) : $@noescape @callee_guaranteed (@in Builtin.Int64) -> @out Builtin.Int64
 // CHECK: } // end sil function 'appliedEscapeToNoEscape'
 sil shared [ossa] @appliedEscapeToNoEscape : $@convention(thin) () -> () {
 bb0:
@@ -673,7 +676,9 @@ bb0:
 
 // CHECK-LABEL: sil shared [ossa] @appliedEscapeToNoEscapeNonTrivial : $@convention(thin) (@owned Klass) -> () {
 // CHECK: [[F:%.*]] = function_ref @indirectClosure_non_trivial : $@convention(thin) (@in Klass) -> @out Klass
-// CHECK: apply [[F]](%{{.*}}, %{{.*}}) : $@convention(thin) (@in Klass) -> @out Klass
+// CHECK: [[TTF:%.*]] = thin_to_thick_function [[F]] : $@convention(thin) (@in Klass) -> @out Klass to $@callee_guaranteed (@in Klass) -> @out Klass
+// CHECK: [[CVT:%.*]] = convert_escape_to_noescape [[TTF]] : $@callee_guaranteed (@in Klass) -> @out Klass to $@noescape @callee_guaranteed (@in Klass) -> @out Klass
+// CHECK: apply [[CVT]](%{{.*}}, %{{.*}}) : $@noescape @callee_guaranteed (@in Klass) -> @out Klass
 // CHECK: } // end sil function 'appliedEscapeToNoEscapeNonTrivial'
 sil shared [ossa] @appliedEscapeToNoEscapeNonTrivial : $@convention(thin) (@owned Klass) -> () {
 bb0(%0 : @owned $Klass):
@@ -791,7 +796,10 @@ bb0(%0 : @guaranteed $Klass):
 
 // CHECK-LABEL: sil [ossa] @convert_function_simplification_caller : $@convention(thin) (@guaranteed Klass) -> () {
 // CHECK:   [[FUNC:%.*]] = function_ref @convert_function_simplification_callee : $@convention(thin) (@guaranteed Klass) -> ()
-// CHECK:   apply [[FUNC]]({{.*}}) : $@convention(thin) (@guaranteed Klass) -> ()
+
+// CHECK:   [[TTF:%.*]] = thin_to_thick_function [[F]] : $@convention(thin) (@guaranteed Klass) -> () to $@callee_guaranteed (@guaranteed Klass) -> ()
+// CHECK:   [[CVT:%.*]] = convert_function [[TTF]] : $@callee_guaranteed (@guaranteed Klass) -> () to $@callee_guaranteed (@guaranteed Klass) -> @error Error
+// CHECK:   apply [nothrow] [[CVT]]({{.*}}) : $@callee_guaranteed (@guaranteed Klass) -> @error Error
 // CHECK:   [[FUNC:%.*]] = function_ref @convert_function_simplification_callee_with_error : $@convention(thin) (@guaranteed Klass) -> @error Error
 // CHECK:   apply [nothrow] [[FUNC]]({{.*}}) : $@convention(thin) (@guaranteed Klass) -> @error Error
 // CHECK: } // end sil function 'convert_function_simplification_caller'

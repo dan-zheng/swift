@@ -698,7 +698,9 @@ bb0(%0 : $Klass):
 
 // CHECK-LABEL: sil @convert_function_simplification_caller : $@convention(thin) (@guaranteed Klass) -> () {
 // CHECK:   [[FUNC:%.*]] = function_ref @convert_function_simplification_callee : $@convention(thin) (@guaranteed Klass) -> ()
-// CHECK:   apply [[FUNC]]({{.*}}) : $@convention(thin) (@guaranteed Klass) -> ()
+// CHECK:   [[TTF:%.*]] = thin_to_thick_function [[FUNC]] : $@convention(thin) (@guaranteed Klass) -> () to $@callee_guaranteed (@guaranteed Klass) -> ()
+// CHECK:   [[CVT:%.*]] = convert_function [[TTF]] : $@callee_guaranteed (@guaranteed Klass) -> () to $@callee_guaranteed (@guaranteed Klass) -> @error Error
+// CHECK:   apply [nothrow] [[CVT]]({{.*}}) : $@callee_guaranteed (@guaranteed Klass) -> @error Error
 // CHECK:   [[FUNC:%.*]] = function_ref @convert_function_simplification_callee_with_error : $@convention(thin) (@guaranteed Klass) -> @error Error
 // CHECK:   apply [nothrow] [[FUNC]]({{.*}}) : $@convention(thin) (@guaranteed Klass) -> @error Error
 // CHECK: } // end sil function 'convert_function_simplification_caller'
