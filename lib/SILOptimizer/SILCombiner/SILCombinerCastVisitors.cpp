@@ -974,9 +974,6 @@ visitCheckedCastAddrBranchInst(CheckedCastAddrBranchInst *CCABI) {
 
 SILInstruction *SILCombiner::visitConvertEscapeToNoEscapeInst(
     ConvertEscapeToNoEscapeInst *Cvt) {
-  if (Cvt->getFunction()->hasOwnership())
-    return nullptr;
-
   // Rewrite conversion of `convert_function` of `thin_to_thick_function` as
   // conversion of `thin_to_thick_function` of `convert_function`.
   //
